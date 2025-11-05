@@ -1,8 +1,8 @@
 # 🎨 Stunning Modeler
 
-**Professional 3D Model Generation Framework**
+**Professional 3D Model Generation & Animation Studio**
 
-A comprehensive, locally-hosted AI-powered 3D model generation system with a modern web interface. Create production-ready 3D models from text descriptions, convert images to 3D, and apply AI-generated textures to existing models.
+A comprehensive, locally-hosted AI-powered 3D model generation system with advanced rigging, animation, and VTuber support. Create production-ready 3D models from text descriptions, convert images to 3D, apply AI-generated textures, automatically rig characters, and export VRM avatars for streaming.
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.0-green)
@@ -31,13 +31,35 @@ A comprehensive, locally-hosted AI-powered 3D model generation system with a mod
 - Stable Diffusion-powered texture synthesis
 - Customizable texture resolution (512px - 4096px)
 
-### 📦 **Professional Features**
-- **Multi-format Export**: GLB, OBJ, FBX, PLY, STL
+### 🦴 **Auto-Rigging & Animation**
+- **Automatic Skeleton Generation**: Humanoid, quadruped, and biped rigs
+- **AI-Powered Weight Painting**: Distance-based automatic bone weights
+- **Pose Library**: T-pose, A-pose, idle, wave, and custom poses
+- **Unity/Unreal Compatible**: Standard bone naming conventions
+- **Weight Distribution**: Top 4 influences per vertex for optimal performance
+
+### 🎭 **VTuber & Streaming Support**
+- **VRM Export**: Full VRM 0.0 and 1.0 format support
+- **Auto Blend Shapes**: 17 VRM standard expressions + 52 ARKit shapes
+- **Platform Ready**: VTube Studio, VSeeFace, VRChat, Warudo compatible
+- **Validation Tools**: Check poly count and VRM compliance
+- **Metadata Editor**: Set avatar permissions, license, and usage rights
+
+### ✨ **Advanced PBR Materials**
+- **Complete Material Sets**: Albedo, Normal, Roughness, Metallic, AO, Height maps
+- **Material Presets**: Metal, Wood, Plastic, Stone, Fabric, Gold, Chrome, Rubber
+- **Procedural Generation**: AI-powered and procedural texture creation
+- **High Resolution**: Support for 512px - 4096px textures
+- **PBR Workflow**: Industry-standard physically based rendering
+
+### 🚀 **Workflow & Productivity**
+- **Batch Processing**: Queue multiple generation tasks
+- **Project Management**: Save and version control your work
+- **Model Comparison**: Side-by-side analysis with statistics
+- **Multi-format Export**: GLB, OBJ, FBX, PLY, STL, VRM
 - **Model Optimization**: Automatic mesh cleanup and decimation
 - **UV Unwrapping**: Automatic UV coordinate generation
-- **Format Conversion**: Convert between 3D file formats
 - **Interactive 3D Viewer**: Built with Three.js for real-time preview
-- **Production-Ready**: Optimized for game engines and film production
 
 ---
 
