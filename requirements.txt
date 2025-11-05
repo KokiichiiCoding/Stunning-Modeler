@@ -1,0 +1,109 @@
+# Stunning Modeler - Requirements
+# Professional 3D Model Generation Framework
+
+# ============================================================================
+# Core Web Framework
+# ============================================================================
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# ============================================================================
+# Deep Learning & AI Models
+# ============================================================================
+torch==2.1.0
+torchvision==0.16.0
+# Note: Install PyTorch with CUDA support if you have a GPU:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+# Diffusion Models
+diffusers==0.24.0
+transformers==4.36.0
+accelerate==0.25.0
+
+# Shap-E for Text-to-3D (OpenAI)
+# Install from GitHub as it may not be on PyPI yet
+# git+https://github.com/openai/shap-e.git
+
+# ============================================================================
+# 3D Processing & Mesh Manipulation
+# ============================================================================
+trimesh==4.0.8
+numpy==1.24.3
+scipy==1.11.4
+networkx==3.2.1
+
+# Additional mesh processing
+# pymeshlab==2022.2.post4  # Optional, for advanced UV unwrapping
+# open3d==0.18.0  # Optional, for point cloud processing
+
+# ============================================================================
+# Image Processing
+# ============================================================================
+Pillow==10.1.0
+opencv-python==4.8.1.78
+imageio==2.33.0
+
+# ============================================================================
+# File Format Support
+# ============================================================================
+# GLB/GLTF support (included in trimesh)
+pygltflib==1.16.1
+
+# ============================================================================
+# Scientific Computing
+# ============================================================================
+scikit-learn==1.3.2
+scikit-image==0.22.0
+
+# ============================================================================
+# Utilities
+# ============================================================================
+requests==2.31.0
+tqdm==4.66.1
+
+# ============================================================================
+# Optional Dependencies for Enhanced Features
+# ============================================================================
+
+# For better texture generation:
+# - Stable Diffusion models are loaded via diffusers (already included)
+
+# For depth estimation (Image-to-3D):
+# - MiDaS is loaded via torch.hub (no extra install needed)
+
+# For GPU acceleration (if available):
+# - CUDA-enabled PyTorch (see note above)
+
+# ============================================================================
+# Development & Testing (Optional)
+# ============================================================================
+# pytest==7.4.3
+# pytest-flask==1.3.0
+# black==23.12.1
+# flake8==6.1.0
+
+# ============================================================================
+# System Requirements
+# ============================================================================
+# - Python 3.8 or higher
+# - CUDA-capable GPU (optional, but recommended for faster generation)
+# - At least 8GB RAM (16GB+ recommended)
+# - 5GB+ free disk space for models
+
+# ============================================================================
+# Installation Notes
+# ============================================================================
+#
+# Basic Installation:
+#   pip install -r requirements.txt
+#
+# For GPU Support (NVIDIA CUDA):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+#   pip install -r requirements.txt
+#
+# For Shap-E (Text-to-3D):
+#   pip install git+https://github.com/openai/shap-e.git
+#
+# Optional Advanced Features:
+#   pip install pymeshlab  # Better UV unwrapping
+#   pip install open3d     # Point cloud processing

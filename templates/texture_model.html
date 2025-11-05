@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Texturing - Stunning Modeler</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="nav-content">
+                <a href="/" class="logo">
+                    <div class="logo-icon">🎨</div>
+                    <span>Stunning Modeler</span>
+                </a>
+                <ul class="nav-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/text-to-3d">Text to 3D</a></li>
+                    <li><a href="/image-to-3d">Image to 3D</a></li>
+                    <li><a href="/texture-model" class="active">Texture Model</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="hero text-center" style="margin-bottom: 2rem;">
+                <h1>🎨 AI Model Texturing</h1>
+                <p>Import 3D models and apply AI-generated textures</p>
+            </div>
+
+            <div class="two-column">
+                <!-- Left Column: Upload & Form -->
+                <div>
+                    <div class="panel">
+                        <h2>Import Model</h2>
+
+                        <form id="textureForm">
+                            <!-- Model File Upload -->
+                            <div class="form-group">
+                                <label class="form-label">3D Model File</label>
+                                <div class="file-upload" id="fileUpload">
+                                    <input
+                                        type="file"
+                                        id="modelInput"
+                                        accept=".obj,.glb,.gltf,.ply,.stl,.fbx"
+                                        required
+                                    >
+                                    <div class="file-upload-icon">📦</div>
+                                    <div class="file-upload-text">
+                                        <strong>Click to upload</strong> or drag and drop
+                                    </div>
+                                    <div class="file-upload-formats">
+                                        OBJ, GLB, GLTF, PLY, STL, FBX (Max 100MB)
+                                    </div>
+                                </div>
+
+                                <!-- File Preview -->
+                                <div id="filePreview" class="file-preview" style="display: none;">
+                                    <div style="width: 80px; height: 80px; background: var(--bg-input); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                                        📦
+                                    </div>
+                                    <div class="file-preview-info">
+                                        <div class="file-preview-name" id="fileName">-</div>
+                                        <div class="file-preview-size" id="fileSize">-</div>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary" id="clearFile">
+                                        ✕ Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Texture Prompt -->
+                            <div class="form-group">
+                                <label class="form-label" for="texturePrompt">
+                                    Texture Description
+                                </label>
+                                <textarea
+                                    id="texturePrompt"
+                                    class="form-textarea"
+                                    placeholder="e.g., Rusty metal with worn edges, industrial look"
+                                    rows="3"
+                                    required
+                                ></textarea>
+                                <div class="form-help">
+                                    Describe the material, colors, and surface properties you want
+                                </div>
+                            </div>
+
+                            <!-- Texture Resolution -->
+                            <div class="form-group">
+                                <label class="form-label" for="textureResolution">
+                                    Texture Resolution
+                                </label>
+                                <select id="textureResolution" class="form-select">
+                                    <option value="512">512x512 (Fast)</option>
+                                    <option value="1024" selected>1024x1024 (Balanced)</option>
+                                    <option value="2048">2048x2048 (High Quality)</option>
+                                    <option value="4096">4096x4096 (Ultra)</option>
+                                </select>
+                                <div class="form-help">
+                                    Higher resolution = better quality but slower generation
+                                </div>
+                            </div>
+
+                            <!-- Apply Texture Button -->
+                            <button type="submit" class="btn btn-primary btn-block" id="textureBtn" disabled>
+                                <span>🎨 Apply Texture</span>
+                            </button>
+                        </form>
+
+                        <!-- Progress -->
+                        <div id="progressContainer" class="progress-container" style="display: none;">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <span>Applying AI texture...</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Alert Messages -->
+                        <div id="alertContainer"></div>
+
+                        <!-- Example Prompts -->
+                        <div style="margin-top: 2rem;">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Example Textures</h3>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <button class="btn btn-secondary example-prompt" data-prompt="Polished chrome metal, highly reflective surface">
+                                    ✨ Chrome Metal
+                                </button>
+                                <button class="btn btn-secondary example-prompt" data-prompt="Worn wooden planks with visible grain, weathered texture">
+                                    🪵 Worn Wood
+                                </button>
+                                <button class="btn btn-secondary example-prompt" data-prompt="Smooth white marble with grey veins, polished finish">
+                                    🏛️ Marble
+                                </button>
+                                <button class="btn btn-secondary example-prompt" data-prompt="Red brick wall texture, rough surface with mortar">
+                                    🧱 Brick Wall
+                                </button>
+                                <button class="btn btn-secondary example-prompt" data-prompt="Blue and gold fabric, soft cloth texture">
+                                    🎭 Fabric
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Viewer -->
+                <div>
+                    <div class="panel">
+                        <h2>3D Preview</h2>
+
+                        <!-- Viewer Container -->
+                        <div class="viewer-container">
+                            <div id="viewerPlaceholder" class="viewer-placeholder">
+                                <div class="viewer-placeholder-icon">🎨</div>
+                                <p>Upload a model to preview it here</p>
+                                <p style="font-size: 0.875rem; color: var(--text-muted);">
+                                    Use mouse to rotate • Scroll to zoom
+                                </p>
+                            </div>
+                            <div id="model-viewer" style="display: none;"></div>
+
+                            <!-- Viewer Controls -->
+                            <div class="viewer-controls" id="viewerControls" style="display: none;">
+                                <button class="viewer-btn" id="resetCamera" title="Reset Camera">
+                                    🔄
+                                </button>
+                                <button class="viewer-btn" id="toggleWireframe" title="Toggle Wireframe">
+                                    🔲
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Download Section -->
+                        <div id="downloadSection" style="display: none; margin-top: 1rem;">
+                            <a id="downloadBtn" class="btn btn-success btn-block" download>
+                                <span>⬇️ Download Textured Model</span>
+                            </a>
+                        </div>
+
+                        <!-- Model Info -->
+                        <div id="modelInfo" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg-input); border-radius: var(--border-radius);">
+                            <h4 style="margin-bottom: 0.5rem;">Model Information</h4>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.8;">
+                                <div><strong>Original File:</strong> <span id="infoOriginal">-</span></div>
+                                <div><strong>Texture Applied:</strong> <span id="infoTexture">-</span></div>
+                                <div><strong>Processing Time:</strong> <span id="infoTime">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Three.js setup
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+        let wireframeMode = false;
+
+        function initViewer() {
+            const container = document.getElementById('model-viewer');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                50,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(2, 2, 2);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+            directionalLight2.position.set(-5, 5, -5);
+            scene.add(directionalLight2);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(10, 10, 0x334155, 0x1e293b);
+            scene.add(gridHelper);
+
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                if (container.clientWidth > 0) {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+        }
+
+        function loadModel(url) {
+            // Remove existing model
+            if (currentModel) {
+                scene.remove(currentModel);
+            }
+
+            // Show viewer
+            document.getElementById('viewerPlaceholder').style.display = 'none';
+            document.getElementById('model-viewer').style.display = 'block';
+            document.getElementById('viewerControls').style.display = 'flex';
+
+            // Initialize viewer if not done
+            if (!renderer) {
+                initViewer();
+            }
+
+            // Load new model (assuming GLB for now)
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                url,
+                (gltf) => {
+                    currentModel = gltf.scene;
+
+                    // Center model
+                    const box = new THREE.Box3().setFromObject(currentModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    currentModel.position.sub(center);
+
+                    // Scale to fit
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 2 / maxDim;
+                    currentModel.scale.multiplyScalar(scale);
+
+                    scene.add(currentModel);
+
+                    // Reset camera
+                    camera.position.set(2, 2, 2);
+                    camera.lookAt(0, 0, 0);
+                    controls.reset();
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading model:', error);
+                    showAlert('error', 'Failed to load model for preview');
+                }
+            );
+        }
+
+        // File upload handling
+        const fileUpload = document.getElementById('fileUpload');
+        const modelInput = document.getElementById('modelInput');
+        const filePreview = document.getElementById('filePreview');
+        const textureBtn = document.getElementById('textureBtn');
+        let selectedFile = null;
+
+        // Click to upload
+        fileUpload.addEventListener('click', () => {
+            modelInput.click();
+        });
+
+        // File selected
+        modelInput.addEventListener('change', (e) => {
+            handleFileSelect(e.target.files[0]);
+        });
+
+        // Drag and drop
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('drag-over');
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('drag-over');
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                handleFileSelect(file);
+            } else {
+                showAlert('error', 'Please drop a 3D model file');
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (!file) return;
+
+            selectedFile = file;
+
+            // Show preview
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            fileUpload.style.display = 'none';
+            filePreview.style.display = 'flex';
+            textureBtn.disabled = false;
+        }
+
+        // Clear file
+        document.getElementById('clearFile').addEventListener('click', () => {
+            selectedFile = null;
+            modelInput.value = '';
+            fileUpload.style.display = 'block';
+            filePreview.style.display = 'none';
+            textureBtn.disabled = true;
+        });
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Example prompts
+        document.querySelectorAll('.example-prompt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('texturePrompt').value = btn.dataset.prompt;
+            });
+        });
+
+        // Form submission
+        let startTime;
+        document.getElementById('textureForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!selectedFile) {
+                showAlert('error', 'Please select a 3D model file');
+                return;
+            }
+
+            const texturePrompt = document.getElementById('texturePrompt').value.trim();
+            if (!texturePrompt) {
+                showAlert('error', 'Please enter a texture description');
+                return;
+            }
+
+            // Show progress
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('textureBtn').disabled = true;
+            document.getElementById('alertContainer').innerHTML = '';
+            startTime = Date.now();
+
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 5;
+                if (progress <= 90) {
+                    document.getElementById('progressFill').style.width = progress + '%';
+                }
+            }, 600);
+
+            try {
+                const formData = new FormData();
+                formData.append('model', selectedFile);
+                formData.append('texture_prompt', texturePrompt);
+                formData.append('texture_resolution', document.getElementById('textureResolution').value);
+
+                const response = await fetch('/api/texture-model', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+                document.getElementById('progressFill').style.width = '100%';
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const endTime = Date.now();
+                    const duration = ((endTime - startTime) / 1000).toFixed(1);
+
+                    showAlert('success', data.message);
+
+                    // Load model in viewer
+                    loadModel(data.model_url);
+
+                    // Show download button
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    downloadBtn.href = data.model_url;
+                    downloadBtn.download = data.filename;
+                    document.getElementById('downloadSection').style.display = 'block';
+
+                    // Show model info
+                    document.getElementById('infoOriginal').textContent = selectedFile.name;
+                    document.getElementById('infoTexture').textContent = texturePrompt;
+                    document.getElementById('infoTime').textContent = duration + 's';
+                    document.getElementById('modelInfo').style.display = 'block';
+                } else {
+                    showAlert('error', data.error || 'Texturing failed');
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                console.error('Error:', error);
+                showAlert('error', 'Network error: ' + error.message);
+            } finally {
+                document.getElementById('progressContainer').style.display = 'none';
+                document.getElementById('textureBtn').disabled = false;
+            }
+        });
+
+        // Viewer controls
+        document.getElementById('resetCamera')?.addEventListener('click', () => {
+            if (controls) {
+                camera.position.set(2, 2, 2);
+                camera.lookAt(0, 0, 0);
+                controls.reset();
+            }
+        });
+
+        document.getElementById('toggleWireframe')?.addEventListener('click', () => {
+            if (currentModel) {
+                wireframeMode = !wireframeMode;
+                currentModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.wireframe = wireframeMode;
+                    }
+                });
+            }
+        });
+
+        // Alert function
+        function showAlert(type, message) {
+            const container = document.getElementById('alertContainer');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            container.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <span>${type === 'success' ? '✓' : '✕'}</span>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

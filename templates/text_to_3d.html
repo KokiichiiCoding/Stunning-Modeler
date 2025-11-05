@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to 3D - Stunning Modeler</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="nav-content">
+                <a href="/" class="logo">
+                    <div class="logo-icon">🎨</div>
+                    <span>Stunning Modeler</span>
+                </a>
+                <ul class="nav-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/text-to-3d" class="active">Text to 3D</a></li>
+                    <li><a href="/image-to-3d">Image to 3D</a></li>
+                    <li><a href="/texture-model">Texture Model</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="hero text-center" style="margin-bottom: 2rem;">
+                <h1>✍️ Text to 3D Generator</h1>
+                <p>Describe your 3D model in words, and watch it come to life</p>
+            </div>
+
+            <div class="two-column">
+                <!-- Left Column: Form -->
+                <div>
+                    <div class="panel">
+                        <h2>Generate Model</h2>
+
+                        <form id="generateForm">
+                            <!-- Prompt -->
+                            <div class="form-group">
+                                <label class="form-label" for="prompt">
+                                    Model Description
+                                </label>
+                                <textarea
+                                    id="prompt"
+                                    class="form-textarea"
+                                    placeholder="e.g., A red sports car with aerodynamic design"
+                                    rows="4"
+                                    required
+                                ></textarea>
+                                <div class="form-help">
+                                    Be specific and descriptive. Include details about shape, color, style, and features.
+                                </div>
+                            </div>
+
+                            <!-- Guidance Scale -->
+                            <div class="form-group">
+                                <label class="form-label" for="guidanceScale">
+                                    Guidance Scale: <span id="guidanceValue">15.0</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    id="guidanceScale"
+                                    class="form-input"
+                                    min="1"
+                                    max="30"
+                                    step="0.5"
+                                    value="15"
+                                    style="cursor: pointer;"
+                                >
+                                <div class="form-help">
+                                    Higher values follow the prompt more closely (7-20 recommended)
+                                </div>
+                            </div>
+
+                            <!-- Inference Steps -->
+                            <div class="form-group">
+                                <label class="form-label" for="inferenceSteps">
+                                    Inference Steps: <span id="stepsValue">64</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    id="inferenceSteps"
+                                    class="form-input"
+                                    min="16"
+                                    max="128"
+                                    step="16"
+                                    value="64"
+                                    style="cursor: pointer;"
+                                >
+                                <div class="form-help">
+                                    More steps = higher quality but slower generation
+                                </div>
+                            </div>
+
+                            <!-- Output Format -->
+                            <div class="form-group">
+                                <label class="form-label" for="outputFormat">
+                                    Output Format
+                                </label>
+                                <select id="outputFormat" class="form-select">
+                                    <option value="glb" selected>GLB (Recommended)</option>
+                                    <option value="obj">OBJ</option>
+                                    <option value="ply">PLY</option>
+                                    <option value="stl">STL</option>
+                                </select>
+                                <div class="form-help">
+                                    GLB format includes colors and is compatible with most 3D software
+                                </div>
+                            </div>
+
+                            <!-- Generate Button -->
+                            <button type="submit" class="btn btn-primary btn-block" id="generateBtn">
+                                <span>🚀 Generate 3D Model</span>
+                            </button>
+                        </form>
+
+                        <!-- Progress -->
+                        <div id="progressContainer" class="progress-container" style="display: none;">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <span>Generating your 3D model...</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Alert Messages -->
+                        <div id="alertContainer"></div>
+
+                        <!-- Example Prompts -->
+                        <div style="margin-top: 2rem;">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Example Prompts</h3>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <button class="btn btn-secondary example-prompt" data-prompt="A sleek red sports car with aerodynamic design">
+                                    🏎️ Sports Car
+                                </button>
+                                <button class="btn btn-secondary example-prompt" data-prompt="A modern wooden chair with curved backrest">
+                                    🪑 Modern Chair
+                                </button>
+                                <button class="btn btn-secondary example-prompt" data-prompt="A blue and white coffee mug with handle">
+                                    ☕ Coffee Mug
+                                </button>
+                                <button class="btn btn-secondary example-prompt" data-prompt="A realistic human skull">
+                                    💀 Skull
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Viewer -->
+                <div>
+                    <div class="panel">
+                        <h2>3D Preview</h2>
+
+                        <!-- Viewer Container -->
+                        <div class="viewer-container">
+                            <div id="viewerPlaceholder" class="viewer-placeholder">
+                                <div class="viewer-placeholder-icon">📦</div>
+                                <p>Your generated model will appear here</p>
+                                <p style="font-size: 0.875rem; color: var(--text-muted);">
+                                    Use mouse to rotate • Scroll to zoom
+                                </p>
+                            </div>
+                            <div id="model-viewer" style="display: none;"></div>
+
+                            <!-- Viewer Controls -->
+                            <div class="viewer-controls" id="viewerControls" style="display: none;">
+                                <button class="viewer-btn" id="resetCamera" title="Reset Camera">
+                                    🔄
+                                </button>
+                                <button class="viewer-btn" id="toggleWireframe" title="Toggle Wireframe">
+                                    🔲
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Download Section -->
+                        <div id="downloadSection" style="display: none; margin-top: 1rem;">
+                            <a id="downloadBtn" class="btn btn-success btn-block" download>
+                                <span>⬇️ Download Model</span>
+                            </a>
+                        </div>
+
+                        <!-- Model Info -->
+                        <div id="modelInfo" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg-input); border-radius: var(--border-radius);">
+                            <h4 style="margin-bottom: 0.5rem;">Model Information</h4>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.8;">
+                                <div><strong>Format:</strong> <span id="infoFormat">-</span></div>
+                                <div><strong>Generation Time:</strong> <span id="infoTime">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Three.js setup
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+        let wireframeMode = false;
+
+        function initViewer() {
+            const container = document.getElementById('model-viewer');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                50,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(2, 2, 2);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+            directionalLight2.position.set(-5, 5, -5);
+            scene.add(directionalLight2);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(10, 10, 0x334155, 0x1e293b);
+            scene.add(gridHelper);
+
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                if (container.clientWidth > 0) {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+        }
+
+        function loadModel(url) {
+            // Remove existing model
+            if (currentModel) {
+                scene.remove(currentModel);
+            }
+
+            // Show viewer
+            document.getElementById('viewerPlaceholder').style.display = 'none';
+            document.getElementById('model-viewer').style.display = 'block';
+            document.getElementById('viewerControls').style.display = 'flex';
+
+            // Initialize viewer if not done
+            if (!renderer) {
+                initViewer();
+            }
+
+            // Load new model
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                url,
+                (gltf) => {
+                    currentModel = gltf.scene;
+
+                    // Center model
+                    const box = new THREE.Box3().setFromObject(currentModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    currentModel.position.sub(center);
+
+                    // Scale to fit
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 2 / maxDim;
+                    currentModel.scale.multiplyScalar(scale);
+
+                    scene.add(currentModel);
+
+                    // Reset camera
+                    camera.position.set(2, 2, 2);
+                    camera.lookAt(0, 0, 0);
+                    controls.reset();
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading model:', error);
+                    showAlert('error', 'Failed to load model for preview');
+                }
+            );
+        }
+
+        // Form handling
+        const form = document.getElementById('generateForm');
+        const guidanceInput = document.getElementById('guidanceScale');
+        const stepsInput = document.getElementById('inferenceSteps');
+        const guidanceValue = document.getElementById('guidanceValue');
+        const stepsValue = document.getElementById('stepsValue');
+
+        // Update slider values
+        guidanceInput.addEventListener('input', (e) => {
+            guidanceValue.textContent = e.target.value;
+        });
+
+        stepsInput.addEventListener('input', (e) => {
+            stepsValue.textContent = e.target.value;
+        });
+
+        // Example prompts
+        document.querySelectorAll('.example-prompt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('prompt').value = btn.dataset.prompt;
+            });
+        });
+
+        // Form submission
+        let startTime;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const prompt = document.getElementById('prompt').value.trim();
+            const guidanceScale = parseFloat(guidanceInput.value);
+            const numInferenceSteps = parseInt(stepsInput.value);
+            const outputFormat = document.getElementById('outputFormat').value;
+
+            if (!prompt) {
+                showAlert('error', 'Please enter a model description');
+                return;
+            }
+
+            // Show progress
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('alertContainer').innerHTML = '';
+            startTime = Date.now();
+
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 5;
+                if (progress <= 90) {
+                    document.getElementById('progressFill').style.width = progress + '%';
+                }
+            }, 500);
+
+            try {
+                const response = await fetch('/api/generate-text-to-3d', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt,
+                        guidance_scale: guidanceScale,
+                        num_inference_steps: numInferenceSteps,
+                        output_format: outputFormat
+                    })
+                });
+
+                clearInterval(progressInterval);
+                document.getElementById('progressFill').style.width = '100%';
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const endTime = Date.now();
+                    const duration = ((endTime - startTime) / 1000).toFixed(1);
+
+                    showAlert('success', data.message);
+
+                    // Load model in viewer
+                    loadModel(data.model_url);
+
+                    // Show download button
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    downloadBtn.href = data.model_url;
+                    downloadBtn.download = data.filename;
+                    document.getElementById('downloadSection').style.display = 'block';
+
+                    // Show model info
+                    document.getElementById('infoFormat').textContent = outputFormat.toUpperCase();
+                    document.getElementById('infoTime').textContent = duration + 's';
+                    document.getElementById('modelInfo').style.display = 'block';
+                } else {
+                    showAlert('error', data.error || 'Generation failed');
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                console.error('Error:', error);
+                showAlert('error', 'Network error: ' + error.message);
+            } finally {
+                document.getElementById('progressContainer').style.display = 'none';
+                document.getElementById('generateBtn').disabled = false;
+            }
+        });
+
+        // Viewer controls
+        document.getElementById('resetCamera')?.addEventListener('click', () => {
+            if (controls) {
+                camera.position.set(2, 2, 2);
+                camera.lookAt(0, 0, 0);
+                controls.reset();
+            }
+        });
+
+        document.getElementById('toggleWireframe')?.addEventListener('click', () => {
+            if (currentModel) {
+                wireframeMode = !wireframeMode;
+                currentModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.wireframe = wireframeMode;
+                    }
+                });
+            }
+        });
+
+        // Alert function
+        function showAlert(type, message) {
+            const container = document.getElementById('alertContainer');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            container.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <span>${type === 'success' ? '✓' : '✕'}</span>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

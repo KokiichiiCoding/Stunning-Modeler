@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stunning Modeler - Professional 3D Model Generation Framework</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="nav-content">
+                <a href="/" class="logo">
+                    <div class="logo-icon">🎨</div>
+                    <span>Stunning Modeler</span>
+                </a>
+                <ul class="nav-links">
+                    <li><a href="/" class="active">Home</a></li>
+                    <li><a href="/text-to-3d">Text to 3D</a></li>
+                    <li><a href="/image-to-3d">Image to 3D</a></li>
+                    <li><a href="/texture-model">Texture Model</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Hero Section -->
+            <section class="hero fade-in">
+                <h1>Professional 3D Model Generation</h1>
+                <p>
+                    Create stunning, production-ready 3D models using state-of-the-art AI.
+                    Perfect for game development, film production, and 3D visualization.
+                </p>
+            </section>
+
+            <!-- Features Grid -->
+            <div class="feature-grid">
+                <!-- Text to 3D -->
+                <a href="/text-to-3d" class="feature-card">
+                    <div class="feature-icon">✍️</div>
+                    <h3>Text to 3D</h3>
+                    <p>
+                        Transform text descriptions into fully-formed 3D models.
+                        Simply describe what you want, and our AI will create it for you.
+                    </p>
+                    <div style="margin-top: 1rem; color: var(--primary-light);">
+                        Get Started →
+                    </div>
+                </a>
+
+                <!-- Image to 3D -->
+                <a href="/image-to-3d" class="feature-card">
+                    <div class="feature-icon">🖼️</div>
+                    <h3>Image to 3D</h3>
+                    <p>
+                        Convert 2D images into detailed 3D models using advanced depth estimation
+                        and reconstruction algorithms.
+                    </p>
+                    <div style="margin-top: 1rem; color: var(--primary-light);">
+                        Upload Image →
+                    </div>
+                </a>
+
+                <!-- Model Texturing -->
+                <a href="/texture-model" class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>AI Texturing</h3>
+                    <p>
+                        Apply AI-generated textures to your 3D models. Import existing models
+                        and give them professional textures with a simple description.
+                    </p>
+                    <div style="margin-top: 1rem; color: var(--primary-light);">
+                        Texture Model →
+                    </div>
+                </a>
+            </div>
+
+            <!-- Additional Features -->
+            <section class="panel">
+                <h2>🚀 Powerful Features</h2>
+                <div class="two-column">
+                    <div>
+                        <h3 style="margin-bottom: 1rem;">Multi-Format Export</h3>
+                        <ul style="list-style: none; color: var(--text-secondary); line-height: 2;">
+                            <li>✓ GLB/GLTF - Industry standard</li>
+                            <li>✓ OBJ - Universal compatibility</li>
+                            <li>✓ FBX - Game engine ready</li>
+                            <li>✓ PLY - Point cloud format</li>
+                            <li>✓ STL - 3D printing ready</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 style="margin-bottom: 1rem;">Professional Quality</h3>
+                        <ul style="list-style: none; color: var(--text-secondary); line-height: 2;">
+                            <li>✓ High-resolution meshes</li>
+                            <li>✓ Optimized topology</li>
+                            <li>✓ UV unwrapping</li>
+                            <li>✓ PBR-ready materials</li>
+                            <li>✓ Game/Film production ready</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Getting Started -->
+            <section class="panel">
+                <h2>🎯 Getting Started</h2>
+                <div class="feature-grid">
+                    <div style="padding: 1.5rem; background: var(--bg-input); border-radius: var(--border-radius);">
+                        <h4 style="font-size: 1.25rem; margin-bottom: 0.75rem;">1. Choose Your Method</h4>
+                        <p style="color: var(--text-secondary);">
+                            Select from text-to-3D, image-to-3D, or model texturing based on your needs.
+                        </p>
+                    </div>
+                    <div style="padding: 1.5rem; background: var(--bg-input); border-radius: var(--border-radius);">
+                        <h4 style="font-size: 1.25rem; margin-bottom: 0.75rem;">2. Create Your Model</h4>
+                        <p style="color: var(--text-secondary);">
+                            Provide a description or image, adjust parameters, and let our AI generate your 3D model.
+                        </p>
+                    </div>
+                    <div style="padding: 1.5rem; background: var(--bg-input); border-radius: var(--border-radius);">
+                        <h4 style="font-size: 1.25rem; margin-bottom: 0.75rem;">3. Export & Use</h4>
+                        <p style="color: var(--text-secondary);">
+                            Download your model in your preferred format and use it in games, films, or visualizations.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tech Stack -->
+            <section class="panel text-center">
+                <h2>⚡ Powered by Cutting-Edge Technology</h2>
+                <p style="color: var(--text-secondary); max-width: 800px; margin: 0 auto 2rem;">
+                    Built with state-of-the-art AI models and production-grade 3D processing pipelines.
+                    Runs locally for complete privacy and control.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                    <div style="padding: 1rem; background: var(--bg-input); border-radius: var(--border-radius); min-width: 150px;">
+                        <strong style="color: var(--primary-light);">OpenAI Shap-E</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">Text-to-3D</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--bg-input); border-radius: var(--border-radius); min-width: 150px;">
+                        <strong style="color: var(--primary-light);">MiDaS</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">Depth Estimation</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--bg-input); border-radius: var(--border-radius); min-width: 150px;">
+                        <strong style="color: var(--primary-light);">Stable Diffusion</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">Texture Generation</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--bg-input); border-radius: var(--border-radius); min-width: 150px;">
+                        <strong style="color: var(--primary-light);">Trimesh</strong>
+                        <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">Mesh Processing</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        // Add fade-in animation to cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.feature-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('fade-in');
+            });
+        });
+    </script>
+</body>
+</html>
