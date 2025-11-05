@@ -31,6 +31,10 @@ from auto_rigger import AutoRigger
 from vrm_exporter import VRMExporter
 from batch_processor import ProjectManager, BatchProcessor, ModelComparison
 from pbr_materials import PBRMaterialGenerator
+from image_preprocessor import ImagePreprocessor
+from mesh_optimizer import MeshOptimizer
+from texture_upscaler import TextureUpscaler
+from style_manager import StyleManager, ReferenceGuidedGenerator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +52,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 os.makedirs('static/projects', exist_ok=True)
 os.makedirs('static/materials', exist_ok=True)
+os.makedirs('static/styles', exist_ok=True)
 
 # Initialize generators (lazy loading)
 text_to_3d_generator = None
@@ -60,6 +65,11 @@ project_manager = None
 batch_processor = None
 model_comparison = None
 pbr_generator = None
+image_preprocessor = None
+mesh_optimizer = None
+texture_upscaler = None
+style_manager = None
+reference_generator = None
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
@@ -145,6 +155,46 @@ def get_pbr_generator():
         logger.info("Initializing PBR Material Generator...")
         pbr_generator = PBRMaterialGenerator()
     return pbr_generator
+
+def get_image_preprocessor():
+    """Lazy load image preprocessor"""
+    global image_preprocessor
+    if image_preprocessor is None:
+        logger.info("Initializing Image Preprocessor...")
+        image_preprocessor = ImagePreprocessor()
+    return image_preprocessor
+
+def get_mesh_optimizer():
+    """Lazy load mesh optimizer"""
+    global mesh_optimizer
+    if mesh_optimizer is None:
+        logger.info("Initializing Mesh Optimizer...")
+        mesh_optimizer = MeshOptimizer()
+    return mesh_optimizer
+
+def get_texture_upscaler():
+    """Lazy load texture upscaler"""
+    global texture_upscaler
+    if texture_upscaler is None:
+        logger.info("Initializing Texture Upscaler...")
+        texture_upscaler = TextureUpscaler()
+    return texture_upscaler
+
+def get_style_manager():
+    """Lazy load style manager"""
+    global style_manager
+    if style_manager is None:
+        logger.info("Initializing Style Manager...")
+        style_manager = StyleManager('static/styles')
+    return style_manager
+
+def get_reference_generator():
+    """Lazy load reference-guided generator"""
+    global reference_generator
+    if reference_generator is None:
+        logger.info("Initializing Reference-Guided Generator...")
+        reference_generator = ReferenceGuidedGenerator()
+    return reference_generator
 
 # ============================================================================
 # MAIN ROUTES
@@ -545,7 +595,12 @@ def health():
             'processor': model_processor is not None,
             'auto_rigger': auto_rigger is not None,
             'vrm_exporter': vrm_exporter is not None,
-            'pbr_generator': pbr_generator is not None
+            'pbr_generator': pbr_generator is not None,
+            'image_preprocessor': image_preprocessor is not None,
+            'mesh_optimizer': mesh_optimizer is not None,
+            'texture_upscaler': texture_upscaler is not None,
+            'style_manager': style_manager is not None,
+            'reference_generator': reference_generator is not None
         }
     })
 
@@ -1004,6 +1059,532 @@ def compare_models():
         return jsonify({'error': f'Comparison failed: {str(e)}'}), 500
 
 # ============================================================================
+# API ROUTES - IMAGE PREPROCESSING
+# ============================================================================
+
+@app.route('/api/preprocess-image', methods=['POST'])
+def preprocess_image():
+    """
+    Preprocess image with AI-powered editing
+
+    Expected form data:
+    - image: File upload
+    - prompt: str (edit instructions like "put them in a t-pose")
+    - strength: float (optional, 0.0-1.0)
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No image file selected'}), 400
+
+        # Save uploaded image
+        filename = secure_filename(file.filename)
+        job_id = str(uuid.uuid4())
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"preprocess_{job_id}_{filename}")
+        file.save(upload_path)
+
+        # Get parameters
+        prompt = request.form.get('prompt', '').strip()
+        strength = float(request.form.get('strength', 0.8))
+
+        if not prompt:
+            return jsonify({'error': 'Edit prompt is required'}), 400
+
+        logger.info(f"Preprocessing image with prompt: '{prompt}'")
+
+        # Generate output filename
+        output_filename = f"preprocessed_{job_id}.png"
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+
+        # Preprocess image
+        preprocessor = get_image_preprocessor()
+        success, message = preprocessor.edit_image_with_prompt(
+            image_path=upload_path,
+            prompt=prompt,
+            output_path=output_path,
+            strength=strength
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'image_url': f'/static/outputs/{output_filename}',
+                'filename': output_filename
+            })
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error preprocessing image: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Preprocessing failed: {str(e)}'}), 500
+
+@app.route('/api/detect-pose', methods=['POST'])
+def detect_pose():
+    """Detect pose in image"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No image file selected'}), 400
+
+        # Save temporarily
+        filename = secure_filename(file.filename)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"pose_{uuid.uuid4()}_{filename}")
+        file.save(temp_path)
+
+        # Detect pose
+        preprocessor = get_image_preprocessor()
+        pose_data = preprocessor.detect_pose(temp_path)
+
+        # Clean up
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+
+        return jsonify({
+            'success': True,
+            'pose_data': pose_data
+        })
+
+    except Exception as e:
+        logger.error(f"Error detecting pose: {str(e)}")
+        return jsonify({'error': f'Pose detection failed: {str(e)}'}), 500
+
+# ============================================================================
+# API ROUTES - MESH OPTIMIZATION
+# ============================================================================
+
+@app.route('/api/ai-retopology', methods=['POST'])
+def ai_retopology():
+    """
+    AI-powered mesh retopology
+
+    Expected form data:
+    - model: File upload
+    - target_faces: int (optional)
+    - quad_dominant: bool (optional)
+    """
+    try:
+        if 'model' not in request.files:
+            return jsonify({'error': 'No model file provided'}), 400
+
+        file = request.files['model']
+        if file.filename == '':
+            return jsonify({'error': 'No model file selected'}), 400
+
+        # Save uploaded model
+        filename = secure_filename(file.filename)
+        job_id = str(uuid.uuid4())
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"retopo_{job_id}_{filename}")
+        file.save(upload_path)
+
+        # Get parameters
+        target_faces = request.form.get('target_faces', type=int)
+        quad_dominant = request.form.get('quad_dominant', 'false').lower() == 'true'
+
+        logger.info(f"Running AI retopology on: {filename}")
+
+        # Generate output filename
+        output_filename = f"retopology_{job_id}.glb"
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+
+        # Perform retopology
+        optimizer = get_mesh_optimizer()
+        success, message = optimizer.ai_retopology(
+            model_path=upload_path,
+            output_path=output_path,
+            target_faces=target_faces,
+            quad_dominant=quad_dominant
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'model_url': f'/static/outputs/{output_filename}',
+                'filename': output_filename
+            })
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error in AI retopology: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Retopology failed: {str(e)}'}), 500
+
+@app.route('/api/analyze-mesh', methods=['POST'])
+def analyze_mesh():
+    """Analyze mesh quality"""
+    try:
+        if 'model' not in request.files:
+            return jsonify({'error': 'No model file provided'}), 400
+
+        file = request.files['model']
+        if file.filename == '':
+            return jsonify({'error': 'No model file selected'}), 400
+
+        # Save temporarily
+        filename = secure_filename(file.filename)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"analyze_{uuid.uuid4()}_{filename}")
+        file.save(temp_path)
+
+        # Analyze mesh
+        optimizer = get_mesh_optimizer()
+        analysis = optimizer.analyze_mesh_quality(temp_path)
+
+        # Clean up
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+
+        return jsonify({
+            'success': True,
+            'analysis': analysis
+        })
+
+    except Exception as e:
+        logger.error(f"Error analyzing mesh: {str(e)}")
+        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
+
+@app.route('/api/generate-lod', methods=['POST'])
+def generate_lod():
+    """Generate LOD (Level of Detail) levels"""
+    try:
+        if 'model' not in request.files:
+            return jsonify({'error': 'No model file provided'}), 400
+
+        file = request.files['model']
+        if file.filename == '':
+            return jsonify({'error': 'No model file selected'}), 400
+
+        # Save uploaded model
+        filename = secure_filename(file.filename)
+        job_id = str(uuid.uuid4())
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"lod_{job_id}_{filename}")
+        file.save(upload_path)
+
+        # Get parameters
+        levels = int(request.form.get('levels', 3))
+
+        logger.info(f"Generating {levels} LOD levels for: {filename}")
+
+        # Create LOD output directory
+        lod_dir = os.path.join(app.config['OUTPUT_FOLDER'], f"lod_{job_id}")
+        os.makedirs(lod_dir, exist_ok=True)
+
+        # Generate LODs
+        optimizer = get_mesh_optimizer()
+        success, message, lod_paths = optimizer.auto_lod_generation(
+            model_path=upload_path,
+            output_dir=lod_dir,
+            levels=levels
+        )
+
+        if success:
+            # Convert paths to URLs
+            lod_urls = [f'/static/outputs/lod_{job_id}/{os.path.basename(path)}' for path in lod_paths]
+
+            return jsonify({
+                'success': True,
+                'message': message,
+                'lod_urls': lod_urls
+            })
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error generating LODs: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'LOD generation failed: {str(e)}'}), 500
+
+# ============================================================================
+# API ROUTES - TEXTURE UPSCALING
+# ============================================================================
+
+@app.route('/api/upscale-texture', methods=['POST'])
+def upscale_texture():
+    """
+    AI-powered texture upscaling
+
+    Expected form data:
+    - texture: File upload (image)
+    - scale: int (2, 4, or 8)
+    - enhance: bool (optional)
+    """
+    try:
+        if 'texture' not in request.files:
+            return jsonify({'error': 'No texture file provided'}), 400
+
+        file = request.files['texture']
+        if file.filename == '':
+            return jsonify({'error': 'No texture file selected'}), 400
+
+        # Save uploaded texture
+        filename = secure_filename(file.filename)
+        job_id = str(uuid.uuid4())
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"texture_{job_id}_{filename}")
+        file.save(upload_path)
+
+        # Get parameters
+        scale = int(request.form.get('scale', 4))
+        enhance = request.form.get('enhance', 'true').lower() == 'true'
+
+        logger.info(f"Upscaling texture {scale}x: {filename}")
+
+        # Generate output filename
+        output_filename = f"upscaled_{job_id}.png"
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+
+        # Upscale texture
+        upscaler = get_texture_upscaler()
+        success, message = upscaler.upscale_texture(
+            texture_path=upload_path,
+            output_path=output_path,
+            scale=scale,
+            enhance=enhance
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'texture_url': f'/static/outputs/{output_filename}',
+                'filename': output_filename
+            })
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error upscaling texture: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Upscaling failed: {str(e)}'}), 500
+
+@app.route('/api/make-seamless', methods=['POST'])
+def make_seamless():
+    """Make texture seamless/tileable"""
+    try:
+        if 'texture' not in request.files:
+            return jsonify({'error': 'No texture file provided'}), 400
+
+        file = request.files['texture']
+        if file.filename == '':
+            return jsonify({'error': 'No texture file selected'}), 400
+
+        # Save uploaded texture
+        filename = secure_filename(file.filename)
+        job_id = str(uuid.uuid4())
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"seamless_{job_id}_{filename}")
+        file.save(upload_path)
+
+        logger.info(f"Making texture seamless: {filename}")
+
+        # Generate output filename
+        output_filename = f"seamless_{job_id}.png"
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+
+        # Make seamless
+        upscaler = get_texture_upscaler()
+        success, message = upscaler.create_seamless_texture(
+            texture_path=upload_path,
+            output_path=output_path
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'texture_url': f'/static/outputs/{output_filename}',
+                'filename': output_filename
+            })
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error making texture seamless: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Seamless generation failed: {str(e)}'}), 500
+
+# ============================================================================
+# API ROUTES - STYLE MANAGEMENT
+# ============================================================================
+
+@app.route('/api/extract-style', methods=['POST'])
+def extract_style():
+    """
+    Extract style from reference image
+
+    Expected form data:
+    - image: File upload
+    - style_name: str
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No image file selected'}), 400
+
+        # Save uploaded image
+        filename = secure_filename(file.filename)
+        job_id = str(uuid.uuid4())
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"style_{job_id}_{filename}")
+        file.save(upload_path)
+
+        # Get style name
+        style_name = request.form.get('style_name', '').strip()
+        if not style_name:
+            return jsonify({'error': 'Style name is required'}), 400
+
+        logger.info(f"Extracting style from image: {filename}")
+
+        # Extract style
+        style_mgr = get_style_manager()
+        success, message, style_id = style_mgr.extract_style_from_image(
+            image_path=upload_path,
+            style_name=style_name
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'style_id': style_id
+            })
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error extracting style: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Style extraction failed: {str(e)}'}), 500
+
+@app.route('/api/list-styles', methods=['GET'])
+def list_styles():
+    """List all saved styles"""
+    try:
+        style_mgr = get_style_manager()
+        styles = style_mgr.list_styles()
+
+        return jsonify({
+            'success': True,
+            'styles': styles
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing styles: {str(e)}")
+        return jsonify({'error': f'Failed to list styles: {str(e)}'}), 500
+
+@app.route('/api/compare-style', methods=['POST'])
+def compare_style():
+    """Compare image to saved style"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No image file selected'}), 400
+
+        # Save temporarily
+        filename = secure_filename(file.filename)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"compare_{uuid.uuid4()}_{filename}")
+        file.save(temp_path)
+
+        # Get style ID
+        style_id = request.form.get('style_id', '').strip()
+        if not style_id:
+            return jsonify({'error': 'Style ID is required'}), 400
+
+        # Compare styles
+        style_mgr = get_style_manager()
+        similarity = style_mgr.compare_styles(temp_path, style_id)
+
+        # Clean up
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+
+        return jsonify({
+            'success': True,
+            'similarity': similarity
+        })
+
+    except Exception as e:
+        logger.error(f"Error comparing styles: {str(e)}")
+        return jsonify({'error': f'Style comparison failed: {str(e)}'}), 500
+
+@app.route('/api/generate-with-style', methods=['POST'])
+def generate_with_style():
+    """
+    Generate 3D model with style reference
+
+    Expected form data:
+    - image: File upload
+    - style_id: str
+    - foreground_ratio: float (optional)
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No image file selected'}), 400
+
+        # Save uploaded image
+        filename = secure_filename(file.filename)
+        job_id = str(uuid.uuid4())
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"stylegen_{job_id}_{filename}")
+        file.save(upload_path)
+
+        # Get parameters
+        style_id = request.form.get('style_id', '').strip()
+        foreground_ratio = float(request.form.get('foreground_ratio', 0.85))
+
+        if not style_id:
+            return jsonify({'error': 'Style ID is required'}), 400
+
+        logger.info(f"Generating 3D model with style reference: {style_id}")
+
+        # Generate output filename
+        output_filename = f"styled_{job_id}.glb"
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+
+        # Generate with style
+        ref_gen = get_reference_generator()
+        success, message = ref_gen.generate_with_reference(
+            image_path=upload_path,
+            reference_style_id=style_id,
+            output_path=output_path
+        )
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'model_url': f'/static/outputs/{output_filename}',
+                'filename': output_filename
+            })
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error generating with style: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Style-guided generation failed: {str(e)}'}), 500
+
+# ============================================================================
 # ERROR HANDLERS
 # ============================================================================
 
@@ -1034,6 +1615,11 @@ if __name__ == '__main__':
     print("  • Image-to-3D Model Conversion (MiDaS Depth Estimation)")
     print("  • AI-Powered Model Texturing (Stable Diffusion)")
     print()
+    print("  🖼️  Image Preprocessing:")
+    print("  • AI-Powered Image Editing with Prompts (e.g., 'put them in a t-pose')")
+    print("  • Pose Detection (MediaPipe)")
+    print("  • Background Removal & Framing Enhancement")
+    print()
     print("  🦴 Rigging & Animation:")
     print("  • Automatic Skeleton Generation (Humanoid, Quadruped, Biped)")
     print("  • AI-Powered Bone Weight Painting")
@@ -1048,6 +1634,20 @@ if __name__ == '__main__':
     print("  • Full PBR Material System (Albedo, Normal, Roughness, Metallic, AO)")
     print("  • Material Presets (Metal, Wood, Plastic, Stone, Fabric, etc.)")
     print("  • Procedural Texture Generation")
+    print("  • AI Texture Upscaling (Real-ESRGAN, up to 8x)")
+    print("  • Seamless Texture Generation")
+    print()
+    print("  🔧 Mesh Optimization:")
+    print("  • AI Retopology (Quad-Dominant Topology)")
+    print("  • Mesh Quality Analysis & Scoring")
+    print("  • Auto LOD Generation (3+ Levels)")
+    print("  • Smart Decimation")
+    print()
+    print("  🎨 Style Consistency:")
+    print("  • CLIP-Based Style Extraction & Management")
+    print("  • Reference-Guided Generation")
+    print("  • Style Comparison & Matching")
+    print("  • Persistent Style Database")
     print()
     print("  🚀 Workflow & Productivity:")
     print("  • Batch Processing Queue")
