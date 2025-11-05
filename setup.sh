@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Stunning Modeler - Setup Script
+# Polii - Setup Script
 # This script helps set up the environment for the 3D model generation framework
 
 set -e  # Exit on error
 
 echo "=========================================="
-echo "  Stunning Modeler - Setup Script"
+echo "  Polii - Setup Script"
 echo "=========================================="
 echo ""
 

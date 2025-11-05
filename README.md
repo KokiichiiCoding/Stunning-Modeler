@@ -1,4 +1,4 @@
-# 🎨 Stunning Modeler
+# 🎨 Polii
 
 **Professional 3D Model Generation & Animation Studio**
 
@@ -188,17 +188,23 @@ A comprehensive, locally-hosted AI-powered 3D model generation system with advan
 ### Backend
 
 ```
-Stunning-Modeler/
+Polii/
 ├── app.py                      # Flask application & API routes
 ├── utils/
 │   ├── model_generator.py      # Text/Image-to-3D generation
 │   ├── model_processor.py      # Mesh processing & optimization
-│   └── texture_generator.py    # AI texture generation
+│   ├── texture_generator.py    # AI texture generation
+│   ├── auto_rigger.py          # Auto-rigging system
+│   ├── vrm_exporter.py         # VRM export for VTubers
+│   ├── pbr_materials.py        # PBR material generation
+│   └── batch_processor.py      # Batch & project management
 ├── static/
 │   ├── css/                    # Stylesheets
 │   ├── js/                     # JavaScript utilities
 │   ├── uploads/                # Temporary uploads
-│   └── outputs/                # Generated models
+│   ├── outputs/                # Generated models
+│   ├── projects/               # Project data
+│   └── materials/              # Material textures
 └── templates/                  # HTML templates
 ```
 
@@ -402,8 +408,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-- **Project Link**: [https://github.com/yourusername/stunning-modeler](https://github.com/yourusername/stunning-modeler)
-- **Issues**: [https://github.com/yourusername/stunning-modeler/issues](https://github.com/yourusername/stunning-modeler/issues)
+- **Project Link**: [https://github.com/KokiichiiCoding/Polii](https://github.com/KokiichiiCoding/Polii)
+- **Issues**: [https://github.com/KokiichiiCoding/Polii/issues](https://github.com/KokiichiiCoding/Polii/issues)
 
 ---
 
@@ -415,4 +421,4 @@ If you find this project useful, please consider giving it a star! ⭐
 
 **Made with ❤️ for the 3D community**
 
-*Stunning Modeler - Making 3D creation accessible to everyone*
+*Polii - Making 3D creation accessible to everyone*

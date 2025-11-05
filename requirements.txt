@@ -1,5 +1,5 @@
-# Stunning Modeler - Requirements
-# Professional 3D Model Generation Framework
+# Polii - Requirements
+# Professional 3D Model Generation & Animation Studio
 
 # ============================================================================
 # Core Web Framework

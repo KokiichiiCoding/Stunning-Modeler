@@ -102,7 +102,7 @@ class VRMExporter:
 
         default_meta = {
             'title': metadata.get('title', 'Generated Avatar'),
-            'author': metadata.get('author', 'Stunning Modeler'),
+            'author': metadata.get('author', 'Polii'),
             'version': metadata.get('version', '1.0'),
             'contactInformation': metadata.get('contact', ''),
             'reference': metadata.get('reference', ''),
@@ -290,7 +290,7 @@ class VRMExporter:
         """Create VRM extension data for GLTF"""
 
         vrm_ext = {
-            'exporterVersion': f'Stunning Modeler VRM Exporter {version}',
+            'exporterVersion': f'Polii VRM Exporter {version}',
             'specVersion': version,
             'meta': metadata,
         }

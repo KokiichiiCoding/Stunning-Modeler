@@ -1,6 +1,6 @@
 # 🚀 Quick Start Guide
 
-Get up and running with Stunning Modeler in 5 minutes!
+Get up and running with Polii in 5 minutes!
 
 ## Installation
 

@@ -1,9 +1,9 @@
 @echo off
-REM Stunning Modeler - Setup Script (Windows)
+REM Polii - Setup Script (Windows)
 REM This script helps set up the environment for the 3D model generation framework
 
 echo ==========================================
-echo   Stunning Modeler - Setup Script
+echo   Polii - Setup Script
 echo ==========================================
 echo.
 

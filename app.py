@@ -1,10 +1,12 @@
 """
-Stunning Modeler - Professional 3D Model Generation Framework
+Polii - Professional 3D Model Generation & Animation Studio
 A comprehensive AI-powered 3D model generation system supporting:
 - Text-to-3D model generation
 - Image-to-3D model conversion
 - Model import and texturing
-- Multi-format export (GLB, OBJ, FBX)
+- Auto-rigging and animation
+- VRM export for VTubers
+- Multi-format export (GLB, OBJ, FBX, VRM)
 """
 
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
@@ -646,7 +648,7 @@ def export_vrm():
         # Get metadata
         metadata = {
             'title': request.form.get('title', 'VRM Avatar'),
-            'author': request.form.get('author', 'Stunning Modeler'),
+            'author': request.form.get('author', 'Polii'),
             'version': request.form.get('avatar_version', '1.0'),
         }
 
@@ -1024,7 +1026,7 @@ def internal_error(error):
 
 if __name__ == '__main__':
     print("=" * 80)
-    print("  STUNNING MODELER - Professional 3D Model Generation & Animation Studio")
+    print("  POLII - Professional 3D Model Generation & Animation Studio")
     print("=" * 80)
     print()
     print("  🎨 Core Features:")
