@@ -6,6 +6,9 @@
 # ============================================================================
 Flask==3.0.0
 Werkzeug==3.0.1
+flask-socketio==5.3.5
+python-socketio==5.10.0
+eventlet==0.33.3
 
 # ============================================================================
 # Deep Learning & AI Models
@@ -42,6 +45,13 @@ networkx==3.2.1
 Pillow==10.1.0
 opencv-python==4.8.1.78
 imageio==2.33.0
+
+# Image preprocessing & enhancement
+rembg==2.0.50  # Background removal
+mediapipe==0.10.9  # Pose detection
+# realesrgan # AI texture upscaling - install separately if needed
+ftfy==6.1.3  # Text preprocessing for CLIP
+open-clip-torch==2.23.0  # CLIP for style management
 
 # ============================================================================
 # File Format Support

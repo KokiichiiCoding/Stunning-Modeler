@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text to 3D - Polii</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/progress.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="{{ url_for('static', filename='js/progress.js') }}"></script>
 </head>
 <body>
     <!-- Header -->
@@ -122,15 +125,12 @@
                             </button>
                         </form>
 
-                        <!-- Progress -->
-                        <div id="progressContainer" class="progress-container" style="display: none;">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                                <span>Generating your 3D model...</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
-                            </div>
+                        <!-- Real-time Progress Bar -->
+                        <div id="progressBar"></div>
+
+                        <!-- Connection Status -->
+                        <div class="connection-status disconnected" id="connectionStatus" style="margin-top: 1rem; display: none;">
+                            Connecting...
                         </div>
 
                         <!-- Alert Messages -->
@@ -344,8 +344,66 @@
             });
         });
 
-        // Form submission
+        // Initialize progress tracking
+        let progressBar;
         let startTime;
+
+        // Connect to WebSocket on page load
+        progressTracker.connect();
+
+        // Update connection status
+        progressTracker.onConnectionChange = (connected) => {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.style.display = 'inline-flex';
+            if (connected) {
+                statusEl.className = 'connection-status connected';
+                statusEl.textContent = 'Real-time updates enabled';
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 3000);
+            } else {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.textContent = 'Reconnecting...';
+            }
+        };
+
+        // Create progress bar instance
+        progressBar = new ProgressBar('progressBar');
+
+        // Handle completion
+        progressBar.onComplete = (result) => {
+            console.log('Generation completed:', result);
+            showAlert('success', 'Model generated successfully!');
+
+            // Load model in viewer
+            loadModel(result.model_url);
+
+            // Show download button
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.href = result.model_url;
+            downloadBtn.download = result.filename;
+            document.getElementById('downloadSection').style.display = 'block';
+
+            // Show model info
+            const endTime = Date.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(1);
+            const outputFormat = document.getElementById('outputFormat').value;
+            document.getElementById('infoFormat').textContent = outputFormat.toUpperCase();
+            document.getElementById('infoTime').textContent = duration + 's';
+            document.getElementById('modelInfo').style.display = 'block';
+
+            // Re-enable button
+            document.getElementById('generateBtn').disabled = false;
+        };
+
+        // Handle errors
+        progressBar.onError = (error) => {
+            console.error('Generation failed:', error);
+            showAlert('error', error);
+            document.getElementById('generateBtn').disabled = false;
+        };
+
+        // Form submission with real-time progress
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -359,22 +417,13 @@
                 return;
             }
 
-            // Show progress
-            document.getElementById('progressContainer').style.display = 'block';
-            document.getElementById('generateBtn').disabled = true;
+            // Clear previous alerts
             document.getElementById('alertContainer').innerHTML = '';
+            document.getElementById('generateBtn').disabled = true;
             startTime = Date.now();
 
-            // Simulate progress
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 5;
-                if (progress <= 90) {
-                    document.getElementById('progressFill').style.width = progress + '%';
-                }
-            }, 500);
-
             try {
+                // Start generation
                 const response = await fetch('/api/generate-text-to-3d', {
                     method: 'POST',
                     headers: {
@@ -388,39 +437,19 @@
                     })
                 });
 
-                clearInterval(progressInterval);
-                document.getElementById('progressFill').style.width = '100%';
-
                 const data = await response.json();
 
-                if (response.ok && data.success) {
-                    const endTime = Date.now();
-                    const duration = ((endTime - startTime) / 1000).toFixed(1);
-
-                    showAlert('success', data.message);
-
-                    // Load model in viewer
-                    loadModel(data.model_url);
-
-                    // Show download button
-                    const downloadBtn = document.getElementById('downloadBtn');
-                    downloadBtn.href = data.model_url;
-                    downloadBtn.download = data.filename;
-                    document.getElementById('downloadSection').style.display = 'block';
-
-                    // Show model info
-                    document.getElementById('infoFormat').textContent = outputFormat.toUpperCase();
-                    document.getElementById('infoTime').textContent = duration + 's';
-                    document.getElementById('modelInfo').style.display = 'block';
+                if (response.ok && data.success && data.job_id) {
+                    // Start tracking progress via WebSocket
+                    progressBar.track(data.job_id);
+                    showAlert('success', 'Generation started! Watch the progress bar below.');
                 } else {
-                    showAlert('error', data.error || 'Generation failed');
+                    showAlert('error', data.error || 'Failed to start generation');
+                    document.getElementById('generateBtn').disabled = false;
                 }
             } catch (error) {
-                clearInterval(progressInterval);
                 console.error('Error:', error);
                 showAlert('error', 'Network error: ' + error.message);
-            } finally {
-                document.getElementById('progressContainer').style.display = 'none';
                 document.getElementById('generateBtn').disabled = false;
             }
         });

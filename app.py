@@ -10,6 +10,7 @@ A comprehensive AI-powered 3D model generation system supporting:
 """
 
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.utils import secure_filename
 import os
 import sys
@@ -19,6 +20,7 @@ import time
 from datetime import datetime
 import traceback
 import logging
+from threading import Thread
 
 # Add utils to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'utils'))
@@ -35,6 +37,7 @@ from image_preprocessor import ImagePreprocessor
 from mesh_optimizer import MeshOptimizer
 from texture_upscaler import TextureUpscaler
 from style_manager import StyleManager, ReferenceGuidedGenerator
+from progress_tracker import progress_tracker
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +49,13 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max upload
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['OUTPUT_FOLDER'] = 'static/outputs'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'obj', 'glb', 'gltf', 'fbx', 'ply', 'stl'}
+app.config['SECRET_KEY'] = 'polii-3d-generation-secret-key-change-in-production'
+
+# Initialize SocketIO for real-time progress updates
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# Set SocketIO instance in progress tracker
+progress_tracker.set_socketio(socketio)
 
 # Ensure folders exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -227,7 +237,7 @@ def texture_model_page():
 @app.route('/api/generate-text-to-3d', methods=['POST'])
 def generate_text_to_3d():
     """
-    Generate 3D model from text description
+    Generate 3D model from text description with real-time progress updates
 
     Expected JSON:
     {
@@ -251,30 +261,79 @@ def generate_text_to_3d():
 
         logger.info(f"Generating 3D model from text: '{prompt}'")
 
-        # Generate unique filename
+        # Generate unique filename and create progress job
         job_id = str(uuid.uuid4())
         output_filename = f"text_to_3d_{job_id}.{output_format}"
         output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
 
-        # Generate the model
-        generator = get_text_to_3d_generator()
-        success, message = generator.generate(
-            prompt=prompt,
-            output_path=output_path,
-            guidance_scale=guidance_scale,
-            num_inference_steps=num_inference_steps
-        )
+        # Create progress tracking job
+        progress_job_id = progress_tracker.create_job('text_to_3d', f"Text-to-3D: {prompt[:30]}...")
 
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'Model generated successfully',
-                'model_url': f'/static/outputs/{output_filename}',
-                'filename': output_filename,
-                'job_id': job_id
-            })
-        else:
-            return jsonify({'error': message}), 500
+        def run_generation():
+            """Run generation in background thread with progress updates"""
+            try:
+                # Update: Starting
+                progress_tracker.update_progress(progress_job_id, 0.1, "Loading model...")
+
+                # Get generator
+                generator = get_text_to_3d_generator()
+
+                # Update: Model loaded
+                progress_tracker.update_progress(progress_job_id, 0.2, "Generating 3D model...")
+
+                # Create progress callback
+                def generation_progress(step, total_steps):
+                    # Progress from 20% to 80% during generation
+                    progress = 0.2 + (step / total_steps) * 0.6
+                    progress_tracker.update_progress(
+                        progress_job_id,
+                        progress,
+                        f"Generating... Step {step}/{total_steps}"
+                    )
+
+                # Generate the model
+                success, message = generator.generate(
+                    prompt=prompt,
+                    output_path=output_path,
+                    guidance_scale=guidance_scale,
+                    num_inference_steps=num_inference_steps
+                )
+
+                if success:
+                    # Update: Post-processing
+                    progress_tracker.update_progress(progress_job_id, 0.9, "Finalizing model...")
+
+                    # Complete the job
+                    progress_tracker.complete_job(
+                        progress_job_id,
+                        result={
+                            'model_url': f'/static/outputs/{output_filename}',
+                            'filename': output_filename
+                        },
+                        message="Model generated successfully!"
+                    )
+                else:
+                    # Mark job as failed
+                    progress_tracker.fail_job(progress_job_id, message)
+
+            except Exception as e:
+                error_msg = f"Generation failed: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                progress_tracker.fail_job(progress_job_id, error_msg)
+
+        # Start generation in background thread
+        thread = Thread(target=run_generation)
+        thread.daemon = True
+        thread.start()
+
+        # Return immediately with job ID for progress tracking
+        return jsonify({
+            'success': True,
+            'message': 'Generation started',
+            'job_id': progress_job_id,
+            'status': 'processing'
+        })
 
     except Exception as e:
         logger.error(f"Error in text-to-3D generation: {str(e)}")
@@ -1585,6 +1644,50 @@ def generate_with_style():
         return jsonify({'error': f'Style-guided generation failed: {str(e)}'}), 500
 
 # ============================================================================
+# WEBSOCKET EVENTS FOR REAL-TIME PROGRESS
+# ============================================================================
+
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection"""
+    logger.info(f"Client connected: {request.sid}")
+    emit('connection_response', {'status': 'connected', 'message': 'Connected to Polii server'})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection"""
+    logger.info(f"Client disconnected: {request.sid}")
+
+@socketio.on('join_job')
+def handle_join_job(data):
+    """Join a job room to receive progress updates"""
+    job_id = data.get('job_id')
+    if job_id:
+        join_room(job_id)
+        logger.info(f"Client {request.sid} joined job room: {job_id}")
+
+        # Send current job status
+        job_status = progress_tracker.get_job_status(job_id)
+        if job_status:
+            emit('progress_update', job_status)
+
+@socketio.on('leave_job')
+def handle_leave_job(data):
+    """Leave a job room"""
+    job_id = data.get('job_id')
+    if job_id:
+        leave_room(job_id)
+        logger.info(f"Client {request.sid} left job room: {job_id}")
+
+@socketio.on('get_job_status')
+def handle_get_job_status(data):
+    """Get current status of a job"""
+    job_id = data.get('job_id')
+    if job_id:
+        job_status = progress_tracker.get_job_status(job_id)
+        emit('job_status_response', job_status or {'error': 'Job not found'})
+
+# ============================================================================
 # ERROR HANDLERS
 # ============================================================================
 
@@ -1656,7 +1759,9 @@ if __name__ == '__main__':
     print("  • Multi-format Export (GLB, OBJ, FBX, PLY, STL, VRM)")
     print()
     print("  Server starting at: http://localhost:5000")
+    print("  Real-time progress updates: WebSocket enabled")
     print("=" * 80)
     print()
 
-    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+    # Run with SocketIO for WebSocket support
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
