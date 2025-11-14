@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'utils'))
 
 # Import our custom utilities
 from model_generator import TextTo3DGenerator, ImageTo3DGenerator
+from advanced_img2mesh import TripoSRGenerator, Hunyuan3DGenerator, MultiModelImageTo3D
 from model_processor import ModelProcessor
 from texture_generator import TextureGenerator
 from auto_rigger import AutoRigger
@@ -67,6 +68,7 @@ os.makedirs('static/styles', exist_ok=True)
 # Initialize generators (lazy loading)
 text_to_3d_generator = None
 image_to_3d_generator = None
+advanced_image_to_3d_generator = None  # Multi-model generator (TripoSR, Hunyuan3D)
 model_processor = None
 texture_generator = None
 auto_rigger = None
@@ -94,12 +96,25 @@ def get_text_to_3d_generator():
     return text_to_3d_generator
 
 def get_image_to_3d_generator():
-    """Lazy load image-to-3D generator"""
+    """Lazy load image-to-3D generator (MiDaS-based fallback)"""
     global image_to_3d_generator
     if image_to_3d_generator is None:
         logger.info("Initializing Image-to-3D Generator...")
         image_to_3d_generator = ImageTo3DGenerator()
     return image_to_3d_generator
+
+def get_advanced_image_to_3d_generator(preferred_model='triposr'):
+    """
+    Lazy load advanced image-to-3D generator (TripoSR, Hunyuan3D)
+
+    Args:
+        preferred_model: 'triposr', 'hunyuan3d', or 'midas' (fallback)
+    """
+    global advanced_image_to_3d_generator
+    if advanced_image_to_3d_generator is None:
+        logger.info(f"Initializing Advanced Image-to-3D Generator (preferred: {preferred_model})...")
+        advanced_image_to_3d_generator = MultiModelImageTo3D(preferred_model=preferred_model)
+    return advanced_image_to_3d_generator
 
 def get_model_processor():
     """Lazy load model processor"""
@@ -347,12 +362,17 @@ def generate_text_to_3d():
 @app.route('/api/generate-image-to-3d', methods=['POST'])
 def generate_image_to_3d():
     """
-    Generate 3D model from image
+    Generate 3D model from image using advanced AI models
 
     Expected form data:
     - image: File upload
-    - foreground_ratio: float (optional)
-    - output_format: str (optional)
+    - model: str (optional) - 'triposr', 'hunyuan3d', or 'midas' (default: 'triposr')
+    - foreground_ratio: float (optional, default: 0.85)
+    - output_format: str (optional, default: 'glb')
+    - remove_bg: bool (optional, default: true) - For TripoSR/Hunyuan3D
+    - mc_resolution: int (optional, default: 256) - For TripoSR mesh quality
+    - num_inference_steps: int (optional, default: 50) - For Hunyuan3D
+    - guidance_scale: float (optional, default: 7.5) - For Hunyuan3D
     """
     try:
         if 'image' not in request.files:
@@ -373,33 +393,98 @@ def generate_image_to_3d():
         file.save(upload_path)
 
         # Get parameters
+        model_type = request.form.get('model', 'triposr').lower()
         foreground_ratio = float(request.form.get('foreground_ratio', 0.85))
         output_format = request.form.get('output_format', 'glb')
+        remove_bg = request.form.get('remove_bg', 'true').lower() == 'true'
+        mc_resolution = int(request.form.get('mc_resolution', 256))
+        num_inference_steps = int(request.form.get('num_inference_steps', 50))
+        guidance_scale = float(request.form.get('guidance_scale', 7.5))
 
-        logger.info(f"Generating 3D model from image: {filename}")
+        logger.info(f"Generating 3D model from image using {model_type}: {filename}")
 
         # Generate output filename
-        output_filename = f"image_to_3d_{job_id}.{output_format}"
+        output_filename = f"image_to_3d_{model_type}_{job_id}.{output_format}"
         output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
 
-        # Generate the model
-        generator = get_image_to_3d_generator()
-        success, message = generator.generate(
-            image_path=upload_path,
-            output_path=output_path,
-            foreground_ratio=foreground_ratio
-        )
+        # Create a progress job ID for WebSocket updates
+        progress_job_id = f"img2mesh_{job_id}"
 
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'Model generated successfully from image',
-                'model_url': f'/static/outputs/{output_filename}',
-                'filename': output_filename,
-                'job_id': job_id
-            })
-        else:
-            return jsonify({'error': message}), 500
+        # Start generation in a background thread with progress tracking
+        def generate_with_progress():
+            try:
+                progress_tracker.start_job(progress_job_id, "Image-to-3D Generation")
+
+                def progress_callback(progress, status):
+                    progress_tracker.update_progress(progress_job_id, progress, status)
+
+                # Get the appropriate generator
+                if model_type in ['triposr', 'hunyuan3d']:
+                    generator = get_advanced_image_to_3d_generator(preferred_model=model_type)
+
+                    # Prepare model-specific arguments
+                    if model_type == 'triposr':
+                        kwargs = {
+                            'remove_bg': remove_bg,
+                            'foreground_ratio': foreground_ratio,
+                            'mc_resolution': mc_resolution,
+                            'progress_callback': progress_callback
+                        }
+                    else:  # hunyuan3d
+                        kwargs = {
+                            'num_inference_steps': num_inference_steps,
+                            'guidance_scale': guidance_scale,
+                            'progress_callback': progress_callback
+                        }
+
+                    success, message = generator.generate(
+                        image_path=upload_path,
+                        output_path=output_path,
+                        model=model_type,
+                        **kwargs
+                    )
+                else:
+                    # Fallback to MiDaS-based generator
+                    generator = get_image_to_3d_generator()
+                    progress_callback(0.5, "Running MiDaS depth estimation...")
+                    success, message = generator.generate(
+                        image_path=upload_path,
+                        output_path=output_path,
+                        foreground_ratio=foreground_ratio
+                    )
+                    progress_callback(1.0, "Complete!")
+
+                if success:
+                    progress_tracker.complete_job(
+                        progress_job_id,
+                        f"Model generated successfully from image using {model_type}",
+                        {
+                            'model_url': f'/static/outputs/{output_filename}',
+                            'filename': output_filename,
+                            'model_type': model_type
+                        }
+                    )
+                else:
+                    progress_tracker.fail_job(progress_job_id, message)
+
+            except Exception as e:
+                logger.error(f"Error in background generation: {str(e)}")
+                logger.error(traceback.format_exc())
+                progress_tracker.fail_job(progress_job_id, f"Generation failed: {str(e)}")
+
+        # Start background thread
+        thread = Thread(target=generate_with_progress)
+        thread.daemon = True
+        thread.start()
+
+        # Return immediately with job ID for progress tracking
+        return jsonify({
+            'success': True,
+            'message': f'Generation started with {model_type}',
+            'job_id': progress_job_id,
+            'status': 'processing',
+            'model_type': model_type
+        })
 
     except Exception as e:
         logger.error(f"Error in image-to-3D generation: {str(e)}")

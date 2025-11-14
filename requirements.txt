@@ -28,6 +28,16 @@ accelerate>=0.25.0
 # Install from GitHub as it may not be on PyPI yet
 # git+https://github.com/openai/shap-e.git
 
+# TripoSR for Image-to-3D (Stability AI)
+# git+https://github.com/VAST-AI-Research/TripoSR.git
+torchmcubes>=0.1.0  # Required for TripoSR mesh extraction
+einops>=0.7.0  # Required for TripoSR
+
+# Hunyuan3D for Image-to-3D (Tencent)
+# git+https://github.com/Tencent/Hunyuan3D-1.git
+omegaconf>=2.3.0  # Configuration management for Hunyuan3D
+rembg[gpu]>=2.0.50  # Enhanced background removal with GPU support
+
 # ============================================================================
 # 3D Processing & Mesh Manipulation
 # ============================================================================
