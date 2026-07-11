@@ -22,6 +22,11 @@ add_library(tp_engine
     src/engine/io/GameData.cpp
     src/engine/io/ScenarioLoader.cpp
     src/engine/scoring/TrophyScore.cpp
+    src/engine/world/Terrain.cpp
+    src/engine/world/Wind.cpp
+    src/engine/world/Evidence.cpp
+    src/engine/world/Scent.cpp
+    src/engine/world/SoundEvents.cpp
 )
 
 target_include_directories(tp_engine PUBLIC src)
@@ -59,6 +64,7 @@ if(TP_BUILD_TESTS)
     tp_add_test(tp_trophy_score tests/trophy_score_test.cpp)
     tp_add_test(tp_golden_scenarios tests/GoldenScenarioTests.cpp)
     tp_add_test(tp_animal_generation tests/animal_generation_test.cpp)
+    tp_add_test(tp_world tests/world_test.cpp)
     # Note: tests/heart_shot_check.cpp is a print-only diagnostic scratch file
     # (no assertions, always exits 0) used while developing the cardiac-timer
     # fast-path. It's kept in the repo for manual inspection but intentionally
