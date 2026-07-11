@@ -208,6 +208,139 @@ void HuntLoopSim::finish(bool success, const std::string& failureReason) {
     log("Hunt complete.");
 }
 
+void HuntLoopSim::claimAnimal() {
+    const CreatureState& c = animal_->creature();
+    std::ostringstream inspect;
+    inspect << "CLAIMED " << result_.animal.individualId << ": "
+            << toString(result_.animal.sex) << " "
+            << toString(result_.animal.ageClass) << ", "
+            << static_cast<int>(result_.animal.bodyMassKg) << " kg, trophy size "
+            << static_cast<int>(result_.animal.trophySize01 * 100.0) << "/100."
+            << " Wounds:";
+    for (const auto& wound : c.wounds) {
+        inspect << " [" << wound.bodyPartId
+                << (wound.exitWound ? ", entry+exit" : ", entry only") << ", "
+                << wound.bleedRateMlPerSec << " ml/s]";
+    }
+    log(inspect.str());
+
+    result_.animalRecovered = true;
+    if (animalWasHit_) {
+        result_.recoveryDistanceM =
+            planarDistance(animalPosAtFirstHit_, animal_->position());
+    }
+    // A carcass is a world object: it smells, and scavengers (later
+    // milestones) will care.
+    scent_.emit(animal_->position(), kScentStrengthCarcass, "carcass", nowS_);
+}
+
+void HuntLoopSim::adjudicateAtExtraction() {
+    if (contract_.type == ContractType::ResearchObservation) {
+        if (!animal_->creature().wounds.empty()) {
+            finish(false, "Research target was wounded.");
+            return;
+        }
+        if (!result_.observedOnly) {
+            finish(false, "Left without completing the observation.");
+            return;
+        }
+        // Research scores on the documented animal alone.
+        result_.trophyScore.biologicalQuality = result_.animal.biologicalQualityPercent;
+        result_.trophyScore.overall = result_.animal.biologicalQualityPercent;
+        result_.trophyScore.tier = "Documented";
+        finish(true, "");
+        return;
+    }
+
+    TrophyScoreInput input;
+    input.biologicalQualityPercent = result_.animal.biologicalQualityPercent;
+    input.shotsFired = result_.shotsFired;
+    input.timeToIncapacitationSeconds = result_.timeToIncapacitationS;
+    result_.trophyScore = computeTrophyScore(animal_->creature(), input);
+
+    if (!result_.animalRecovered) {
+        finish(false, "Left without recovering the animal.");
+        return;
+    }
+    if (result_.shotsFired > contract_.maxShots) {
+        finish(false, "Exceeded the contract's shot allowance.");
+        return;
+    }
+    if (result_.trophyScore.overall < contract_.minTrophyQuality) {
+        finish(false, "Trophy quality " + std::to_string(result_.trophyScore.overall) +
+                          " below the contracted minimum.");
+        return;
+    }
+    finish(true, "");
+}
+
+void HuntLoopSim::setManualHunter(bool enabled) {
+    manual_ = enabled;
+}
+
+void HuntLoopSim::manualControl(const ManualInput& input) {
+    manualInput_ = input;
+}
+
+void HuntLoopSim::updateManual(double dt) {
+    hunterStance_ = manualInput_.stance;
+
+    // Stance-governed pace; sprinting only upright. The noise consequences
+    // fall out of movementLoudness() in step() exactly as for the bot.
+    double speed = 0.0;
+    switch (manualInput_.stance) {
+        case Stance::Standing: speed = manualInput_.sprint ? 4.0 : 1.7; break;
+        case Stance::Crouched: speed = 0.8; break;
+        case Stance::Prone:    speed = 0.4; break;
+    }
+
+    const Vec3 dir = manualInput_.moveDir;
+    const double len = dir.length();
+    if (len > 1e-6) {
+        const Vec3 target{hunterPos_.x + dir.x / len * 50.0,
+                          hunterPos_.y + dir.y / len * 50.0, 0.0};
+        moveHunterToward(target, speed, dt);
+    } else {
+        hunterSpeedMps_ = 0.0;
+    }
+
+    const double dist = hunterAnimalDistanceM();
+    const bool animalDown = animal_->alertState() == AlertState::Incapacitated;
+
+    if (manualInput_.fire && hasWeapon_ && sinceLastShotS_ > 1.0 &&
+        result_.shotsFired < contract_.maxShots && hunterCanSeeAnimal() &&
+        dist < 250.0) {
+        // Simplified aim assist for the first playable pass: the shot is
+        // resolved against the species' broadside vital stack at the true
+        // distance. Free aim over anatomy comes with the 3D viewer camera.
+        fireAtAnimal("SHOT");
+    }
+
+    if (manualInput_.interact && animalDown && dist < kClaimRangeM &&
+        !result_.animalRecovered) {
+        claimAnimal();
+        log("Harvest tagged. Make for the extraction zone.");
+    }
+
+    if (contract_.type == ContractType::ResearchObservation && !result_.observedOnly &&
+        hunterCanSeeAnimal() && dist <= contract_.observationRangeM &&
+        animal_->creature().wounds.empty() && !animalDown) {
+        manualObservedS_ += dt;
+        if (manualObservedS_ >= contract_.observationTimeS) {
+            result_.observedOnly = true;
+            log("Observation complete: documentation secured.");
+        }
+    }
+
+    const bool readyToExtract =
+        result_.animalRecovered ||
+        (contract_.type == ContractType::ResearchObservation && result_.observedOnly);
+    if (readyToExtract && planarDistance(hunterPos_, extractionPos_) < 8.0) {
+        log("Reached the extraction zone.");
+        adjudicateAtExtraction();
+    }
+}
+
 void HuntLoopSim::updatePhase(double dt) {
     const double dist = hunterAnimalDistanceM();
     const bool animalDown = animal_->alertState() == AlertState::Incapacitated;
@@ -379,30 +512,7 @@ void HuntLoopSim::updatePhase(double dt) {
         }
 
         case HuntPhase::Claiming: {
-            const CreatureState& c = animal_->creature();
-            std::ostringstream inspect;
-            inspect << "CLAIMED " << result_.animal.individualId << ": "
-                    << toString(result_.animal.sex) << " "
-                    << toString(result_.animal.ageClass) << ", "
-                    << static_cast<int>(result_.animal.bodyMassKg) << " kg, trophy size "
-                    << static_cast<int>(result_.animal.trophySize01 * 100.0) << "/100."
-                    << " Wounds:";
-            for (const auto& wound : c.wounds) {
-                inspect << " [" << wound.bodyPartId
-                        << (wound.exitWound ? ", entry+exit" : ", entry only") << ", "
-                        << wound.bleedRateMlPerSec << " ml/s]";
-            }
-            log(inspect.str());
-
-            result_.animalRecovered = true;
-            if (animalWasHit_) {
-                result_.recoveryDistanceM =
-                    planarDistance(animalPosAtFirstHit_, animal_->position());
-            }
-            // A carcass is a world object: it smells, and scavengers (later
-            // milestones) will care.
-            scent_.emit(animal_->position(), kScentStrengthCarcass, "carcass", nowS_);
-
+            claimAnimal();
             log("Harvest tagged. Heading to extraction.");
             phase_ = HuntPhase::Extracting;
             break;
@@ -413,44 +523,7 @@ void HuntLoopSim::updatePhase(double dt) {
             moveHunterToward(extractionPos_, kWalkMps, dt);
             if (planarDistance(hunterPos_, extractionPos_) < 8.0) {
                 log("Reached the extraction zone.");
-
-                // Contract adjudication.
-                if (contract_.type == ContractType::ResearchObservation) {
-                    const bool clean = animal_->creature().wounds.empty();
-                    if (!clean) {
-                        finish(false, "Research target was wounded.");
-                        return;
-                    }
-                    // Research scores on the documented animal alone.
-                    result_.trophyScore.biologicalQuality =
-                        result_.animal.biologicalQualityPercent;
-                    result_.trophyScore.overall = result_.animal.biologicalQualityPercent;
-                    result_.trophyScore.tier = "Documented";
-                    finish(true, "");
-                    return;
-                }
-
-                TrophyScoreInput input;
-                input.biologicalQualityPercent = result_.animal.biologicalQualityPercent;
-                input.shotsFired = result_.shotsFired;
-                input.timeToIncapacitationSeconds = result_.timeToIncapacitationS;
-                result_.trophyScore = computeTrophyScore(animal_->creature(), input);
-
-                if (!result_.animalRecovered) {
-                    finish(false, "Left without recovering the animal.");
-                    return;
-                }
-                if (result_.shotsFired > contract_.maxShots) {
-                    finish(false, "Exceeded the contract's shot allowance.");
-                    return;
-                }
-                if (result_.trophyScore.overall < contract_.minTrophyQuality) {
-                    finish(false, "Trophy quality " +
-                                      std::to_string(result_.trophyScore.overall) +
-                                      " below the contracted minimum.");
-                    return;
-                }
-                finish(true, "");
+                adjudicateAtExtraction();
                 return;
             }
             break;
@@ -520,7 +593,11 @@ void HuntLoopSim::step(double dt) {
         prevAnimalState_ = animalState;
     }
 
-    updatePhase(dt);
+    if (manual_) {
+        updateManual(dt);
+    } else {
+        updatePhase(dt);
+    }
 
     if (!finished_ && nowS_ > contract_.timeLimitS) {
         finish(false, "Contract time limit expired.");

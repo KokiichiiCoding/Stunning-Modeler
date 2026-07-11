@@ -84,6 +84,27 @@ public:
     [[nodiscard]] bool finished() const;
     void runToCompletion();
 
+    // --- Manual (human) hunter control -----------------------------------
+    // When enabled, the scripted policy stops driving the hunter; the
+    // caller (viewer) feeds inputs each frame via manualControl(). Every
+    // simulation rule — perception, ballistics, evidence, contract
+    // adjudication — stays identical; only the decision source changes.
+    void setManualHunter(bool enabled);
+    struct ManualInput {
+        Vec3 moveDir;          // desired horizontal direction, need not be normalized
+        bool sprint{false};
+        Stance stance{Stance::Standing};
+        bool fire{false};      // fire at the animal if visible and in range
+        bool interact{false};  // claim a downed animal within reach
+    };
+    void manualControl(const ManualInput& input);
+    // Feedback for the player UI.
+    [[nodiscard]] bool animalVisibleToHunter() const { return hunterCanSeeAnimal(); }
+    [[nodiscard]] double distanceToAnimalM() const { return hunterAnimalDistanceM(); }
+    [[nodiscard]] bool harvestTagged() const { return result_.animalRecovered; }
+    [[nodiscard]] const Contract& contract() const { return contract_; }
+    [[nodiscard]] int shotsFired() const { return result_.shotsFired; }
+
     [[nodiscard]] const HuntResult& result() const { return result_; }
 
     // Introspection for the debug viewer / tests.
@@ -91,6 +112,7 @@ public:
     [[nodiscard]] const TerrainGrid& terrain() const { return terrain_; }
     [[nodiscard]] const WindModel& wind() const { return wind_; }
     [[nodiscard]] const EvidenceMap& evidence() const { return evidence_; }
+    [[nodiscard]] const ScentField& scent() const { return scent_; }
     [[nodiscard]] const AnimalAgent& animal() const { return *animal_; }
     [[nodiscard]] Vec3 hunterPos() const { return hunterPos_; }
     [[nodiscard]] Stance hunterStance() const { return hunterStance_; }
@@ -105,6 +127,9 @@ private:
     [[nodiscard]] std::string pickAimBodyPart() const;
     void finish(bool success, const std::string& failureReason);
     void updatePhase(double dt);
+    void updateManual(double dt);
+    void claimAnimal();
+    void adjudicateAtExtraction();
 
     const GameDataRegistry* registry_;
     Contract contract_;
@@ -146,6 +171,10 @@ private:
     AlertState prevAnimalState_{AlertState::Calm};
     HuntResult result_;
     bool finished_{false};
+
+    bool manual_{false};
+    ManualInput manualInput_;
+    double manualObservedS_{0.0};
 };
 
 [[nodiscard]] const char* toString(HuntPhase p);
