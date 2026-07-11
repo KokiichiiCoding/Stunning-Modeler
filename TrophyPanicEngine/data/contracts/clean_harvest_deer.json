@@ -1,0 +1,14 @@
+{
+  "id": "clean_harvest_deer",
+  "title": "Clean Harvest: Ridge Deer near the meadow",
+  "type": "clean_harvest",
+  "species": "prototype_deer",
+  "region": "meadow",
+  "min_trophy_quality": 50.0,
+  "max_shots": 3,
+  "time_limit_s": 1800.0,
+  "reward_credits": 450.0,
+  "allowed_equipment": ["bolt_rifle_308", "binoculars", "rangefinder", "field_knife", "wind_ribbon"],
+  "world_seed": 1234,
+  "animal_seed": 42
+}

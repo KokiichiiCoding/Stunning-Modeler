@@ -29,6 +29,9 @@ add_library(tp_engine
     src/engine/world/SoundEvents.cpp
     src/engine/ai/Perception.cpp
     src/engine/ai/Behavior.cpp
+    src/engine/game/Contracts.cpp
+    src/engine/game/HuntLoop.cpp
+    src/engine/game/IncidentReport.cpp
 )
 
 target_include_directories(tp_engine PUBLIC src)
@@ -46,6 +49,12 @@ target_link_libraries(tp_demo PRIVATE tp_engine)
 
 add_executable(tp_scenario src/scenario_runner.cpp)
 target_link_libraries(tp_scenario PRIVATE tp_engine)
+
+# Full autonomous hunt-loop driver: camp -> track -> shoot -> trail ->
+# claim -> extract, entirely headless. Prints the hunt transcript and
+# writes an incident-report JSON. Usage: tp_hunt <contract.json> [seed]
+add_executable(tp_hunt src/hunt_runner.cpp)
+target_link_libraries(tp_hunt PRIVATE tp_engine)
 
 if(TP_BUILD_TESTS)
     enable_testing()
@@ -68,6 +77,7 @@ if(TP_BUILD_TESTS)
     tp_add_test(tp_animal_generation tests/animal_generation_test.cpp)
     tp_add_test(tp_world tests/world_test.cpp)
     tp_add_test(tp_behavior tests/behavior_test.cpp)
+    tp_add_test(tp_hunt_loop tests/hunt_loop_test.cpp)
     # Note: tests/heart_shot_check.cpp is a print-only diagnostic scratch file
     # (no assertions, always exits 0) used while developing the cardiac-timer
     # fast-path. It's kept in the repo for manual inspection but intentionally

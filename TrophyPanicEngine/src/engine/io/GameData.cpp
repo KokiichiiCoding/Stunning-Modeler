@@ -233,6 +233,71 @@ std::map<std::string, ProjectileSpec> loadAmmunitionFromFile(const std::string& 
     return result;
 }
 
+std::map<std::string, ItemSpec> loadItemsFromFile(const std::string& path) {
+    const std::string text = readFileOrThrow(path);
+
+    json::Value root;
+    try {
+        root = json::Value::parse(text);
+    } catch (const json::JsonError& e) {
+        throw GameDataError("JSON parse error in '" + path + "': " + e.what());
+    }
+
+    std::map<std::string, ItemSpec> result;
+    try {
+        const json::Value& items = root["items"];
+        if (!items.isObject()) {
+            throw GameDataError("'items' must be an object in '" + path + "'");
+        }
+        for (const auto& id : items.objectKeys()) {
+            const json::Value& it = items[id];
+            ItemSpec spec;
+            spec.id = id;
+            spec.displayName = it.stringOr("display_name", id);
+            spec.kind = it["kind"].asString();
+            spec.projectileId = it.stringOr("projectile", "");
+            spec.magazineSize = static_cast<int>(it.numberOr("magazine_size", 0.0));
+            spec.fireSound = it.stringOr("fire_sound", "");
+            spec.fireLoudness = it.numberOr("fire_loudness", 0.0);
+            spec.magnification = it.numberOr("magnification", 1.0);
+            spec.ranging = it.boolOr("ranging", false);
+            result[id] = std::move(spec);
+        }
+    } catch (const json::JsonError& e) {
+        throw GameDataError("Malformed items file '" + path + "': " + e.what());
+    }
+
+    if (result.empty()) {
+        throw GameDataError("Items file '" + path + "' defines zero items");
+    }
+    return result;
+}
+
+void GameDataRegistry::loadItemsFile(const std::string& path) {
+    auto loaded = loadItemsFromFile(path);
+    for (auto& [id, spec] : loaded) {
+        items_[id] = std::move(spec);
+    }
+}
+
+bool GameDataRegistry::hasItem(const std::string& id) const {
+    return items_.find(id) != items_.end();
+}
+
+const ItemSpec& GameDataRegistry::item(const std::string& id) const {
+    auto it = items_.find(id);
+    if (it == items_.end()) {
+        throw GameDataError("Unknown item id: '" + id + "'");
+    }
+    return it->second;
+}
+
+std::vector<std::string> GameDataRegistry::itemIds() const {
+    std::vector<std::string> ids;
+    for (const auto& [id, _] : items_) ids.push_back(id);
+    return ids;
+}
+
 void GameDataRegistry::loadSpeciesFile(const std::string& path) {
     // The file is parsed twice (anatomy + profile); acceptable for small,
     // one-time startup data loads, and not worth a merged loader code path.
