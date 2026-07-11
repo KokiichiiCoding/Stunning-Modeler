@@ -244,7 +244,7 @@ int main() {
     // --- Sound -------------------------------------------------------------------
     {
         SoundLog log;
-        log.emit(SoundCategory::Gunshot, {0, 0, 0}, 1000.0, 10.0, "player");
+        log.emit(SoundCategory::Gunshot, {0, 0, 0}, kLoudnessGunshot, 10.0, "player");
         log.emit(SoundCategory::Footstep, {0, 0, 0}, 0.5, 10.0, "player");
 
         const auto recent = log.eventsSince(9.0);

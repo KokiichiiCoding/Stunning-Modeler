@@ -53,6 +53,16 @@ private:
     std::vector<SoundEvent> events_;
 };
 
+// Standard source intensities (at 1 m) so emitters and tests agree.
+// With inverse-square falloff and the animal hearing floor (~0.02), a
+// rifle shot stays audible out to roughly 3.5 km; a squeeze of a rubber
+// chicken carries ~200 m on a quiet day.
+inline constexpr double kLoudnessGunshot = 2.5e5;
+inline constexpr double kLoudnessChickenSqueak = 900.0;
+inline constexpr double kLoudnessLeafBlower = 2500.0;
+inline constexpr double kLoudnessEquipmentImpact = 150.0;
+inline constexpr double kLoudnessHunterCall = 400.0;
+
 [[nodiscard]] const char* toString(SoundCategory c);
 
 } // namespace tp
