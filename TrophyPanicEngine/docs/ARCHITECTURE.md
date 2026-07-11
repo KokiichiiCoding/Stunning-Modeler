@@ -70,3 +70,37 @@ This allows a failed hunt to be reproduced exactly in tests.
 - Joules
 - milliliters for blood volume
 - degrees only at user-facing boundaries; radians internally when practical
+
+## Module map (v0.3)
+
+```text
+engine/core        Fixed-step loop, seeded Rng (determinism backbone)
+engine/math        Vec3 (x/y ground plane, z up, meters)
+engine/ballistics  Flight, impact, layered tissue traversal
+engine/biology     Anatomy, wounds, physiology, mobility (authoritative)
+engine/ecology     Deterministic individual-animal generation
+engine/io          JSON parser, species/ammo/items/scenario loading
+engine/world       Terrain grid, wind, evidence (tracks/blood/clues),
+                   scent plume, world sound events
+engine/ai          Perception (vision/hearing/smell) and AnimalAgent
+                   behavior (alertness ladder, wounded styles, memory)
+engine/scoring     Four-part trophy score
+engine/sim         HuntSimulation (single-creature), ScenarioRunner
+engine/game        Contracts, HuntLoopSim (full loop, bot or manual
+                   input), incident reports
+viewer/            OPTIONAL SDL2/OpenGL debug viewer — presentation
+                   only; reads simulation state, never writes gameplay
+                   facts
+```
+
+Dependency direction: `viewer -> engine/game -> (ai, world, ecology,
+scoring, sim) -> (ballistics, biology, io) -> (core, math)`. Nothing in
+`engine/` includes SDL or OpenGL; the headless build has zero external
+dependencies.
+
+The hunter in `HuntLoopSim` is driven either by the deterministic bot
+policy (headless tests, spectate mode) or by `ManualInput` from a human
+(viewer `--player`). Both paths call the same fire/claim/adjudication
+code — input source is the only difference, which is also the shape a
+future networked client/server split needs (input as commands,
+simulation as authority).

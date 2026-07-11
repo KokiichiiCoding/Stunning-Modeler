@@ -189,3 +189,52 @@ Six suites, all currently green:
 6. Add replay snapshots for multiplayer validation.
 
 See `docs/ROADMAP.md` for the larger plan.
+
+## v0.3: the playable vertical slice (headless + optional viewer)
+
+Everything from Milestone 1 still holds. This version adds the complete
+hunt loop and the systems beneath it:
+
+- Four species (deer, boar, elk, black bear) with extended profile data
+  (mass ranges, senses, behavior tuning, tracks) — `docs/DATA_FORMATS.md`.
+- Deterministic animal generation: (species, seed) -> individual; the
+  trophy score's Biological Quality is now computed, not supplied.
+- World layer: procedural terrain (guaranteed camp/forest/meadow/creek/
+  rocky slope/dense cover/extraction zones), drifting wind, aging tracks
+  with injured gaits, blood evidence driven by the actual wound state,
+  wind-advected scent, and authoritative world sound events.
+- Animal AI: graded alertness ladder (no binary detection), species
+  wounded styles (deer/elk bed down, boars charge when cornered, bears
+  answer close threats), herd alarm, physiology-capped movement.
+- Contracts (clean harvest / problem animal / research observation) with
+  embedded seeds, the full camp-to-extraction hunt loop (`tp_hunt`), and
+  reproducible JSON incident reports.
+- An optional SDL2/OpenGL debug viewer (`-DTP_BUILD_VIEWER=ON`) with a
+  spectate mode for the autonomous hunter and a `--player` mode for
+  manual control. The headless build remains dependency-free.
+
+### Quick start
+
+```bash
+./scripts/validate.sh                                   # build + all tests + all scenarios + all contracts
+./build/tp_hunt data/contracts/clean_harvest_deer.json  # watch a full hunt transcript
+./build/tp_hunt data/contracts/clean_harvest_deer.json 1234  # same contract, different individual
+
+cmake -S . -B build -DTP_BUILD_VIEWER=ON && cmake --build build
+./build/viewer/tp_viewer data/contracts/clean_harvest_deer.json            # spectate the bot
+./build/viewer/tp_viewer data/contracts/clean_harvest_deer.json --player   # hunt yourself
+```
+
+Run everything from the project root so relative `data/` paths resolve.
+
+### Viewer controls
+
+Spectate: camera follows the hunter (`T` to re-follow after moving);
+`WASD` free camera, `R`/`F` zoom, arrows orbit.
+Player mode: `WASD` move, `LShift` sprint, `C` crouch, `X` prone,
+`F` fire at a visible animal (aim-assisted), `E` claim a downed animal.
+Both: `SPACE` pause, `N` single-step, `-`/`=` time scale, `R` restart,
+`ESC` quit. Overlays: `1` tracks, `2` blood, `3` scent, `4` wind,
+`5` vision cone, `6` AI debug to stdout, `7` shot traces,
+`F12` screenshot. Headless capture: `--frames N --screenshot out.ppm`
+(works under `SDL_VIDEODRIVER=offscreen`).
