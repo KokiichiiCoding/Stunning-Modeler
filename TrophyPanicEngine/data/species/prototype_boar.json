@@ -2,6 +2,37 @@
   "id": "prototype_boar",
   "display_name": "Prototype Ridge Boar",
   "max_blood_volume_ml": 3200.0,
+  "body_mass_kg_range": [60.0, 180.0],
+  "trophy": {
+    "organ": "tusks",
+    "base_score_range": [20.0, 85.0]
+  },
+  "movement": {
+    "walk_mps": 1.0,
+    "trot_mps": 3.0,
+    "run_mps": 11.0,
+    "max_stamina_s": 50.0
+  },
+  "senses": {
+    "vision_range_m": 70.0,
+    "vision_fov_deg": 260.0,
+    "hearing_sensitivity": 1.1,
+    "smell_threshold": 0.06
+  },
+  "behavior": {
+    "grouping": "herd",
+    "fear_threshold": 45.0,
+    "aggression_threshold": 65.0,
+    "curiosity": 0.5,
+    "defensive_radius_m": 15.0,
+    "wounded_style": "flee_circle_charge",
+    "preferred_terrain": ["dense_cover", "forest"],
+    "active_periods": ["dusk", "night"]
+  },
+  "tracks": {
+    "stride_m": 0.9,
+    "print_size_cm": 6.0
+  },
   "body_parts": [
     {
       "id": "tusks",

@@ -1,0 +1,9 @@
+{
+  "title": "Poorly placed bear gut shot, .45 ACP, 30m — bear stays on its feet",
+  "species": "prototype_black_bear",
+  "shots": [
+    {"ammunition": "45acp_hollow_point", "body_part": "gut", "distance_m": 30, "angle_deg": 90}
+  ],
+  "run_duration_seconds": 90,
+  "biological_quality_percent": 95
+}

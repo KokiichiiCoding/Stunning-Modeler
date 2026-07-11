@@ -134,6 +134,87 @@ int main() {
                   "boar_legs_immobilized trophy overall score");
     }
 
+    // --- Golden 4: clean broadside elk lung shot ------------------------
+    // Heavier elk anatomy (thicker muscle, 12L blood volume) must read as a
+    // longer, but still successful, recovery than the same shot on a deer.
+    {
+        std::cout << "\n--- Golden: elk_lung_clean ---\n";
+        const Scenario scenario = loadScenarioFromFile("data/scenarios/elk_lung_clean.json");
+        const ScenarioRunResult result = runScenario(registry, scenario);
+
+        checkEqual(std::string(toString(result.simulation.creature().life)),
+                   "Dead", "elk_lung_clean final life state");
+        checkNear(result.simulation.timeToIncapacitationSeconds(), 60.0, 10.0,
+                  "elk_lung_clean time-to-incapacitation (must be much longer than deer's ~21s)");
+        checkEqual(result.trophyScore.tier, "Gold", "elk_lung_clean trophy tier");
+
+        // The .308 fully penetrates elk thorax: entry AND exit evidence.
+        const bool exit = result.shotOutcomes.at(0).hit.wound.exitWound;
+        checkEqual(exit ? "yes" : "no", "yes", "elk_lung_clean produced an exit wound");
+    }
+
+    // --- Golden 5: underpowered .22LR fails against elk anatomy ---------
+    // The round must stop in the shoulder/rib structure before the lung:
+    // no organ reached, animal stays Active, hunt is a No Recovery.
+    {
+        std::cout << "\n--- Golden: elk_underpowered_22lr ---\n";
+        const Scenario scenario =
+            loadScenarioFromFile("data/scenarios/elk_underpowered_22lr.json");
+        const ScenarioRunResult result = runScenario(registry, scenario);
+
+        checkEqual(std::string(toString(result.simulation.creature().life)),
+                   "Active", "elk_underpowered_22lr final life state (round must not be lethal)");
+        checkEqual(result.trophyScore.tier, "No Recovery", "elk_underpowered_22lr trophy tier");
+
+        // Lung organ integrity untouched — the projectile never reached it.
+        const BodyPart* lung =
+            result.simulation.creature().findPart("primary_thorax_left");
+        checkNear(lung ? lung->organIntegrity : -1.0, 100.0, 0.01,
+                  "elk_underpowered_22lr lung organ integrity (projectile stopped short)");
+    }
+
+    // --- Golden 6: bear heart shot (cardiac fast-path on heavy anatomy) -
+    {
+        std::cout << "\n--- Golden: bear_heart_shot ---\n";
+        const Scenario scenario = loadScenarioFromFile("data/scenarios/bear_heart_shot.json");
+        const ScenarioRunResult result = runScenario(registry, scenario);
+
+        checkEqual(std::string(toString(result.simulation.creature().life)),
+                   "Dead", "bear_heart_shot final life state");
+        checkNear(result.simulation.timeToIncapacitationSeconds(), 3.0, 1.0,
+                  "bear_heart_shot time-to-incapacitation (cardiac timer)");
+        checkEqual(result.trophyScore.tier, "Platinum", "bear_heart_shot trophy tier");
+    }
+
+    // --- Golden 7: poorly placed bear gut shot — bear survives ----------
+    // A handgun gut shot must NOT bring a bear down inside the window;
+    // this is the physiological basis for wounded-aggressive behavior.
+    {
+        std::cout << "\n--- Golden: bear_gut_poor_shot ---\n";
+        const Scenario scenario = loadScenarioFromFile("data/scenarios/bear_gut_poor_shot.json");
+        const ScenarioRunResult result = runScenario(registry, scenario);
+
+        checkEqual(std::string(toString(result.simulation.creature().life)),
+                   "Active", "bear_gut_poor_shot final life state (bear stays up)");
+        checkEqual(std::string(toString(result.simulation.creature().mobility)),
+                   "Full", "bear_gut_poor_shot final mobility");
+        checkEqual(result.trophyScore.tier, "No Recovery", "bear_gut_poor_shot trophy tier");
+    }
+
+    // --- Golden 8: trophy-organ destruction tanks integrity -------------
+    {
+        std::cout << "\n--- Golden: elk_antler_trophy_damage ---\n";
+        const Scenario scenario =
+            loadScenarioFromFile("data/scenarios/elk_antler_trophy_damage.json");
+        const ScenarioRunResult result = runScenario(registry, scenario);
+
+        checkEqual(std::string(toString(result.simulation.creature().life)),
+                   "Dead", "elk_antler_trophy_damage final life state");
+        checkNear(result.trophyScore.trophyIntegrity, 0.0, 0.01,
+                  "elk_antler_trophy_damage trophy integrity (slug destroyed the rack)");
+        checkEqual(result.trophyScore.tier, "Silver", "elk_antler_trophy_damage trophy tier");
+    }
+
     if (failures != 0) {
         std::cerr << "\n" << failures << " golden regression test(s) failed.\n";
         return 1;
