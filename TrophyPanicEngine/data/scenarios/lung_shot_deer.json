@@ -1,0 +1,9 @@
+{
+  "title": "Clean lung shot, deer, 80m broadside",
+  "species": "prototype_deer",
+  "shots": [
+    {"ammunition": "308_soft_point", "body_part": "primary_thorax_left", "distance_m": 80, "angle_deg": 90}
+  ],
+  "run_duration_seconds": 60,
+  "biological_quality_percent": 100
+}
