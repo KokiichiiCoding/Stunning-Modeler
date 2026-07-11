@@ -1,0 +1,9 @@
+{
+  "title": "Heart shot, deer, 60m broadside",
+  "species": "prototype_deer",
+  "shots": [
+    {"ammunition": "3006_soft_point", "body_part": "core_pump_cavity", "distance_m": 60, "angle_deg": 90}
+  ],
+  "run_duration_seconds": 20,
+  "biological_quality_percent": 100
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Boar, both front legs, 12ga slug, 25m",
+  "species": "prototype_boar",
+  "shots": [
+    {"ammunition": "12ga_slug", "body_part": "gait_column_front_left", "distance_m": 25, "angle_deg": 90, "dense_bone": true},
+    {"ammunition": "12ga_slug", "body_part": "gait_column_front_right", "distance_m": 25, "angle_deg": 90, "dense_bone": true, "fire_at_seconds": 1.0}
+  ],
+  "run_duration_seconds": 15,
+  "biological_quality_percent": 85
+}

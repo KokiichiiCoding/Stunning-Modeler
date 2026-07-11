@@ -1,0 +1,9 @@
+{
+  "title": "Clean broadside lung shot, elk, 80m, .308",
+  "species": "prototype_elk",
+  "shots": [
+    {"ammunition": "308_soft_point", "body_part": "primary_thorax_left", "distance_m": 80, "angle_deg": 90}
+  ],
+  "run_duration_seconds": 120,
+  "biological_quality_percent": 90
+}
