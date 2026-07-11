@@ -49,6 +49,15 @@ Scenario loadScenarioFromFile(const std::string& path) {
         scenario.runDurationSeconds = root.numberOr("run_duration_seconds", 120.0);
         scenario.biologicalQualityPercent =
             root.numberOr("biological_quality_percent", 100.0);
+        if (root.has("animal_seed")) {
+            const double seed = root["animal_seed"].asNumber();
+            if (seed < 0.0) {
+                throw GameDataError(
+                    "Scenario '" + path + "': 'animal_seed' must be non-negative");
+            }
+            scenario.hasAnimalSeed = true;
+            scenario.animalSeed = static_cast<std::uint64_t>(seed);
+        }
 
         for (const auto& shotJson : root["shots"].asArray()) {
             scenario.shots.push_back(parseShot(shotJson));

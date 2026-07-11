@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+
 #include "engine/ballistics/Ballistics.hpp"
 #include "engine/io/GameData.hpp"
 
@@ -22,7 +24,13 @@ struct Scenario {
     std::string speciesId;
     std::vector<ScenarioShot> shots;
     double runDurationSeconds{120.0};
+    // Legacy placeholder path: used only when no animal_seed is given.
     double biologicalQualityPercent{100.0};
+    // When set, the scenario runs against a deterministically generated
+    // individual (engine/ecology/AnimalGenerator) instead of the bare
+    // species template, and biological quality comes from that animal.
+    bool hasAnimalSeed{false};
+    std::uint64_t animalSeed{0};
 };
 
 [[nodiscard]] Scenario loadScenarioFromFile(const std::string& path);

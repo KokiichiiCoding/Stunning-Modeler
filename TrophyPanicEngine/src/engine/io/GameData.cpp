@@ -101,6 +101,98 @@ CreatureState loadSpeciesFromFile(const std::string& path) {
     }
 }
 
+SpeciesProfile loadSpeciesProfileFromFile(const std::string& path) {
+    const std::string text = readFileOrThrow(path);
+
+    json::Value root;
+    try {
+        root = json::Value::parse(text);
+    } catch (const json::JsonError& e) {
+        throw GameDataError("JSON parse error in '" + path + "': " + e.what());
+    }
+
+    try {
+        SpeciesProfile profile;
+        profile.id = root["id"].asString();
+        profile.displayName = root.stringOr("display_name", profile.id);
+
+        if (root.has("body_mass_kg_range")) {
+            const auto& range = root["body_mass_kg_range"].asArray();
+            if (range.size() != 2) {
+                throw GameDataError("'body_mass_kg_range' must be [min, max] in '" + path + "'");
+            }
+            profile.bodyMassKgMin = range[0].asNumber();
+            profile.bodyMassKgMax = range[1].asNumber();
+            if (profile.bodyMassKgMax < profile.bodyMassKgMin) {
+                throw GameDataError("'body_mass_kg_range' min exceeds max in '" + path + "'");
+            }
+        }
+
+        if (root.has("trophy")) {
+            const json::Value& trophy = root["trophy"];
+            profile.trophyOrganId = trophy.stringOr("organ", "");
+            if (trophy.has("base_score_range")) {
+                const auto& range = trophy["base_score_range"].asArray();
+                if (range.size() != 2) {
+                    throw GameDataError(
+                        "'trophy.base_score_range' must be [min, max] in '" + path + "'");
+                }
+                profile.trophyScoreMin = range[0].asNumber();
+                profile.trophyScoreMax = range[1].asNumber();
+            }
+        }
+
+        if (root.has("movement")) {
+            const json::Value& mv = root["movement"];
+            profile.walkMps = mv.numberOr("walk_mps", profile.walkMps);
+            profile.trotMps = mv.numberOr("trot_mps", profile.trotMps);
+            profile.runMps = mv.numberOr("run_mps", profile.runMps);
+            profile.maxStaminaS = mv.numberOr("max_stamina_s", profile.maxStaminaS);
+        }
+
+        if (root.has("senses")) {
+            const json::Value& sn = root["senses"];
+            profile.visionRangeM = sn.numberOr("vision_range_m", profile.visionRangeM);
+            profile.visionFovDeg = sn.numberOr("vision_fov_deg", profile.visionFovDeg);
+            profile.hearingSensitivity =
+                sn.numberOr("hearing_sensitivity", profile.hearingSensitivity);
+            profile.smellThreshold = sn.numberOr("smell_threshold", profile.smellThreshold);
+        }
+
+        if (root.has("behavior")) {
+            const json::Value& bh = root["behavior"];
+            profile.grouping = bh.stringOr("grouping", profile.grouping);
+            profile.fearThreshold = bh.numberOr("fear_threshold", profile.fearThreshold);
+            profile.aggressionThreshold =
+                bh.numberOr("aggression_threshold", profile.aggressionThreshold);
+            profile.curiosity = bh.numberOr("curiosity", profile.curiosity);
+            profile.defensiveRadiusM =
+                bh.numberOr("defensive_radius_m", profile.defensiveRadiusM);
+            profile.woundedStyle = bh.stringOr("wounded_style", profile.woundedStyle);
+            if (bh.has("preferred_terrain")) {
+                for (const auto& t : bh["preferred_terrain"].asArray()) {
+                    profile.preferredTerrain.push_back(t.asString());
+                }
+            }
+            if (bh.has("active_periods")) {
+                for (const auto& p : bh["active_periods"].asArray()) {
+                    profile.activePeriods.push_back(p.asString());
+                }
+            }
+        }
+
+        if (root.has("tracks")) {
+            const json::Value& tr = root["tracks"];
+            profile.trackStrideM = tr.numberOr("stride_m", profile.trackStrideM);
+            profile.trackPrintSizeCm = tr.numberOr("print_size_cm", profile.trackPrintSizeCm);
+        }
+
+        return profile;
+    } catch (const json::JsonError& e) {
+        throw GameDataError("Malformed species file '" + path + "': " + e.what());
+    }
+}
+
 std::map<std::string, ProjectileSpec> loadAmmunitionFromFile(const std::string& path) {
     std::string text = readFileOrThrow(path);
 
@@ -142,15 +234,13 @@ std::map<std::string, ProjectileSpec> loadAmmunitionFromFile(const std::string& 
 }
 
 void GameDataRegistry::loadSpeciesFile(const std::string& path) {
+    // The file is parsed twice (anatomy + profile); acceptable for small,
+    // one-time startup data loads, and not worth a merged loader code path.
     CreatureState creature = loadSpeciesFromFile(path);
-    // CreatureState doesn't retain the short "id" used for lookups (only
-    // the display name), so we read it directly from the file here. This
-    // means the file gets parsed twice; acceptable for small, one-time
-    // startup data loads, and not worth a second loader code path.
-    const std::string text = readFileOrThrow(path);
-    const json::Value root = json::Value::parse(text);
-    const std::string id = root["id"].asString();
+    SpeciesProfile profile = loadSpeciesProfileFromFile(path);
+    const std::string id = profile.id;
     speciesTemplates_[id] = std::move(creature);
+    speciesProfiles_[id] = std::move(profile);
 }
 
 void GameDataRegistry::loadAmmunitionFile(const std::string& path) {
@@ -174,6 +264,14 @@ CreatureState GameDataRegistry::instantiateSpecies(const std::string& id) const 
         throw GameDataError("Unknown species id: '" + id + "'");
     }
     return it->second; // copy — caller gets independent mutable state
+}
+
+const SpeciesProfile& GameDataRegistry::speciesProfile(const std::string& id) const {
+    auto it = speciesProfiles_.find(id);
+    if (it == speciesProfiles_.end()) {
+        throw GameDataError("Unknown species id: '" + id + "'");
+    }
+    return it->second;
 }
 
 const ProjectileSpec& GameDataRegistry::ammunition(const std::string& id) const {

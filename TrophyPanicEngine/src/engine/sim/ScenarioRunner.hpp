@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/ecology/AnimalGenerator.hpp"
 #include "engine/io/GameData.hpp"
 #include "engine/io/ScenarioLoader.hpp"
 #include "engine/scoring/TrophyScore.hpp"
@@ -18,6 +19,9 @@ struct ScenarioRunResult {
     HuntSimulation simulation;
     std::vector<ScenarioShotOutcome> shotOutcomes;
     TrophyScoreResult trophyScore;
+    // Populated only when the scenario supplied an animal_seed.
+    bool usedGeneratedAnimal{false};
+    GeneratedAnimal generatedAnimal;
 };
 
 // Runs every shot in `scenario` against a freshly-instantiated creature from

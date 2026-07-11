@@ -12,7 +12,19 @@ ScenarioRunResult runScenario(
         throw GameDataError("Unknown species in scenario: " + scenario.speciesId);
     }
 
-    HuntSimulation sim(registry.instantiateSpecies(scenario.speciesId));
+    bool usedGeneratedAnimal = false;
+    GeneratedAnimal generated;
+    CreatureState creature = [&] {
+        if (scenario.hasAnimalSeed) {
+            usedGeneratedAnimal = true;
+            generated = generateAnimal(
+                registry.speciesProfile(scenario.speciesId), scenario.animalSeed);
+            return instantiateGeneratedAnimal(registry, generated);
+        }
+        return registry.instantiateSpecies(scenario.speciesId);
+    }();
+
+    HuntSimulation sim(std::move(creature));
 
     std::vector<ScenarioShot> shots = scenario.shots;
     std::sort(shots.begin(), shots.end(),
@@ -51,13 +63,16 @@ ScenarioRunResult runScenario(
     }
 
     TrophyScoreInput scoreInput;
-    scoreInput.biologicalQualityPercent = scenario.biologicalQualityPercent;
+    scoreInput.biologicalQualityPercent = usedGeneratedAnimal
+        ? generated.biologicalQualityPercent
+        : scenario.biologicalQualityPercent;
     scoreInput.shotsFired = sim.shotsFired();
     scoreInput.timeToIncapacitationSeconds = sim.timeToIncapacitationSeconds();
 
     const TrophyScoreResult score = computeTrophyScore(sim.creature(), scoreInput);
 
-    return ScenarioRunResult{std::move(sim), std::move(outcomes), score};
+    return ScenarioRunResult{std::move(sim), std::move(outcomes), score,
+                             usedGeneratedAnimal, std::move(generated)};
 }
 
 } // namespace tp
