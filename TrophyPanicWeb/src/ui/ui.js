@@ -362,7 +362,7 @@ export class UI {
     list.innerHTML = items.join('');
     list.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (p.buyWeapon(b.dataset.buy)) { g.audio.play('cash'); g.weapons.onInventoryChanged(); this.feed(`Bought the ${WEAPONS[b.dataset.buy].name}!`, 'good'); } this.renderShop(); });
     list.querySelectorAll('[data-ammo]').forEach(b => b.onclick = () => { if (p.buyAmmo(b.dataset.ammo)) g.audio.play('cash'); this.renderShop(); });
-    list.querySelectorAll('[data-gear]').forEach(b => b.onclick = () => { if (p.buyGear(b.dataset.gear)) { g.audio.play('cash'); if (GEAR[b.dataset.gear].call) p.selectedCall = b.dataset.gear; } this.renderShop(); });
+    list.querySelectorAll('[data-gear]').forEach(b => b.onclick = () => { if (p.buyGear(b.dataset.gear)) { g.audio.play('cash'); if (GEAR[b.dataset.gear].call) p.selectedCall = b.dataset.gear; if (b.dataset.gear === 'dog') { g.audio.play('woof'); this.feed('Biscuit joins the hunt! Press K to send her after something you hit, K again to call her back.', 'good'); } } this.renderShop(); });
     list.querySelectorAll('[data-accept]').forEach(b => b.onclick = () => { g.jobs.accept(b.dataset.accept); this.renderShop(); });
     list.querySelectorAll('[data-abandon]').forEach(b => b.onclick = () => { g.jobs.abandon(b.dataset.abandon); this.renderShop(); });
     list.querySelectorAll('[data-callsel]').forEach(b => b.onclick = () => { p.selectedCall = b.dataset.callsel; p.save(); this.renderShop(); });

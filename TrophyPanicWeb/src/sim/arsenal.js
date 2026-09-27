@@ -122,6 +122,7 @@ export const GEAR = {
   predator_call: { id: 'predator_call', name: 'Predator Call', price: 240, call: 'predator', desc: 'A dying-rabbit squeal. Wolves, cougars and bears come. That is the point. And the problem.' },
   scent_spray: { id: 'scent_spray', name: 'Scent Killer', price: 35, stack: true, desc: '5 minutes of 70% less human smell.' },
   energy_drink: { id: 'energy_drink', name: 'Moss Cola', price: 15, stack: true, desc: 'Instant stamina. Mild jitters.' },
+  dog: { id: 'dog', name: 'Biscuit (tracking dog)', price: 120, desc: 'A very good girl. Heels, growls at bears, and on K follows the blood trail to whatever you hit. Barking is loud.' },
 };
 
 export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'camera', 'boot', 'chicken', 'blower'];

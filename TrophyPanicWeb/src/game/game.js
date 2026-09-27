@@ -25,6 +25,7 @@ import { Weather } from '../sim/weather.js';
 import { WeatherFX } from '../world/weatherfx.js';
 import { Social } from '../ui/social.js';
 import { Jobs } from './jobs.js';
+import { Dog } from '../entities/dog.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -114,6 +115,7 @@ export class Game {
     this.animals = new AnimalManager(this);
     this.weapons = new Weapons(this);
     this.vehicles = new Vehicles(this);
+    this.dog = new Dog(this);
     this.coop = new Coop(this);
     this.social = new Social(this);
     this.jobs = new Jobs(this);
@@ -337,6 +339,7 @@ export class Game {
     if (I.wasPressed('KeyV')) this.thirdPerson = !this.thirdPerson;
     if (I.wasPressed('KeyM')) this.openMenu('map');
     if (I.wasPressed('KeyX')) this.social.ping();
+    if (I.wasPressed('KeyK')) this.dog.command();
     if (I.wasPressed('Enter') || I.wasPressed('NumpadEnter')) this.social.open();
     if (I.wasPressed('Escape')) this.pause();
   }
@@ -359,6 +362,7 @@ export class Game {
     this.weapons.step(dt, cmd || {});
     this.scent.update(dt, this.wind, this.weapons.blowers, this.weather.scentWash());
     this.animals.step(dt);
+    this.dog.step(dt);
     this.fx.step(dt);
     if (((this.time * 60) | 0) % 60 === 0) this.sounds.expire(this.time);
     if (this.waveT > 0) this.waveT -= dt;
@@ -582,6 +586,7 @@ export class Game {
     }
     this.animals.render(dt);
     this.vehicles.render(dt);
+    this.dog.render(dt);
     this.fx.render(dt);
     this.weapons.render(dt);
     this.coop.render(dt);

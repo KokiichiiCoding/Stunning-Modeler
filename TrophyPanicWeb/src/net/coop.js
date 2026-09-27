@@ -17,6 +17,7 @@ import { Animal } from '../entities/animals.js';
 import { WEAPONS, AMMO } from '../sim/arsenal.js';
 import { Life } from '../sim/creature.js';
 import { Rng } from '../core/rng.js';
+import { buildDog } from '../entities/dog.js';
 
 const SEND_HZ = 12;
 const EV_RING = 10;
@@ -89,7 +90,7 @@ export class Coop {
   }
 
   drop() {
-    for (const p of this.peers.values()) if (p.model) this.game.scene.remove(p.model.group);
+    for (const p of this.peers.values()) { if (p.model) this.game.scene.remove(p.model.group); if (p.tag) this.game.scene.remove(p.tag); if (p.dog) this.game.scene.remove(p.dog.root); }
     this.peers.clear();
     for (const a of this.shadow.values()) a.dispose();
     this.shadow.clear();
@@ -119,7 +120,7 @@ export class Coop {
     }
     for (const p of change.left) {
       const r = this.peers.get(p.peer);
-      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
+      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); if (r.dog) g.scene.remove(r.dog.root); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
     }
     for (const p of valid) {
       if (p.sameTab) continue;
@@ -373,6 +374,8 @@ export class Coop {
       tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0,
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,
     };
+    const dg = g.dog;
+    if (dg && dg.active) pres.dg = [r2(dg.pos.x), r2(dg.pos.y), r2(dg.pos.z), r2(dg.yaw), r2(dg.speed), dg.mode === 'sit' || dg.mode === 'found' ? 1 : 0];
     const v = p.vehicle;
     if (v) pres.vh = [g.vehicles.list.indexOf(v), r2(v.pos.x), r2(v.pos.y), r2(v.pos.z), r2(v.yaw), r2(v.pitch), r2(v.roll), r2(v.steer), r2(v.speed())];
     if (this.filterCode) pres.pc = this.filterCode;
@@ -462,6 +465,18 @@ export class Coop {
       const pr = r.presence;
       const m = r.model;
       m.group.position.set(r.pos.x, r.pos.y, r.pos.z);
+      // their dog, if they brought one
+      if (Array.isArray(pr.dg)) {
+        if (!r.dog) { r.dog = buildDog(); g.scene.add(r.dog.root); r.dogPos = { x: pr.dg[0], y: pr.dg[1], z: pr.dg[2] }; r.dogPh = 0; }
+        const k3 = Math.min(1, dt * 10), dp = r.dogPos;
+        dp.x += (pr.dg[0] - dp.x) * k3; dp.y += (pr.dg[1] - dp.y) * k3; dp.z += (pr.dg[2] - dp.z) * k3;
+        r.dog.root.visible = true;
+        r.dog.root.position.set(dp.x, dp.y, dp.z); r.dog.root.rotation.set(0, pr.dg[3] || 0, 0);
+        const sp2 = pr.dg[4] || 0; r.dogPh += dt * (3 + sp2 * 3.5);
+        r.dog.legs.forEach((l, i) => { l.rotation.x = Math.sin(r.dogPh + (i === 0 || i === 3 ? 0 : Math.PI)) * Math.min(0.9, sp2 * 0.22); });
+        r.dog.body.rotation.x = pr.dg[5] ? -0.45 : 0;
+        r.dog.tail.rotation.y = Math.sin(g.visualTime * 8) * 0.6;
+      } else if (r.dog) r.dog.root.visible = false;
       // Riding: pose our copy of that quad where they are and seat them on it.
       const vh = Array.isArray(pr.vh) ? pr.vh : null;
       const quad = vh && g.vehicles.list[vh[0] | 0];

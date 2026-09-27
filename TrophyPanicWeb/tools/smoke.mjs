@@ -231,6 +231,44 @@ const scripts = {
     await step(1);
     await shot('96_map_zones');
   },
+  async dog() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); g.profile.gear.dog = 1; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await step(2);
+    const info = await page.evaluate(() => {
+      const g = window.__tp.game;
+      let tries = 0;
+      while (!g.animals.list.some(a => a.species.id === 'deer') && tries++ < 80) g.animals.spawnGroup(g.player.pos);
+      const info = window.__tp.debug.approach('deer', 50);
+      window.__tp.debug.selectWeapon('rifle_308');
+      g.dog.placed = false;
+      window.__tp.debug.stepFrames(2);
+      window.__tp.debug.aimAtAnimal(info.id, 'gut'); // a gut shot: it will run
+      g.weapons.fire(1);
+      return info;
+    });
+    console.log('  target', JSON.stringify(info));
+    const log = await page.evaluate((id) => {
+      const g = window.__tp.game, a = g.animals.list.find(x => x.id === id);
+      const modes = new Set();
+      for (let i = 0; i < 60 * 3; i++) g.advance(1 / 60);
+      g.dog.command();
+      // the hunter follows the dog
+      for (let i = 0; i < 60 * 150; i++) {
+        g.advance(1 / 60);
+        modes.add(g.dog.mode);
+        const d = g.dog;
+        const dx = d.pos.x - g.player.pos.x, dz = d.pos.z - g.player.pos.z;
+        if (Math.hypot(dx, dz) > 8) { g.player.pos.x += dx * 0.02; g.player.pos.z += dz * 0.02; g.player.pos.y = g.terrain.heightAt(g.player.pos.x, g.player.pos.z); }
+        if (d.mode === 'found') break;
+      }
+      return { modes: [...modes], final: g.dog.mode, animalDown: a.downed, life: a.creature.life, wounds: a.creature.wounds.length, dogToAnimal: +Math.hypot(a.pos.x - g.dog.pos.x, a.pos.z - g.dog.pos.z).toFixed(1), t: +g.time.toFixed(0) };
+    }, info.id);
+    console.log('  dog', JSON.stringify(log));
+    await page.evaluate(() => { const g = window.__tp.game; g.thirdPerson = true; });
+    for (let i = 0; i < 3; i++) await step(5);
+    await shot('97_dog');
+  },
   async jobs() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.cash = 300; });
     await page.evaluate(() => window.__tp.debug.startGame({}));
