@@ -21,6 +21,7 @@ export class UI {
     this.feedItems = [];
     this.lastHp = 100;
     this.shopTab = 'weapons';
+    this._c = {};
     this.wire();
   }
 
@@ -157,9 +158,14 @@ export class UI {
   }
 
   // ------------------------------------------------------------------ HUD
+  // Cached DOM writes: the HUD updates every frame, but only touches the DOM when a value changes.
+  txt(id, v) { const k = id + '.t'; v = String(v); if (this._c[k] !== v) { this._c[k] = v; $(id).textContent = v; } }
+  sty(id, prop, v) { const k = id + '.' + prop; v = String(v); if (this._c[k] !== v) { this._c[k] = v; $(id).style[prop] = v; } }
+  hid(id, v) { const k = id + '.h'; v = !!v; if (this._c[k] !== v) { this._c[k] = v; $(id).hidden = v; } }
+
   updateHUD(dt) {
     const g = this.game, p = g.player, w = g.weapons;
-    for (const f of this.feedItems) { f.t -= dt; if (f.t < 1) f.el.style.opacity = Math.max(0, f.t); }
+    for (const f of this.feedItems) { f.t -= dt; if (f.t < 1) f.el.style.opacity = Math.max(0, f.t).toFixed(2); }
     this.feedItems = this.feedItems.filter(f => { if (f.t <= 0) { f.el.remove(); return false; } return true; });
 
     // compass
@@ -175,7 +181,8 @@ export class UI {
       strip.dataset.built = '1';
     }
     const px = (deg / 15) * 30 + 24 * 30; // center the middle copy
-    strip.style.transform = `translateX(${-px + strip.parentElement.clientWidth / 2 - 15}px)`;
+    if (!this.compassW || this.compassWAt !== window.innerWidth) { this.compassW = strip.parentElement.clientWidth; this.compassWAt = window.innerWidth; }
+    this.sty('compass-strip', 'transform', `translateX(${(-px + this.compassW / 2 - 15).toFixed(1)}px)`);
 
     // wind indicator (bearing the wind blows TOWARD, relative to view)
     let wind = $('wind-ui');
@@ -187,44 +194,44 @@ export class UI {
     const wv = g.wind.vec();
     const windBearing = Math.atan2(wv.x, -wv.z); // 0 = toward north
     const rel = windBearing + p.yaw;
-    $('wind-arr').style.transform = `rotate(${(rel * 180 / Math.PI) - 90}deg)`;
-    $('wind-spd').textContent = `${g.wind.speed.toFixed(1)} m/s`;
+    this.sty('wind-arr', 'transform', `rotate(${(rel * 180 / Math.PI) - 90}deg)`);
+    this.txt('wind-spd', `${g.wind.speed.toFixed(1)} m/s`);
 
     // clock
     const h = Math.floor(g.hour), m = Math.floor((g.hour - h) * 60);
-    $('clock-time').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    this.txt('clock-time', `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
     const per = g.period || g.sky.period;
     const wk = g.weather.kind;
-    $('clock-period').textContent = `${per[0].toUpperCase() + per.slice(1)} · ${WEATHER_ICON[wk]} ${WEATHER_LABEL[wk]}`;
+    this.txt('clock-period', `${per[0].toUpperCase() + per.slice(1)} · ${WEATHER_ICON[wk]} ${WEATHER_LABEL[wk]}`);
 
     // vitals
-    $('hp-bar').style.width = Math.max(0, p.hp) + '%';
-    $('bleed-bar').style.width = Math.min(100, p.bleed * 20) + '%';
-    $('st-bar').style.width = p.stamina + '%';
-    $('noise-bar').style.width = Math.round(p.noise * 100) + '%';
-    $('vis-bar').style.width = Math.round(p.visibility * 100) + '%';
-    $('stance-chip').textContent = p.vehicle ? 'Riding' : p.inBlind ? 'In blind' : p.swimming ? 'Swimming' : p.tumble ? 'Tumbling!' : p.onTower ? 'On tower' : { stand: 'Standing', crouch: 'Crouched', prone: 'Prone' }[p.stance];
-    if (p.hp < this.lastHp - 0.5) $('damage-vignette').style.opacity = String(Math.min(1, (this.lastHp - p.hp) / 12 + 0.3));
-    else $('damage-vignette').style.opacity = String(Math.max(0, (parseFloat($('damage-vignette').style.opacity) || 0) - dt * 1.2, p.hp < 30 ? 0.35 : 0));
+    this.sty('hp-bar', 'width', Math.max(0, p.hp) + '%');
+    this.sty('bleed-bar', 'width', Math.min(100, p.bleed * 20) + '%');
+    this.sty('st-bar', 'width', p.stamina + '%');
+    this.sty('noise-bar', 'width', Math.round(p.noise * 100) + '%');
+    this.sty('vis-bar', 'width', Math.round(p.visibility * 100) + '%');
+    this.txt('stance-chip', p.vehicle ? 'Riding' : p.inBlind ? 'In blind' : p.swimming ? 'Swimming' : p.tumble ? 'Tumbling!' : p.onTower ? 'On tower' : { stand: 'Standing', crouch: 'Crouched', prone: 'Prone' }[p.stance]);
+    if (p.hp < this.lastHp - 0.5) this.sty('damage-vignette', 'opacity', String(Math.min(1, (this.lastHp - p.hp) / 12 + 0.3)));
+    else this.sty('damage-vignette', 'opacity', String(+Math.max(0, (parseFloat(this._c['damage-vignette.opacity']) || 0) - dt * 1.2, p.hp < 30 ? 0.35 : 0).toFixed(2)));
     this.lastHp = p.hp;
-    $('sense-vignette').style.opacity = g.fx.senseT > 0 ? '1' : '0';
-    { const c0 = w.current; $('blind-frame').hidden = !(p.inBlind && !g.thirdPerson && !w.binoculars && !(w.aiming && c0 && (c0.zoom >= 3 || c0.type === 'camera'))); }
+    this.sty('sense-vignette', 'opacity', g.fx.senseT > 0 ? '1' : '0');
+    { const c0 = w.current; this.hid('blind-frame', !(p.inBlind && !g.thirdPerson && !w.binoculars && !(w.aiming && c0 && (c0.zoom >= 3 || c0.type === 'camera')))); }
 
     // weapon
     const cur = w.current;
     if (p.vehicle) {
       const v = p.vehicle;
-      $('weapon-name').textContent = v.airborne ? 'Quad bike · AIRBORNE' : 'Quad bike';
-      $('ammo-mag').textContent = Math.round(v.speed() * 3.6);
-      $('ammo-res').textContent = 'km/h';
-      $('ammo-type').textContent = '';
+      this.txt('weapon-name', v.airborne ? 'Quad bike · AIRBORNE' : 'Quad bike');
+      this.txt('ammo-mag', Math.round(v.speed() * 3.6));
+      this.txt('ammo-res', 'km/h');
+      this.txt('ammo-type', '');
     } else if (cur) {
-      $('weapon-name').textContent = w.binoculars ? 'Binoculars' : cur.name;
+      this.txt('weapon-name', w.binoculars ? 'Binoculars' : cur.name);
       const st = w.state[cur.id];
-      if (cur.type === 'blower') { $('ammo-mag').textContent = '∞'; $('ammo-res').textContent = ''; }
-      else if (cur.type === 'camera') { $('ammo-mag').textContent = g.profile.photos.length; $('ammo-res').textContent = 'photos'; }
-      else { $('ammo-mag').textContent = st ? st.mag : 0; $('ammo-res').textContent = g.profile.ammo[cur.id] ?? 0; }
-      $('ammo-type').textContent = cur.type === 'shotgun' ? AMMO[w.shellType()].name.replace(' pellet', '') : '';
+      if (cur.type === 'blower') { this.txt('ammo-mag', '∞'); this.txt('ammo-res', ''); }
+      else if (cur.type === 'camera') { this.txt('ammo-mag', g.profile.photos.length); this.txt('ammo-res', 'photos'); }
+      else { this.txt('ammo-mag', st ? st.mag : 0); this.txt('ammo-res', g.profile.ammo[cur.id] ?? 0); }
+      this.txt('ammo-type', cur.type === 'shotgun' ? AMMO[w.shellType()].name.replace(' pellet', '') : '');
     }
     const slots = $('slots');
     const owned = g.profile.ownedWeapons();
@@ -233,17 +240,17 @@ export class UI {
       slots.innerHTML = owned.map((id, i) => `<span class="slot${cur && cur.id === id ? ' on' : ''}">${i + 1} ${esc(WEAPONS[id].short)}</span>`).join('');
       slots.dataset.key = key;
     }
-    $('cash').textContent = money(g.profile.cash);
-    $('level').textContent = 'Lv ' + g.profile.level;
+    this.txt('cash', money(g.profile.cash));
+    this.txt('level', 'Lv ' + g.profile.level);
 
     // aim overlays
     const camAim = w.aiming && cur && cur.type === 'camera' && !p.vehicle;
     const scoped = w.aiming && cur && cur.zoom >= 3 && !w.binoculars && !camAim;
-    $('scope').hidden = !scoped;
-    $('viewfinder').hidden = !camAim;
+    this.hid('scope', !scoped);
+    this.hid('viewfinder', !camAim);
     if (camAim) {
       this.vfT = (this.vfT || 0) - dt;
-      if (this.vfT <= 0) { this.vfT = 0.25; const r = w.rangeReadout(); $('vf-read').textContent = r.text.split('\n').slice(0, 2).join(' · ') + '  ·  click to snap'; }
+      if (this.vfT <= 0) { this.vfT = 0.25; const r = w.rangeReadout(); this.txt('vf-read', r.text.split('\n').slice(0, 2).join(' · ') + '  ·  click to snap'); }
     }
     // ranger jobs
     const jl = g.jobs.hudLines();
@@ -251,22 +258,25 @@ export class UI {
     jc.hidden = !jl.length;
     const jkey = jl.join('|');
     if (jc.dataset.key !== jkey) { jc.dataset.key = jkey; jc.innerHTML = '<b>Ranger jobs</b>' + jl.map(t => `<div>• ${esc(t)}</div>`).join(''); }
-    $('binos').hidden = !w.binoculars;
-    $('crosshair').hidden = scoped || w.binoculars || camAim;
-    if (scoped || w.binoculars) {
+    this.hid('binos', !w.binoculars);
+    this.hid('crosshair', scoped || w.binoculars || camAim);
+    this.rangeT = (this.rangeT || 0) - dt;
+    if ((scoped || w.binoculars) && this.rangeT <= 0) {
+      this.rangeT = 0.15;
       const read = w.rangeReadout();
-      if (scoped) $('range-read').textContent = read.text;
-      else $('bino-read').textContent = read.text;
+      if (scoped) this.txt('range-read', read.text);
+      else this.txt('bino-read', read.text);
     }
 
     // prompt & clue card
     this.updatePrompt();
     const clue = g.fx.focusClue;
     const card = $('clue-card');
+    this.clueT = (this.clueT || 0) - dt;
     if (clue && !w.aiming) {
-      card.hidden = false;
-      card.innerHTML = this.clueText(clue);
-    } else card.hidden = true;
+      this.hid('clue-card', false);
+      if (this.clueT <= 0 || this._clue !== clue) { this.clueT = 0.5; this._clue = clue; const html = this.clueText(clue); if (this._c['clue.html'] !== html) { this._c['clue.html'] = html; card.innerHTML = html; } }
+    } else this.hid('clue-card', true);
   }
 
   clueText(c) {
@@ -302,7 +312,7 @@ export class UI {
     }
     if (p.tumble && p.tumble.t > 1.2) text = 'Press any key to get up';
     const el = $('prompt');
-    if (text) { el.hidden = false; el.innerHTML = text; } else el.hidden = true;
+    if (text) { this.hid('prompt', false); if (this._c['prompt.html'] !== text) { this._c['prompt.html'] = text; el.innerHTML = text; } } else this.hid('prompt', true);
   }
 
   // ------------------------------------------------------------------ harvest card
