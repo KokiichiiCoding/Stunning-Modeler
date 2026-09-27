@@ -5,6 +5,7 @@
 
 import { WATER_LEVEL, HALF } from '../world/terrainData.js';
 import { movementLoudness } from '../sim/worldsim.js';
+import { Rng } from '../core/rng.js';
 
 const GRAV = 22;
 export const EYE = { stand: 1.36, crouch: 0.95, prone: 0.42 };
@@ -38,6 +39,8 @@ export class Player {
     this.jitter = 0;
     this.slide = 0;
     this.invuln = 0;
+    this.vehicle = null;
+    this.rng = new Rng(game.sessionSeed ^ 0x51ed);
   }
 
   spawnAt(x, z, yaw = 0) {
@@ -59,7 +62,7 @@ export class Player {
   }
 
   eyePos() {
-    const e = this.tumble ? 0.5 : this.eyeHeight();
+    const e = this.tumble ? 0.5 : this.vehicle ? 0.78 : this.eyeHeight();
     return { x: this.pos.x, y: this.pos.y + e, z: this.pos.z };
   }
 
@@ -90,7 +93,7 @@ export class Player {
     this.tumble = {
       t: 0,
       vel: { x: this.vel.x + vx, y: this.vel.y + vy, z: this.vel.z + vz },
-      spin: { x: (Math.random() - 0.5) * 14, y: (Math.random() - 0.5) * 8, z: (Math.random() - 0.5) * 14 },
+      spin: { x: this.rng.range(-7, 7), y: this.rng.range(-4, 4), z: this.rng.range(-7, 7) },
       rot: { x: 0, y: this.yaw, z: 0 },
     };
     this.game.audio && this.game.audio.play('oof', { x: this.pos.x, y: this.pos.y, z: this.pos.z });
@@ -120,6 +123,7 @@ export class Player {
     if (this.scentTimer > 0) { this.scentTimer -= dt; if (this.scentTimer <= 0) this.scentMult = 1; }
 
     if (this.tumble) { this.stepTumble(dt, cmd); this.emitSigns(dt); return; }
+    if (this.vehicle) { this.ride(dt); return; }
     if (this.getUp > 0) { this.getUp -= dt; }
 
     // --- stance --------------------------------------------------------
@@ -218,6 +222,23 @@ export class Player {
     this.emitSigns(dt);
   }
 
+  /** Riding: the quad owns our position; we still bleed, smell and get seen. */
+  ride(dt) {
+    const v = this.vehicle, s = v.seat();
+    // your view turns with the machine; the mouse looks around on top of that
+    if (this._vYaw !== undefined) this.yaw += v.yaw - this._vYaw;
+    this._vYaw = v.yaw;
+    this.pos.x = s.x; this.pos.y = s.y; this.pos.z = s.z;
+    this.vel.x = v.vel.x; this.vel.y = 0; this.vel.z = v.vel.z;
+    this.grounded = true; this.swimming = false; this.onTower = null; this.stance = 'stand';
+    this.speed = v.speed();
+    this.stamina = Math.min(100, this.stamina + 12 * dt);
+    this.noise = Math.min(1, 0.55 + this.speed / 30);
+    this.visibility = Math.min(1, 0.75 + this.speed / 40);
+    this.scentAcc += dt;
+    if (this.scentAcc > 0.5) { this.scentAcc = 0; this.game.scent.emit(this.pos.x, this.pos.z, (1.5 + this.bleed * 1.5) * this.scentMult, 'player', this.game.time); }
+  }
+
   collide(radius) {
     const g = this.game;
     for (const o of g.vegetation.query(this.pos.x, this.pos.z, 3, this._q || (this._q = []))) {
@@ -286,7 +307,7 @@ export class Player {
       if (loud > 0.02) g.sounds.emit('footstep', this.pos.x, this.pos.y, this.pos.z, loud, g.time, 'player');
       g.audio && g.audio.footstep(this.pos, this.speed, T.biomeAt(this.pos.x, this.pos.z), this.stance, this.swimming);
       // The hunter leaves tracks too (useful for co-op friends looking for you).
-      if (!this.swimming && this.speed > 0.8 && Math.random() < 0.5) {
+      if (!this.swimming && this.speed > 0.8 && this.rng.chance(0.5)) {
         const f = this.forward();
         g.evidence.add({ kind: 'Footprint', x: this.pos.x, y: this.pos.y, z: this.pos.z, dirX: f.x, dirZ: f.z, time: g.time, base: 0.6, species: 'hunter', who: 'player', gait: this.speed > 4 ? 'Run' : 'Walk', printCm: 26, stride: 0.7 });
       }

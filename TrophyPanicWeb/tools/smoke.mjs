@@ -160,6 +160,89 @@ const scripts = {
     await step(2);
     await shot('43_sunset');
   },
+  async atv() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await step(2);
+    // 1) mount the lodge quad and floor it
+    const mount = await page.evaluate(() => {
+      const g = window.__tp.game;
+      const v = g.vehicles.nearest(g.player.pos, 1e9);
+      g.player.spawnAt(v.pos.x + 1.2, v.pos.z, 0);
+      g.interact();
+      return { riding: !!g.player.vehicle, id: v.id, x: +v.pos.x.toFixed(1), z: +v.pos.z.toFixed(1) };
+    });
+    console.log('  mount', JSON.stringify(mount));
+    await page.evaluate(() => window.__tp.debug.press('KeyW'));
+    const drive = await page.evaluate(() => {
+      const g = window.__tp.game, v = g.player.vehicle;
+      let maxSp = 0, air = 0, heard = 0;
+      const x0 = v.pos.x, z0 = v.pos.z;
+      for (let i = 0; i < 60 * 6; i++) {
+        g.advance(1 / 60); g.input.endFrame();
+        maxSp = Math.max(maxSp, v.speed());
+        if (v.airborne) air++;
+      }
+      heard = g.sounds.events.filter(e => e.category === 'engine').length;
+      return { maxKmh: +(maxSp * 3.6).toFixed(0), dist: +Math.hypot(v.pos.x - x0, v.pos.z - z0).toFixed(1), airFrames: air, crashed: v.crashed, riding: !!g.player.vehicle, engineEvents: heard, hp: +g.player.hp.toFixed(1) };
+    });
+    console.log('  drive', JSON.stringify(drive));
+    await step(1);
+    await shot('60_atv_fp');
+    await page.evaluate(() => window.__tp.debug.third(true));
+    for (let i = 0; i < 4; i++) await step(15);
+    await shot('61_atv_chase');
+    await page.evaluate(() => window.__tp.debug.release('KeyW'));
+    // 2) side-hill a steep slope at speed: it should roll and throw the rider
+    const roll = await page.evaluate(() => {
+      const g = window.__tp.game, T = g.terrain;
+      if (!g.player.vehicle) { const v = g.vehicles.nearest(g.player.pos, 1e9); v.crashed = false; v.enter(g.player); }
+      const v = g.player.vehicle;
+      let best = null;
+      for (let x = -480; x < 480 && !best; x += 6) for (let z = -480; z < 480; z += 6) {
+        const n = T.normalAt(x, z);
+        if (n.y < 0.66 && n.y > 0.5 && !T.isWater(x, z)) { best = { x, z, n }; break; }
+      }
+      if (!best) return { found: false };
+      // face across the slope (perpendicular to the downhill direction)
+      v.pos.x = best.x; v.pos.z = best.z; v.pos.y = T.heightAt(best.x, best.z) + 0.5;
+      v.yaw = Math.atan2(best.n.z, -best.n.x);
+      v.vel = { x: Math.sin(v.yaw) * 9, y: 0, z: Math.cos(v.yaw) * 9 };
+      let crashedAt = -1;
+      for (let i = 0; i < 60 * 3; i++) { g.advance(1 / 60); if (v.crashed && crashedAt < 0) crashedAt = i; }
+      return { found: true, slopeNy: +best.n.y.toFixed(2), crashed: v.crashed, crashedAt, riding: !!g.player.vehicle, tumbling: !!g.player.tumble, hp: +g.player.hp.toFixed(1) };
+    });
+    console.log('  rollover', JSON.stringify(roll));
+    await step(20);
+    await shot('62_atv_crash');
+    // 3) bonk a deer
+    const bonk = await page.evaluate(() => {
+      const g = window.__tp.game;
+      g.player.tumble = null; g.player.hp = 100;
+      let tries = 0;
+      while (!g.animals.list.some(a => a.species.id === 'deer') && tries++ < 80) g.animals.spawnGroup(g.player.pos);
+      const info = window.__tp.debug.approach('deer', 16);
+      window.__tp.debug.freeze(true);
+      const a = g.animals.list.find(x => x.id === info.id);
+      const v = g.vehicles.nearest(g.player.pos, 1e9);
+      v.crashed = false; v.pitch = v.roll = 0; v.spin = { p: 0, r: 0, y: 0 };
+      v.pos.x = g.player.pos.x; v.pos.z = g.player.pos.z; v.pos.y = g.terrain.heightAt(v.pos.x, v.pos.z) + 0.5;
+      v.yaw = Math.atan2(a.pos.x - v.pos.x, a.pos.z - v.pos.z);
+      // park the deer 9 m straight ahead so no tree gets there first
+      a.pos.x = v.pos.x + Math.sin(v.yaw) * 9; a.pos.z = v.pos.z + Math.cos(v.yaw) * 9;
+      a.pos.y = g.terrain.heightAt(a.pos.x, a.pos.z);
+      v.vel = { x: Math.sin(v.yaw) * 7, y: 0, z: Math.cos(v.yaw) * 7 };
+      if (v.driver !== g.player) v.enter(g.player);
+      window.__tp.debug.press('KeyW');
+      const hp0 = a.creature.bodyParts ? a.creature.bodyParts.length : 0;
+      for (let i = 0; i < 60 * 4 && !a.lastBonk; i++) { g.advance(1 / 60); }
+      window.__tp.debug.release('KeyW');
+      return { bonked: !!a.lastBonk, crashed: v.crashed && v.lastCrash, vid: v.id, speed: +v.speed().toFixed(1), life: a.creature.life, mobility: a.creature.mobility, wounds: a.creature.wounds.length, dVeh: +Math.hypot(a.pos.x - v.pos.x, a.pos.z - v.pos.z).toFixed(1) };
+    });
+    console.log('  bonk', JSON.stringify(bonk));
+    await step(2);
+    await shot('63_atv_bonk');
+  },
   async basic() {
     await shot('00_title');
     if (args.includes('--low')) await page.evaluate(() => { const g = window.__tp.game; g.profile.settings.quality = 'low'; g.applySettings(); });

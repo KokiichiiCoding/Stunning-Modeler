@@ -199,7 +199,7 @@ export class UI {
     $('st-bar').style.width = p.stamina + '%';
     $('noise-bar').style.width = Math.round(p.noise * 100) + '%';
     $('vis-bar').style.width = Math.round(p.visibility * 100) + '%';
-    $('stance-chip').textContent = p.swimming ? 'Swimming' : p.tumble ? 'Tumbling!' : p.onTower ? 'On tower' : { stand: 'Standing', crouch: 'Crouched', prone: 'Prone' }[p.stance];
+    $('stance-chip').textContent = p.vehicle ? 'Riding' : p.swimming ? 'Swimming' : p.tumble ? 'Tumbling!' : p.onTower ? 'On tower' : { stand: 'Standing', crouch: 'Crouched', prone: 'Prone' }[p.stance];
     if (p.hp < this.lastHp - 0.5) $('damage-vignette').style.opacity = String(Math.min(1, (this.lastHp - p.hp) / 12 + 0.3));
     else $('damage-vignette').style.opacity = String(Math.max(0, (parseFloat($('damage-vignette').style.opacity) || 0) - dt * 1.2, p.hp < 30 ? 0.35 : 0));
     this.lastHp = p.hp;
@@ -207,7 +207,13 @@ export class UI {
 
     // weapon
     const cur = w.current;
-    if (cur) {
+    if (p.vehicle) {
+      const v = p.vehicle;
+      $('weapon-name').textContent = v.airborne ? 'Quad bike · AIRBORNE' : 'Quad bike';
+      $('ammo-mag').textContent = Math.round(v.speed() * 3.6);
+      $('ammo-res').textContent = 'km/h';
+      $('ammo-type').textContent = '';
+    } else if (cur) {
       $('weapon-name').textContent = w.binoculars ? 'Binoculars' : cur.name;
       const st = w.state[cur.id];
       if (cur.type === 'blower') { $('ammo-mag').textContent = '∞'; $('ammo-res').textContent = ''; }
@@ -266,8 +272,11 @@ export class UI {
     const g = this.game, p = g.player;
     let text = null;
     const a = g.animals.nearestDowned(p.pos, 3.2);
-    if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
+    const quad = !p.vehicle && g.vehicles.nearest(p.pos, 2.6);
+    if (p.vehicle) text = g.time - p.vehicle.mountedAt > 6 ? null : '<kbd>E</kbd>Hop off · <kbd>Space</kbd>handbrake · <kbd>V</kbd>chase cam';
+    else if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
     else if (g.weapons.nearestPickup(p.pos, 2.5)) text = `<kbd>E</kbd>Pick up ${esc(g.weapons.nearestPickup(p.pos, 2.5).label)}`;
+    else if (quad) text = quad.crashed ? '<kbd>E</kbd>Heave the quad back over' : '<kbd>E</kbd>Ride quad bike';
     else {
       for (const tw of g.structures.towers) if (Math.hypot(p.pos.x - tw.x, p.pos.z - (tw.z + 1.5)) < 2.2 && !p.onTower) text = '<kbd>E</kbd>Climb tower';
       const poi = POIS.find(q => Math.hypot(p.pos.x - q.x, p.pos.z - q.z) < q.r + 4);

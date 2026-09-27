@@ -123,7 +123,7 @@ export class Weapons {
     if (!w) return;
     const st = this.state[w.id];
     this.cooldown = Math.max(0, this.cooldown - dt);
-    const busy = p.tumble || p.swimming || p.downed || p.getUp > 0;
+    const busy = p.tumble || p.swimming || p.downed || p.getUp > 0 || p.vehicle;
     this.aiming = !!cmd.aiming && !busy && !this.binoculars;
     const zoom = this.binoculars ? 8 : this.aiming ? (w.zoom || 1) : 1;
     this.aimZoom += (zoom - this.aimZoom) * Math.min(1, dt * 12);

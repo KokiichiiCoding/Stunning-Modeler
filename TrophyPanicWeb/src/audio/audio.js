@@ -190,7 +190,47 @@ export class Audio {
     this.birdT = 0;
   }
 
+  /** Quad bike engine: two detuned oscillators + chuggy noise, pitched by speed. */
+  startEngine() {
+    if (!this.ctx || this.engine) return;
+    const c = this.ctx;
+    const o1 = c.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 42;
+    const o2 = c.createOscillator(); o2.type = 'square'; o2.frequency.value = 43.5;
+    const n = c.createBufferSource(); n.buffer = this.noiseBuf; n.loop = true;
+    const nf = c.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 320;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 700; f.Q.value = 3;
+    const g = c.createGain(); g.gain.value = 0.0001;
+    const chug = c.createGain(); chug.gain.value = 0.5;
+    const lfo = c.createOscillator(); lfo.frequency.value = 9; const lg = c.createGain(); lg.gain.value = 0.35;
+    lfo.connect(lg); lg.connect(chug.gain);
+    o1.connect(f); o2.connect(f); n.connect(nf); nf.connect(f); f.connect(chug); chug.connect(g); g.connect(this.master);
+    [o1, o2, n, lfo].forEach(x => x.start());
+    g.gain.exponentialRampToValueAtTime(0.09, c.currentTime + 0.3);
+    this.engine = { o1, o2, n, lfo, f, g };
+    this.play('boing'); // the starter motor is, somehow, a spring
+  }
+  stopEngine() {
+    if (!this.engine) return;
+    const e = this.engine, t = this.ctx.currentTime;
+    this.engine = null;
+    e.g.gain.cancelScheduledValues(t);
+    e.g.gain.setValueAtTime(e.g.gain.value, t);
+    e.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    [e.o1, e.o2, e.n, e.lfo].forEach(x => x.stop(t + 0.55));
+  }
+
   update(dt) {
+    if (this.engine) {
+      const v = this.game.player.vehicle;
+      const sp = v ? v.speed() : 0;
+      const rev = v && v.airborne ? 1.5 : 1;
+      const hz = (42 + sp * 5.5) * rev;
+      const t = this.ctx.currentTime;
+      this.engine.o1.frequency.setTargetAtTime(hz, t, 0.08);
+      this.engine.o2.frequency.setTargetAtTime(hz * 1.03, t, 0.08);
+      this.engine.lfo.frequency.setTargetAtTime(9 + sp * 1.4, t, 0.1);
+      this.engine.f.frequency.setTargetAtTime(600 + sp * 90, t, 0.1);
+    }
     if (!this.ctx || !this.ambience) return;
     const G = this.game;
     const w = G.wind.speed;

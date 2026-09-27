@@ -187,6 +187,15 @@ export function buildHunter({ jacket = 0xff6b2c, hat = 'beanie', skin = 0 } = {}
         arms[0].rotation.x = -s * sw * 0.8; arms[1].rotation.x = s * sw * 0.8;
         arms[0].rotation.z = 0.15; arms[1].rotation.z = -0.15;
       }
+      if (st.seated) {
+        // astride the quad: knees up, hands on the bars, leaning into turns
+        legs[0].rotation.x = legs[1].rotation.x = -1.35;
+        legs[0].rotation.z = 0.35; legs[1].rotation.z = -0.35;
+        body.position.y = 0; body.rotation.x = 0.2; body.rotation.z = -(st.lean || 0) * 0.5;
+        arms[0].rotation.x = arms[1].rotation.x = -1.25;
+        arms[0].rotation.z = 0.35; arms[1].rotation.z = -0.35;
+        for (const l of legs) l.position.y = 0.3;
+      } else { legs[0].rotation.z = legs[1].rotation.z = 0; }
       eyes.visible = !st.dead; deadEyes.visible = !!st.dead;
       rifle.visible = !!st.showRifle;
     },

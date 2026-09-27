@@ -20,6 +20,7 @@ import { Audio } from '../audio/audio.js';
 import { UI } from '../ui/ui.js';
 import { Profile } from './profile.js';
 import { Coop } from '../net/coop.js';
+import { Vehicles } from '../entities/vehicle.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -100,6 +101,7 @@ export class Game {
     this.hunterModel.setVisible(false);
     this.animals = new AnimalManager(this);
     this.weapons = new Weapons(this);
+    this.vehicles = new Vehicles(this);
     this.coop = new Coop(this);
 
     ui.loading(1, 'Ready!');
@@ -227,6 +229,7 @@ export class Game {
     this.coop.broadcastEvent('downed', { by: source });
   }
   respawn() {
+    if (this.player.vehicle) this.player.vehicle.exit(true);
     this.spawnAtLodge();
     this.hour = Math.min(23.5, this.hour + 1.5);
     this.resume();
@@ -293,6 +296,12 @@ export class Game {
     };
     cmd.holdBreath = cmd.aiming && cmd.sprint;
     if (cmd.aiming) cmd.sprint = false;
+    if (p.vehicle) {
+      cmd.throttle = cmd.moveZ; cmd.steer = cmd.moveX;
+      cmd.handbrake = I.isDown('Space');
+      cmd.moveX = cmd.moveZ = 0; cmd.jump = cmd.crouch = cmd.prone = false;
+      cmd.aiming = cmd.fire = cmd.firePressed = false;
+    }
     this.handleActionKeys(I);
     return cmd;
   }
@@ -319,6 +328,7 @@ export class Game {
     this.hour = (this.hour + dt * 24 / this.daySeconds) % 24;
     this.period = periodFor(this.hour); // simulation-owned; the sky only displays it
     this.wind.update(dt);
+    this.vehicles.step(dt, cmd || {});
     this.player.step(dt, cmd || {});
     this.weapons.step(dt, cmd || {});
     this.scent.update(dt, this.wind, this.weapons.blowers);
@@ -330,11 +340,14 @@ export class Game {
 
   interact() {
     const p = this.player;
+    if (p.vehicle) { p.vehicle.exit(); this.ui.feed('You hop off. The quad ticks as it cools.', 'info'); return; }
     // Harvest a downed animal in reach
     const a = this.animals.nearestDowned(p.pos, 3.2);
     if (a) { this.animals.harvest(a); return; }
     const item = this.weapons.nearestPickup(p.pos, 2.5);
     if (item) { this.weapons.pickup(item); return; }
+    const quad = !p.tumble && this.vehicles.nearest(p.pos, 2.6);
+    if (quad) { this.weapons.aiming = false; if (this.weapons.binoculars) this.weapons.toggleBinoculars(); quad.enter(p); return; }
     for (const tw of this.structures.towers) {
       if (Math.hypot(p.pos.x - tw.x, p.pos.z - (tw.z + 1.5)) < 2.2 && !p.onTower) {
         p.pos.x = tw.x; p.pos.z = tw.z; p.pos.y = tw.top + 0.05; p.vel.y = 0;
@@ -393,7 +406,22 @@ export class Game {
 
     const third = this.thirdPerson || p.tumble || p.downed;
     this.hunterModel.setVisible(!!third);
-    if (third) {
+    if (p.vehicle && this.thirdPerson) {
+      // chase cam: sits behind the quad, swings with it, mouse can look around
+      const v = p.vehicle;
+      const yaw = v.yaw + Math.PI;
+      const back = 6 + v.speed() * 0.12;
+      const cx = v.pos.x + Math.sin(yaw) * back, cz = v.pos.z + Math.cos(yaw) * back;
+      let cy = v.pos.y + 2.4 - p.pitch * 3;
+      cy = Math.max(cy, this.terrain.heightAt(cx, cz) + 0.6);
+      cam.position.lerp(new THREE.Vector3(cx, cy, cz), Math.min(1, dt * 6));
+      cam.lookAt(v.pos.x, v.pos.y + 1.1, v.pos.z);
+    } else if (p.vehicle) {
+      // first person on the quad: look around freely, the machine pitches and rolls under you
+      const v = p.vehicle;
+      cam.position.set(eye.x, eye.y, eye.z);
+      cam.rotation.set(p.pitch + v.pitch * 0.6, p.yaw, -v.roll * 0.6);
+    } else if (third) {
       const back = p.tumble ? 5.5 : 3.4;
       const yaw = p.yaw;
       const cx = eye.x + Math.sin(yaw) * back * Math.cos(p.pitch * 0.5);
@@ -421,6 +449,15 @@ export class Game {
   updateHunterModel(dt) {
     const p = this.player, hm = this.hunterModel;
     hm.group.position.set(p.pos.x, p.pos.y, p.pos.z);
+    if (p.vehicle) {
+      const v = p.vehicle;
+      hm.group.position.y = p.pos.y - 0.36;
+      hm.group.rotation.order = 'YXZ';
+      hm.group.rotation.set(-v.pitch, v.yaw, v.roll);
+      hm.animate(dt, { speed: 0, stance: 'stand', pitch: p.pitch, seated: true, lean: v.steer, showRifle: false });
+      return;
+    }
+    hm.group.rotation.order = 'XYZ';
     if (p.tumble) {
       hm.group.rotation.set(p.tumble.rot.x, p.tumble.rot.y, p.tumble.rot.z);
     } else {
@@ -452,6 +489,7 @@ export class Game {
       this.vegetation.cull(cp, this.scene.fog.far);
     }
     this.animals.render(dt);
+    this.vehicles.render(dt);
     this.fx.render(dt);
     this.weapons.render(dt);
     this.coop.render(dt);
@@ -461,7 +499,7 @@ export class Game {
     r.info.reset();
     r.clear();
     r.render(this.scene, this.camera);
-    if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && this.weapons.viewmodelVisible()) {
+    if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && !this.player.vehicle && this.weapons.viewmodelVisible()) {
       r.clearDepth();
       r.render(this.viewScene, this.viewCamera);
     }
