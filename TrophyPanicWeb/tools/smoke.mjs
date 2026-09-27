@@ -54,6 +54,46 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async danger() {
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    for (const [sp, dist, hour] of [['grizzly', 22, 10], ['moose', 14, 10], ['black_bear', 18, 10], ['wolf', 45, 20.5], ['cougar', 40, 21], ['boar', 12, 10]]) {
+      const r = await page.evaluate(({ sp, dist, hour }) => {
+        const g = window.__tp.game;
+        g.hour = hour;
+        // clear the reserve and spawn just this species nearby
+        for (const a of g.animals.list) a.dispose();
+        g.animals.list = []; g.animals.groups = [];
+        g.player.spawnAt(-60, 200, 0);
+        let tries = 0;
+        while (!g.animals.list.some(a => a.species.id === sp) && tries++ < 200) {
+          for (const a of g.animals.list) a.dispose();
+          g.animals.list = []; g.animals.groups = [];
+          g.animals.spawnGroup(g.player.pos);
+        }
+        const info = window.__tp.debug.approach(sp, dist);
+        g.player.hp = 100; g.player.bleed = 0;
+        return info;
+      }, { sp, dist, hour });
+      if (!r) { console.log('  no', sp); continue; }
+      const log = await page.evaluate(() => {
+        const g = window.__tp.game;
+        const states = new Set();
+        let tumbles = 0, minD = 1e9;
+        const a0 = g.animals.list.find(a => a.species.id === window.__tp._sp) || null;
+        for (let i = 0; i < 60 * 20; i++) {
+          g.advance(1 / 60);
+          for (const a of g.animals.list) { states.add(a.species.id + ':' + a.state); minD = Math.min(minD, Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z)); }
+          if (g.player.tumble) tumbles++;
+          if (g.player.downed) break;
+        }
+        return { hp: +g.player.hp.toFixed(1), downed: g.player.downed, tumbled: tumbles > 0, minDist: +minD.toFixed(1), state: g.state, t: +g.time.toFixed(1), states: [...states].join(',') };
+      });
+      console.log(`  ${sp}: ${JSON.stringify(log)}`);
+      await page.evaluate(() => { const g = window.__tp.game; g.player.spawnAt(g.player.pos.x, g.player.pos.z, g.player.yaw); g.state = 'play'; g.ui.hideScreens(); g.ui.showHUD(); });
+      await step(1);
+      await shot('50_' + sp);
+    }
+  },
   async gallery() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 9.5; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

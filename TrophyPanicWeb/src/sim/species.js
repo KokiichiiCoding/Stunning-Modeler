@@ -173,7 +173,7 @@ export const SPECIES = {
     behavior: { grouping: 'solitary', groupSize: [1, 1], fear: 85, aggression: 55, curiosity: 0.8, defensiveRadius: 40, wounded: 'defensive', territorial: 30 },
     tracks: { stride: 1.35, printCm: 22 },
     klass: [4, 4], value: 1250, xp: 700, danger: 5,
-    attack: { name: 'maul', blunt: 42, cut: 30, knock: 16, reach: 2.3, cooldown: 1.3 },
+    attack: { name: 'maul', blunt: 36, cut: 26, knock: 16, reach: 2.3, cooldown: 1.3 },
     activity: ['dawn', 'day', 'dusk', 'night'], habitat: { pine: 3, brush: 2, marsh: 2, ridge: 1 },
     body: { len: 1.9, h: 1.08, w: 0.98, leg: 0.64, neck: 0.22, head: 0.56, headFwd: 0.12, hump: 0.28 },
     look: { coat: 0x8a5f3c, belly: 0xa77e56, accent: 0xd8b48a, nose: 0x241a14, eye: 'small', ears: 'round', tail: 'stub', trophy: 'skull', muzzle: 0xd8b48a },

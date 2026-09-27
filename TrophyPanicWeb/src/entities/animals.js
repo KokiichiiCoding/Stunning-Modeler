@@ -130,6 +130,19 @@ export class Animal {
       this.stimuli.push({ kind: 'hear', x: e.x, z: e.z, s });
     }
     this.lastSound = g.time;
+    // Close quarters: breathing, rustling, the smell of a nervous hunter.
+    // Any animal notices someone standing right next to it; territorial
+    // giants notice anyone inside their patch.
+    for (const h of hunters) {
+      const d = Math.hypot(h.x - this.pos.x, h.z - this.pos.z);
+      const close = sp.behavior.territorial ? Math.max(10, sp.behavior.territorial * 0.8) : 9;
+      if (d < close && !h.downed) {
+        const k = (1 - d / close) * (h.stance === 'prone' ? 0.5 : 1);
+        this.alertness += k * 14;
+        if (k > 0.3) this.setThreat(h.x, h.z, h.id);
+        this.stimuli.push({ kind: 'near', s: k });
+      }
+    }
     // smell: the scent field is wind-advected; upwind animals find nothing
     const smelled = g.scent.sample(this.pos.x, this.pos.z, 'player');
     if (smelled >= sp.senses.smell) {
@@ -176,7 +189,19 @@ export class Animal {
       if (B.zigzag) this.zig = 1;
     };
     const charge = (who) => {
+      if (g.time < (this.retreatUntil || 0)) { flee(); return; }
+      const h0 = who || nearestHunter;
+      // Playing dead works on bears: a still, prone hunter is not a threat.
+      if (sp.id.includes('bear') || sp.id === 'grizzly') {
+        if (h0 && h0.stance === 'prone' && h0.speed < 0.25 && !wounded && this.memory.charges > 0) {
+          this.alertness = 30; this.state = 'Curious'; this.goal = 'Watch'; this.target = null;
+          if (!this.playedDeadNotice) { this.playedDeadNotice = true; this.mgr.announce(this, 'playdead'); }
+          return;
+        }
+      }
       if (this.state !== 'Aggressive') {
+        this.attacksLeft = ({ boar: 2, moose: 2, black_bear: 2, grizzly: 2, wolf: 1, cougar: 2 })[sp.id] || 2;
+        this.memory.charges++;
         g.audio.play(VOICES[sp.id] === 'howl' ? 'growl' : VOICES[sp.id] === 'gobble' ? 'gobble' : sp.id === 'boar' ? 'squeal' : VOICES[sp.id], this.pos);
         this.mgr.announce(this, 'charge');
       }
@@ -188,7 +213,7 @@ export class Animal {
 
     // ---- predators hunting the hunter -----------------------------------
     if (B.predator && !wounded && nearestHunter) {
-      const bold = g.sky.period === 'night' || g.sky.period === 'dusk' || nearestHunter.bleeding > 0 || this.identity.temperament === 'Ornery' || this.called;
+      const bold = g.period === 'night' || g.period === 'dusk' || nearestHunter.bleeding > 0 || this.identity.temperament === 'Ornery' || this.called;
       if (B.stalker) {
         // Cougar: shadow the hunter from behind, pounce when they look away.
         if ((bold || this.called) && hd < 90 && this.alertness < 90) {
@@ -206,7 +231,8 @@ export class Animal {
         // Wolves: pack circles and closes when bold; scatter from gunfire.
         const packBold = bold && g.time - this.memory.shotT > 20;
         if (packBold && hd < 110) {
-          if (hd < 7 || (this.state === 'Aggressive' && hd < 20)) { charge(nearestHunter); return; }
+          if (this.state === 'Stalking' && hd < 30) this.rushT = (this.rushT || this.rng.range(4, 9)) - DECIDE;
+          if (hd < 7 || (this.state === 'Aggressive' && hd < 20) || (this.rushT !== undefined && this.rushT <= 0)) { this.rushT = undefined; charge(nearestHunter); return; }
           this.state = 'Stalking'; this.goal = 'Circle';
           const ang = Math.atan2(this.pos.z - nearestHunter.z, this.pos.x - nearestHunter.x) + 0.35;
           const r = Math.max(9, hd - 3);
@@ -231,8 +257,11 @@ export class Animal {
     }
 
     // ---- dangerous game: territorial / defensive ---------------------------
-    if (B.territorial && hd < B.territorial && this.alertness > 20 && nearestHunter) { charge(nearestHunter); return; }
-    if (this.alertness >= B.aggression && hd < B.defensiveRadius && nearestHunter) {
+    // In a group only the leader (or a cornered animal) stands its ground;
+    // the rest of the sounder/herd scatters.
+    const mayConfront = !this.group || this.group.leader === this || hd < 6;
+    if (B.territorial && hd < B.territorial && this.alertness > 20 && nearestHunter && mayConfront) { charge(nearestHunter); return; }
+    if (this.alertness >= B.aggression && hd < B.defensiveRadius && nearestHunter && mayConfront) {
       // Black bears bluff first: a charge that stops short, a huff, then a real one.
       if (sp.id === 'black_bear' && this.memory.bluffed < 1 && this.identity.temperament !== 'Ornery') {
         this.memory.bluffed++; this.bluffUntil = g.time + 2.5; charge(nearestHunter); this.bluff = true; return;
@@ -411,11 +440,19 @@ export class Animal {
             this.attackCd = atk.cooldown;
             const k = atk.knock * (0.8 + this.identity.scale * 0.3);
             const nx = (h.x - this.pos.x) / Math.max(0.1, d), nz = (h.z - this.pos.z) / Math.max(0.1, d);
+            if (h.invulnerable) { this.attackCd = 0.4; break; }
             view.hitHunter(h, { blunt: atk.blunt * this.identity.scale, cut: atk.cut, knock: { x: nx * k, y: 3 + k * 0.3, z: nz * k }, source: atk.name });
             g.audio.play(this.species.id.includes('bear') || this.species.id === 'grizzly' ? 'growl' : 'thwack', this.pos);
             this.lungeT = 0.3;
-            // after landing a hit, predators may back off to reassess
-            if (this.species.behavior.predator && this.rng.chance(0.4)) { this.alertness = 95; this.goal = 'Flee'; this.state = 'Fleeing'; this.target = this.safeTarget(this.pos.x - nx * 40, this.pos.z - nz * 40); }
+            // Hit-and-run: once the attack budget is spent the animal breaks
+            // off and will not re-engage for a while (unless shot again).
+            this.attacksLeft = (this.attacksLeft || 1) - 1;
+            const playingDead = h.stance === 'prone' && h.speed < 0.25 && (this.species.id.includes('bear') || this.species.id === 'grizzly');
+            if (this.attacksLeft <= 0 || playingDead) {
+              this.retreatUntil = g.time + (this.species.behavior.predator ? 12 : 25);
+              this.alertness = 70; this.goal = 'Flee'; this.state = 'Fleeing'; this.chaseId = null;
+              this.target = this.safeTarget(this.pos.x - nx * 45, this.pos.z - nz * 45);
+            }
             break;
           }
         }
@@ -428,7 +465,7 @@ export class Animal {
       if (this.voiceCd <= 0) {
         this.voiceCd = this.rng.range(20, 70);
         const dPlayer = Math.hypot(g.player.pos.x - this.pos.x, g.player.pos.z - this.pos.z);
-        const vocal = this.species.id === 'elk' ? g.sky.period !== 'day' : this.species.id === 'wolf' ? g.sky.period === 'night' || g.sky.period === 'dusk' : this.species.id === 'turkey' || this.species.id === 'deer';
+        const vocal = this.species.id === 'elk' ? g.period !== 'day' : this.species.id === 'wolf' ? g.period === 'night' || g.period === 'dusk' : this.species.id === 'turkey' || this.species.id === 'deer';
         if (vocal && dPlayer < 450 && (!this.group || this.group.leader === this)) {
           g.audio.play(VOICES[this.species.id], this.pos);
           g.sounds.emit('animal', this.pos.x, this.pos.y + 1, this.pos.z, 300, g.time, this.id);
@@ -638,7 +675,7 @@ export class AnimalManager {
         const p = g.player;
         const f = p.forward();
         this.hunters.length = 0;
-        if (!p.downed && g.state !== 'title') this.hunters.push({ id: 'player', x: p.pos.x, y: p.pos.y, z: p.pos.z, speed: p.speed, stance: p.stance, onTower: !!p.onTower, bleeding: p.bleed, fwd: { x: f.x, z: f.z }, downed: p.downed });
+        if (!p.downed && g.state !== 'title') this.hunters.push({ id: 'player', x: p.pos.x, y: p.pos.y, z: p.pos.z, speed: p.speed, stance: p.stance, onTower: !!p.onTower, bleeding: p.bleed, fwd: { x: f.x, z: f.z }, downed: p.downed, invulnerable: p.invuln > 0 });
         for (const r of g.coop.remoteHunters()) this.hunters.push(r);
       },
     };
@@ -658,7 +695,7 @@ export class AnimalManager {
     const g = this.game, T = g.terrain;
     const rng = new Rng((g.sessionSeed ^ (this.spawnCounter * 7919)) >>> 0);
     this.spawnCounter++;
-    const period = g.sky ? g.sky.period : 'day';
+    const period = g.sky ? g.period : 'day';
     // choose species weighted by spawn weight and time-of-day activity
     const items = SPECIES_IDS.map(id => ({ v: id, w: SPAWN_WEIGHT[id] * (SPECIES[id].activity.includes(period) ? 1 : 0.35) }));
     const id = rng.weighted(items);
@@ -939,6 +976,7 @@ export class AnimalManager {
       const d = Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z);
       if (d < 60) g.ui.toast(a.bluff ? `The ${a.species.displayName.split(' ').pop()} is bluff charging!` : `${a.species.displayName.toUpperCase()} IS CHARGING!`, 'big', 1.8);
     } else if (what === 'staredown') g.ui.feed('You stared the cougar down. It slinks away.', 'good');
+    else if (what === 'playdead') g.ui.feed('You play dead. The bear sniffs you… and loses interest.', 'good');
   }
 
   onCall(kind, pos) {

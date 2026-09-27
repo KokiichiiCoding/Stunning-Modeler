@@ -200,7 +200,7 @@ export class Audio {
     if (this.birdT <= 0) {
       this.birdT = 1.5 + Math.random() * 5;
       const t = this.ctx.currentTime + 0.01;
-      const period = G.sky.period;
+      const period = G.period || G.sky.period;
       const { g } = this.out(null, 0.06);
       if (period === 'night') {
         for (let i = 0; i < 3; i++) this.tone(g, t + i * 0.09, 0.05, { type: 'sine', f0: 4200, gain: 0.25 }); // crickets

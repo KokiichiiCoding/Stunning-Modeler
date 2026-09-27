@@ -6,7 +6,7 @@ import { THREE } from '../three.js';
 import { TerrainData, WATER_LEVEL, POIS } from '../world/terrainData.js';
 import { buildTerrainMesh, buildHeightTexture } from '../world/terrainMesh.js';
 import { buildWater } from '../world/water.js';
-import { Sky } from '../world/sky.js';
+import { Sky, periodFor } from '../world/sky.js';
 import { Vegetation, vegUniforms } from '../world/vegetation.js';
 import { Structures } from '../world/structures.js';
 import { Wind, ScentField, SoundLog, Evidence, SCENT_CARCASS } from '../sim/worldsim.js';
@@ -122,12 +122,39 @@ export class Game {
     this.input.sensitivity = s.sens;
     this.fov = s.fov;
     this.audio.setVolume(s.volume);
-    const high = s.quality !== 'low';
-    this.renderer.shadowMap.enabled = high;
-    this.sky.sun.castShadow = high;
-    this.renderer.setPixelRatio(high ? Math.min(window.devicePixelRatio || 1, 1.75) : 0.8);
+    // 'auto' starts high and steps down if frames get slow (see autoQuality).
+    this.qualityLevel = s.quality === 'low' ? 3 : s.quality === 'high' ? 0 : (this.qualityLevel ?? 0);
+    this.applyQualityLevel();
+  }
+
+  applyQualityLevel() {
+    const L = this.qualityLevel;
+    const dpr = window.devicePixelRatio || 1;
+    const pr = [Math.min(dpr, 1.75), Math.min(dpr, 1.0), 0.85, 0.7][L];
+    const shadows = L <= 1;
+    if (this.renderer.shadowMap.enabled !== shadows) {
+      this.renderer.shadowMap.enabled = shadows;
+      this.sky.sun.castShadow = shadows;
+      this.scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+    }
+    this.renderer.setPixelRatio(pr);
+    this.vegetation.lodDistance = [170, 150, 120, 95][L];
     this.onResize();
-    this.scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+  }
+
+  /** Keep the frame rate playable on modest laptops. */
+  autoQuality(dt) {
+    if (this.profile.settings.quality !== 'auto' || this.state !== 'play' || document.hidden) { this.qAcc = 0; this.qFrames = 0; return; }
+    this.qAcc = (this.qAcc || 0) + dt; this.qFrames = (this.qFrames || 0) + 1;
+    if (this.qAcc < 2.5) return;
+    const avg = this.qAcc / this.qFrames;
+    this.qAcc = 0; this.qFrames = 0;
+    if (avg > 0.03 && this.qualityLevel < 3) {
+      this.qualityLevel++; this.applyQualityLevel();
+      this.ui.feed('Graphics lowered a notch to keep things smooth.', 'info');
+    } else if (avg < 0.012 && this.qualityLevel > 0 && (this.qUpT = (this.qUpT || 0) + 1) > 4) {
+      this.qUpT = 0; this.qualityLevel--; this.applyQualityLevel();
+    }
   }
 
   onResize() {
@@ -214,6 +241,7 @@ export class Game {
     this.advance(dt);
     this.render(dt);
     this.audio.update(dt);
+    this.autoQuality(dt);
     this.input.endFrame();
   }
 
@@ -289,6 +317,7 @@ export class Game {
   simStep(dt, cmd) {
     this.time += dt;
     this.hour = (this.hour + dt * 24 / this.daySeconds) % 24;
+    this.period = periodFor(this.hour); // simulation-owned; the sky only displays it
     this.wind.update(dt);
     this.player.step(dt, cmd || {});
     this.weapons.step(dt, cmd || {});

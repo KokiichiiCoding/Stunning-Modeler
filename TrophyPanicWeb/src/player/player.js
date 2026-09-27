@@ -37,6 +37,7 @@ export class Player {
     this.lastFallSpeed = 0;
     this.jitter = 0;
     this.slide = 0;
+    this.invuln = 0;
   }
 
   spawnAt(x, z, yaw = 0) {
@@ -69,7 +70,7 @@ export class Player {
 
   /** Blunt/cut injuries with a knockback impulse (m/s). */
   hurt({ blunt = 0, cut = 0, knock = null, source = '' }) {
-    if (this.downed) return;
+    if (this.downed || this.invuln > 0) return;
     const dmg = blunt * 0.55 + cut * 0.45;
     this.hp -= dmg;
     this.bleed = Math.min(6, this.bleed + cut * 0.035);
@@ -77,8 +78,8 @@ export class Player {
     this.lastHurtBy = source;
     if (knock) {
       const k = Math.hypot(knock.x, knock.z);
-      if (k > 5.5 || blunt > 25) this.startTumble(knock.x, Math.max(knock.y || 0, 3 + k * 0.25), knock.z);
-      else { this.vel.x += knock.x * 0.5; this.vel.z += knock.z * 0.5; }
+      if (k > 5.5 || blunt > 25) { this.startTumble(knock.x, Math.max(knock.y || 0, 3 + k * 0.25), knock.z); this.invuln = 2.2; }
+      else { this.vel.x += knock.x * 0.5; this.vel.z += knock.z * 0.5; this.invuln = 0.6; }
     }
     if (this.hp <= 0) { this.hp = 0; this.downed = true; this.game.onPlayerDowned(source); }
   }
@@ -100,6 +101,7 @@ export class Player {
     const g = this.game;
     const T = g.terrain;
     if (this.downed) return;
+    if (this.invuln > 0) this.invuln -= dt;
 
     // --- injuries ------------------------------------------------------
     if (this.bleed > 0) {
