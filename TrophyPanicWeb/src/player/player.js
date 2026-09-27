@@ -318,7 +318,8 @@ export class Player {
       const s = (1 + this.bleed * 1.5) * this.scentMult;
       g.scent.emit(this.pos.x, this.pos.z, s, 'player', g.time);
     }
-    const cover = this.onTower ? 0.6 : T.coverAt(this.pos.x, this.pos.z);
+    this.inBlind = !!(g.blinds && g.blinds.inside(this.pos.x, this.pos.z));
+    const cover = this.inBlind ? 0.93 : this.onTower ? 0.6 : T.coverAt(this.pos.x, this.pos.z);
     const stanceF = this.stance === 'prone' ? 0.3 : this.stance === 'crouch' ? 0.55 : 1;
     this.visibility = Math.min(1, (0.15 + 0.85 * Math.min(1, this.speed / 4)) * stanceF * (1 - cover * 0.9) * 1.6);
   }

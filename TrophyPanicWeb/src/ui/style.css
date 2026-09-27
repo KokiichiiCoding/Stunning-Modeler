@@ -265,3 +265,11 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 .photo-item .stars { color: #e6a800; letter-spacing: 1px; }
 @media (prefers-reduced-motion: reduce) { .photo-item, .photo-item:nth-child(even) { transform: none; } }
 .shop-note { grid-column: 1 / -1; font: 700 14px var(--body); color: var(--ink-soft); }
+
+/* inside a ground blind: a leafy window slit */
+#blind-frame { position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(to bottom, #2f4220 0 17%, rgba(47,66,32,.0) 24%, rgba(47,66,32,0) 70%, #2f4220 78% 100%),
+    radial-gradient(ellipse at center, transparent 60%, rgba(20,28,14,.55) 100%); }
+#blind-frame::before, #blind-frame::after { content: ''; position: absolute; left: 0; right: 0; height: 12px; background: repeating-linear-gradient(90deg, #6f8f3a 0 26px, #4f6a28 26px 44px, #a9c85a 44px 58px); border-block: 3px solid var(--ink); }
+#blind-frame::before { top: 17%; } #blind-frame::after { top: calc(78% - 12px); }

@@ -203,11 +203,12 @@ export class UI {
     $('st-bar').style.width = p.stamina + '%';
     $('noise-bar').style.width = Math.round(p.noise * 100) + '%';
     $('vis-bar').style.width = Math.round(p.visibility * 100) + '%';
-    $('stance-chip').textContent = p.vehicle ? 'Riding' : p.swimming ? 'Swimming' : p.tumble ? 'Tumbling!' : p.onTower ? 'On tower' : { stand: 'Standing', crouch: 'Crouched', prone: 'Prone' }[p.stance];
+    $('stance-chip').textContent = p.vehicle ? 'Riding' : p.inBlind ? 'In blind' : p.swimming ? 'Swimming' : p.tumble ? 'Tumbling!' : p.onTower ? 'On tower' : { stand: 'Standing', crouch: 'Crouched', prone: 'Prone' }[p.stance];
     if (p.hp < this.lastHp - 0.5) $('damage-vignette').style.opacity = String(Math.min(1, (this.lastHp - p.hp) / 12 + 0.3));
     else $('damage-vignette').style.opacity = String(Math.max(0, (parseFloat($('damage-vignette').style.opacity) || 0) - dt * 1.2, p.hp < 30 ? 0.35 : 0));
     this.lastHp = p.hp;
     $('sense-vignette').style.opacity = g.fx.senseT > 0 ? '1' : '0';
+    { const c0 = w.current; $('blind-frame').hidden = !(p.inBlind && !g.thirdPerson && !w.binoculars && !(w.aiming && c0 && (c0.zoom >= 3 || c0.type === 'camera'))); }
 
     // weapon
     const cur = w.current;

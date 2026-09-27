@@ -9,7 +9,7 @@ import { buildWater } from '../world/water.js';
 import { Sky, periodFor } from '../world/sky.js';
 import { Vegetation, vegUniforms } from '../world/vegetation.js';
 import { Structures } from '../world/structures.js';
-import { Wind, ScentField, SoundLog, Evidence, SCENT_CARCASS } from '../sim/worldsim.js';
+import { Wind, ScentField, SoundLog, Evidence, SCENT_CARCASS, visualDetection } from '../sim/worldsim.js';
 import { Input } from '../core/input.js';
 import { Player } from '../player/player.js';
 import { buildHunter, JACKETS } from '../entities/hunter.js';
@@ -26,6 +26,7 @@ import { WeatherFX } from '../world/weatherfx.js';
 import { Social } from '../ui/social.js';
 import { Jobs } from './jobs.js';
 import { Dog } from '../entities/dog.js';
+import { Blinds } from '../entities/blind.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -116,6 +117,7 @@ export class Game {
     this.weapons = new Weapons(this);
     this.vehicles = new Vehicles(this);
     this.dog = new Dog(this);
+    this.blinds = new Blinds(this);
     this.coop = new Coop(this);
     this.social = new Social(this);
     this.jobs = new Jobs(this);
@@ -228,6 +230,7 @@ export class Game {
   quitToTitle() {
     this.coop.leave();
     this.social.clear();
+    this.blinds.clear();
     if (this.player.vehicle) this.player.vehicle.exit(true);
     this.state = 'title';
     this.profile.save();
@@ -340,6 +343,7 @@ export class Game {
     if (I.wasPressed('KeyM')) this.openMenu('map');
     if (I.wasPressed('KeyX')) this.social.ping();
     if (I.wasPressed('KeyK')) this.dog.command();
+    if (I.wasPressed('KeyP')) this.blinds.toggle();
     if (I.wasPressed('Enter') || I.wasPressed('NumpadEnter')) this.social.open();
     if (I.wasPressed('Escape')) this.pause();
   }
@@ -587,6 +591,7 @@ export class Game {
     this.animals.render(dt);
     this.vehicles.render(dt);
     this.dog.render(dt);
+    this.blinds.render(this.camera.position);
     this.fx.render(dt);
     this.weapons.render(dt);
     this.coop.render(dt);
@@ -670,6 +675,11 @@ export class Game {
         teleport(x, z, yaw = game.player.yaw) { game.player.spawnAt(x, z, yaw); },
         setHour(h) { game.hour = h; },
         setWeather(k, instant = true) { game.weather.set(k, instant); },
+        /** How strongly animal `a` would see hunter view-entry `h` right now (moving slowly). */
+        seenBy(a, h) {
+          const cover = h.cover !== undefined ? h.cover : h.onTower ? 0.2 : game.terrain.coverAt(h.x, h.z);
+          return visualDetection(a.species, a.pos.x, a.pos.z, a.facing, h.x, h.z, 0.8, h.stance, cover, false, game.light, game.weather.visibilityMult());
+        },
         press(code) { game.input.pressed.add(code); game.input.down.add(code); },
         release(code) { game.input.down.delete(code); },
         report() {

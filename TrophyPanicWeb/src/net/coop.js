@@ -18,6 +18,7 @@ import { WEAPONS, AMMO } from '../sim/arsenal.js';
 import { Life } from '../sim/creature.js';
 import { Rng } from '../core/rng.js';
 import { buildDog } from '../entities/dog.js';
+import { buildBlind } from '../entities/blind.js';
 
 const SEND_HZ = 12;
 const EV_RING = 10;
@@ -90,7 +91,7 @@ export class Coop {
   }
 
   drop() {
-    for (const p of this.peers.values()) { if (p.model) this.game.scene.remove(p.model.group); if (p.tag) this.game.scene.remove(p.tag); if (p.dog) this.game.scene.remove(p.dog.root); }
+    for (const p of this.peers.values()) { if (p.model) this.game.scene.remove(p.model.group); if (p.tag) this.game.scene.remove(p.tag); if (p.dog) this.game.scene.remove(p.dog.root); if (p.blind) this.game.scene.remove(p.blind.mesh); }
     this.peers.clear();
     for (const a of this.shadow.values()) a.dispose();
     this.shadow.clear();
@@ -120,7 +121,7 @@ export class Coop {
     }
     for (const p of change.left) {
       const r = this.peers.get(p.peer);
-      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); if (r.dog) g.scene.remove(r.dog.root); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
+      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); if (r.dog) g.scene.remove(r.dog.root); if (r.blind) g.scene.remove(r.blind.mesh); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
     }
     for (const p of valid) {
       if (p.sameTab) continue;
@@ -374,6 +375,8 @@ export class Coop {
       tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0,
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,
     };
+    const bm = g.blinds && g.blinds.mine;
+    if (bm) pres.bl = [r2(bm.x), r2(bm.z), r2(bm.yaw)];
     const dg = g.dog;
     if (dg && dg.active) pres.dg = [r2(dg.pos.x), r2(dg.pos.y), r2(dg.pos.z), r2(dg.yaw), r2(dg.speed), dg.mode === 'sit' || dg.mode === 'found' ? 1 : 0];
     const v = p.vehicle;
@@ -465,6 +468,13 @@ export class Coop {
       const pr = r.presence;
       const m = r.model;
       m.group.position.set(r.pos.x, r.pos.y, r.pos.z);
+      // their blind
+      const bl = Array.isArray(pr.bl) ? pr.bl : null;
+      if (bl && (!r.blind || r.blind.x !== bl[0] || r.blind.z !== bl[1])) {
+        if (r.blind) g.scene.remove(r.blind.mesh);
+        const mesh = buildBlind(); mesh.position.set(bl[0], g.terrain.heightAt(bl[0], bl[1]) - 0.05, bl[1]); mesh.rotation.y = bl[2] || 0;
+        g.scene.add(mesh); r.blind = { x: bl[0], z: bl[1], mesh };
+      } else if (!bl && r.blind) { g.scene.remove(r.blind.mesh); r.blind = null; }
       // their dog, if they brought one
       if (Array.isArray(pr.dg)) {
         if (!r.dog) { r.dog = buildDog(); g.scene.add(r.dog.root); r.dogPos = { x: pr.dg[0], y: pr.dg[1], z: pr.dg[2] }; r.dogPh = 0; }

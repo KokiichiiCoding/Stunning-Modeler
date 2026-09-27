@@ -103,7 +103,7 @@ export class Animal {
     const earMult = g.weather ? g.weather.hearingMult() : 1;
     const hunters = view.hunters;
     for (const h of hunters) {
-      const cover = h.onTower ? 0.2 : g.terrain.coverAt(h.x, h.z);
+      const cover = h.cover !== undefined ? h.cover : h.onTower ? 0.2 : g.terrain.coverAt(h.x, h.z);
       let seen = visualDetection(sp, this.pos.x, this.pos.z, this.facing, h.x, h.z, h.speed, h.stance, cover, this.state !== 'Calm', light, vis);
       if (seen > 0.05) {
         // A tree trunk between us blocks the look.
@@ -728,6 +728,7 @@ export class AnimalManager {
         this.hunters.length = 0;
         if (!p.downed && g.state !== 'title') this.hunters.push({ id: 'player', x: p.pos.x, y: p.pos.y, z: p.pos.z, speed: p.speed, stance: p.stance, onTower: !!p.onTower, bleeding: p.bleed, fwd: { x: f.x, z: f.z }, downed: p.downed, invulnerable: p.invuln > 0 });
         for (const r of g.coop.remoteHunters()) this.hunters.push(r);
+        for (const h of this.hunters) h.cover = g.blinds && g.blinds.inside(h.x, h.z) ? 0.93 : undefined;
       },
     };
   }

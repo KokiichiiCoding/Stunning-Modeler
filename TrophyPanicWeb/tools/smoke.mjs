@@ -269,6 +269,32 @@ const scripts = {
     for (let i = 0; i < 3; i++) await step(5);
     await shot('97_dog');
   },
+  async blind() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); g.profile.gear.blind = 1; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player;
+      let tries = 0;
+      while (!g.animals.list.some(a => a.species.id === 'deer') && tries++ < 80) g.animals.spawnGroup(p.pos);
+      const info = window.__tp.debug.approach('deer', 28);
+      const a = g.animals.list.find(x => x.id === info.id);
+      // visibility at 28 m, standing in the open, looked at by the deer
+      const seen = () => { a.facing = Math.atan2(p.pos.z - a.pos.z, p.pos.x - a.pos.x); g.animals.view.refresh(); const h = g.animals.view.hunters[0]; return { cover: h.cover, vis: +window.__tp.debug.seenBy(a, h).toFixed(3) }; };
+      const open = seen();
+      g.blinds.toggle();
+      const bm = g.blinds.mine;
+      p.pos.x = bm.x; p.pos.z = bm.z; p.pos.y = g.terrain.heightAt(bm.x, bm.z);
+      p.stance = 'crouch';
+      const inBlind = seen();
+      return { open, inBlind, placed: !!bm };
+    });
+    console.log('  blind', JSON.stringify(r));
+    await step(2);
+    await shot('98_blind_inside');
+    await page.evaluate(() => { const g = window.__tp.game; g.player.pos.x += 4; g.player.pos.z += 3; g.player.yaw += 2.4; });
+    for (let i = 0; i < 2; i++) await step(3);
+    await shot('98_blind');
+  },
   async jobs() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.cash = 300; });
     await page.evaluate(() => window.__tp.debug.startGame({}));
