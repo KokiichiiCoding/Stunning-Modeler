@@ -160,6 +160,36 @@ const scripts = {
     await step(2);
     await shot('43_sunset');
   },
+  async portraits() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const list = (args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : ['deer', 'grizzly', 'wolf', 'moose', 'turkey', 'rabbit', 'boar', 'cougar']);
+    for (const sp of list) {
+      const ok = await page.evaluate((sp) => {
+        const g = window.__tp.game;
+        let tries = 0;
+        while (!g.animals.list.some(a => a.species.id === sp) && tries++ < 80) g.animals.spawnGroup(g.player.pos);
+        window.__tp.debug.freeze(true);
+        const info = window.__tp.debug.approach(sp, 10);
+        if (!info) return false;
+        const a = g.animals.list.find(x => x.id === info.id);
+        // hide everyone else so the portrait is clean
+        for (const o of g.animals.list) o.rig.root.visible = o === a;
+        const f = a.facing, d = 2.2 + a.species.body.len * a.identity.scale * 1.2;
+        const ang = f + 0.65;
+        g.player.spawnAt(a.pos.x + Math.cos(ang) * d, a.pos.z + Math.sin(ang) * d, 0);
+        a.alertness = 60; a.state = sp === 'wolf' || sp === 'grizzly' ? 'Aggressive' : 'Suspicious';
+        a.lookTarget = { x: g.player.pos.x, z: g.player.pos.z };
+        window.__tp.debug.aimAtAnimal(a, 'brain');
+        g.player.pitch -= 0.06;
+        g.weapons.select('camera');
+        return true;
+      }, sp);
+      if (!ok) { console.log('  no', sp); continue; }
+      await step(20);
+      await shot('25_face_' + sp);
+    }
+  },
   async jobs() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.cash = 300; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

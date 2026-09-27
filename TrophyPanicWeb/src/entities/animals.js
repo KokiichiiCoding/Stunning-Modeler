@@ -499,7 +499,7 @@ export class Animal {
     this.state = 'Down'; this.goal = 'None';
     const tumble = Math.min(1, this.speed / 8);
     this.death = { t: 0, side: this.rng.chance(0.5) ? 1 : -1, spin: tumble * 4, vy: 1 + tumble * 3, y: 0, roll: 0 };
-    this.rig.eyes.visible = false; this.rig.deadEyes.visible = true; this.rig.tongue.visible = true;
+    this.rig.eyes.visible = false; this.rig.deadEyes.visible = true; this.rig.tongue.visible = true; this.rig.brows.visible = false;
     g.audio.play(this.species.id === 'turkey' ? 'gobble' : this.species.id === 'boar' ? 'squeal' : 'boing', this.pos);
     g.sounds.emit('carcass', this.pos.x, this.pos.y + 0.5, this.pos.z, 200, g.time, this.id);
     g.scent.emit(this.pos.x, this.pos.z, 3, 'carcass', g.time);
@@ -576,6 +576,15 @@ export class Animal {
     if (this.daze > 0) r.head.rotation.z = Math.sin(this.game.visualTime * 8) * 0.3;
     else r.head.rotation.z = 0;
     if (r.tail) r.tail.rotation.y = Math.sin(this.game.visualTime * (this.state === 'Calm' ? 3 : 12) + this.phase) * 0.25;
+    // Cartoon acting (render-only, no sim randomness): blinks, angry brows,
+    // and a little squash-and-stretch bounce in the stride.
+    const vt = this.game.visualTime + (this.identity.seed % 997) * 0.37;
+    const period = 2.6 + (this.identity.seed % 5) * 0.55;
+    const blink = (vt % period) < 0.11;
+    r.eyes.scale.y = blink ? 0.12 : 1;
+    r.brows.visible = this.goal === 'Charge' || this.state === 'Aggressive' || this.state === 'Stalking';
+    const sq = Math.sin(this.phase * 2) * amp * 0.05;
+    r.torso.scale.set(1 - sq * 0.5, 1 + sq, 1 - sq * 0.5);
   }
 
   // ------------------------------------------------------------------ ballistics

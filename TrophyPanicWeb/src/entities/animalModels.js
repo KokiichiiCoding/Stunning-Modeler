@@ -8,20 +8,30 @@ import { G, paint, merge, xf, toonMat, addOutline } from '../render/toon.js';
 function tint(hex, k) { const c = new THREE.Color(hex); c.multiplyScalar(k); return c.getHex(); }
 
 function buildEyes(look, H, dead) {
-  const size = look.eye === 'big' ? 0.27 : look.eye === 'sly' ? 0.2 : 0.19;
+  const size = (look.eye === 'big' ? 0.27 : look.eye === 'sly' ? 0.2 : 0.19) * 1.12;
   const r = H * size;
   const ex = H * 0.3, ey = H * 0.12, ez = H * 0.36;
   const parts = [];
   for (const s of [-1, 1]) {
     if (!dead) {
       parts.push(paint(xf(G.sphere(r, 10, 8), [s * ex, ey, ez], [0, 0, 0], [1, 1.15, 0.6]), 0xffffff));
-      parts.push(paint(xf(G.sphere(r * 0.62, 8, 6), [s * ex * 0.97, ey - r * 0.05, ez + r * 0.35], [0, 0, 0], [1, 1.2, 0.5]), 0x1d1622));
-      parts.push(paint(xf(G.sphere(r * 0.22, 5, 4), [s * ex * 0.97 + r * 0.2, ey + r * 0.3, ez + r * 0.58]), 0xffffff));
+      parts.push(paint(xf(G.sphere(r * 0.68, 10, 8), [s * ex * 0.97, ey - r * 0.05, ez + r * 0.33], [0, 0, 0], [1, 1.2, 0.5]), 0x1d1622));
+      parts.push(paint(xf(G.sphere(r * 0.24, 6, 5), [s * ex * 0.97 + r * 0.22, ey + r * 0.3, ez + r * 0.6]), 0xffffff));
+      parts.push(paint(xf(G.sphere(r * 0.1, 5, 4), [s * ex * 0.97 - r * 0.2, ey - r * 0.28, ez + r * 0.6]), 0xffffff));
       if (look.eye === 'sly') parts.push(paint(xf(G.sphere(r * 1.05, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), [s * ex, ey + r * 0.05, ez], [0.25, 0, 0], [1, 1.1, 0.62]), look.coat));
     } else {
       for (const a of [0.78, -0.78]) parts.push(paint(xf(G.box(r * 1.6, r * 0.35, r * 0.3), [s * ex, ey, ez + r * 0.45], [0, s * 0.35, a]), 0x1d1622));
     }
   }
+  return merge(parts);
+}
+
+/** Angry cartoon eyebrows (shown when the animal means business). */
+function buildBrows(look, H) {
+  const size = (look.eye === 'big' ? 0.27 : look.eye === 'sly' ? 0.2 : 0.19) * 1.12;
+  const r = H * size, ex = H * 0.3, ey = H * 0.12, ez = H * 0.36;
+  const parts = [];
+  for (const s of [-1, 1]) parts.push(paint(xf(G.capsule(r * 0.2, r * 1.3, 3, 6), [s * ex * 0.92, ey + r * 1.25, ez + r * 0.35], [0, 0, Math.PI / 2 + s * 0.5]), 0x1d1622));
   return merge(parts);
 }
 
@@ -128,7 +138,7 @@ export function buildAnimalRig(sp, animal) {
   body.add(torso);
 
   // --- neck + head (head group rotates to look around)
-  const H = B.head * 1.25; // big cute head
+  const H = B.head * 1.45; // big cute head
   const neckBase = new THREE.Vector3(0, B.leg + B.h * 0.72, B.len * 0.42);
   const headPos = new THREE.Vector3(0, B.leg + B.h * 0.72 + B.neck * 0.75, B.len * 0.42 + B.headFwd + B.neck * 0.35);
   if (B.neck > 0.1) {
@@ -162,7 +172,9 @@ export function buildAnimalRig(sp, animal) {
   const eyes = new THREE.Mesh(buildEyes(L2, H, false), mat);
   const deadEyes = new THREE.Mesh(buildEyes(L2, H, true), mat);
   deadEyes.visible = false;
-  head.add(eyes); head.add(deadEyes);
+  const brows = new THREE.Mesh(buildBrows(L2, H), mat);
+  brows.visible = false;
+  head.add(eyes); head.add(deadEyes); head.add(brows);
   const tongue = new THREE.Mesh(paint(xf(G.capsule(H * 0.06, H * 0.18, 3, 6), [H * 0.08, -H * 0.3, H * (0.45 + snoutLen)], [1.2, 0, 0.3], [1, 1, 0.5]), 0xff6f91), mat);
   tongue.visible = false;
   head.add(tongue);
@@ -225,14 +237,14 @@ export function buildAnimalRig(sp, animal) {
       for (const o of outlines) o.visible = near;
       for (const c of casters) c.castShadow = near;
     },
-    root, body, head, headMesh, eyes, deadEyes, tongue, trophyMesh, tail, legs, torso,
+    root, body, head, headMesh, eyes, deadEyes, brows, tongue, trophyMesh, tail, legs, torso,
     H, headPos, scale: s,
   };
 }
 
 /** Hit volumes in the rig's unscaled local space: {region, c:[x,y,z], r}. */
 export function buildHitVolumes(sp, animal) {
-  const B = sp.body, H = B.head * 1.25;
+  const B = sp.body, H = B.head * 1.45;
   const v = [];
   const torsoY = B.leg + B.h / 2;
   const headPos = [0, B.leg + B.h * 0.72 + B.neck * 0.75, B.len * 0.42 + B.headFwd + B.neck * 0.35];

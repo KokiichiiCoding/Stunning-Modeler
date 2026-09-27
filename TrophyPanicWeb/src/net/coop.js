@@ -433,7 +433,7 @@ export class Coop {
       if ((flags & 1) && !a.downed) {
         a.downed = true; a.alive = false; a.downTime = g.time;
         a.death = { t: 0, side: flags & 4 ? 1 : -1, spin: 0, vy: 1.5, y: 0, roll: 0 };
-        a.rig.eyes.visible = false; a.rig.deadEyes.visible = true; a.rig.tongue.visible = true;
+        a.rig.eyes.visible = false; a.rig.deadEyes.visible = true; a.rig.tongue.visible = true; a.rig.brows.visible = false;
         g.audio.play('boing', a.pos);
       }
       if (a.death) a.stepDeath(dt);

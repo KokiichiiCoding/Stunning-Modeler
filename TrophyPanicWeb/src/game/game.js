@@ -505,14 +505,21 @@ export class Game {
       cam.position.set(eye.x, eye.y, eye.z);
       cam.rotation.set(p.pitch + v.pitch * 0.6, p.yaw, -v.roll * 0.6);
     } else if (third) {
-      const back = p.tumble ? 5.5 : 3.4;
+      // Over the right shoulder while exploring; pulled back and centred when tumbling or down.
+      const wide = p.tumble || p.downed;
+      const back = wide ? 5.5 : 3.1;
+      const sh = wide ? 0 : 0.62;
       const yaw = p.yaw;
-      const cx = eye.x + Math.sin(yaw) * back * Math.cos(p.pitch * 0.5);
-      const cz = eye.z + Math.cos(yaw) * back * Math.cos(p.pitch * 0.5);
-      let cy = eye.y + 0.6 - Math.sin(p.pitch * 0.5) * back;
+      const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+      const cx = eye.x + Math.sin(yaw) * back * Math.cos(p.pitch * 0.5) + rx * sh;
+      const cz = eye.z + Math.cos(yaw) * back * Math.cos(p.pitch * 0.5) + rz * sh;
+      let cy = eye.y + 0.45 - Math.sin(p.pitch * 0.5) * back;
       cy = Math.max(cy, this.terrain.heightAt(cx, cz) + 0.4);
-      cam.position.lerp(new THREE.Vector3(cx, cy, cz), Math.min(1, dt * 10));
-      cam.lookAt(eye.x, eye.y + 0.3, eye.z);
+      const want = new THREE.Vector3(cx, cy, cz);
+      if (!this._wasThird || cam.position.distanceTo(want) > 12) cam.position.copy(want);
+      else cam.position.lerp(want, Math.min(1, dt * 10));
+      if (wide) cam.lookAt(eye.x, eye.y + 0.3, eye.z);
+      else { const f = p.forward(); cam.lookAt(eye.x + f.x * 25 + rx * sh, eye.y + f.y * 25 + 0.2, eye.z + f.z * 25 + rz * sh); }
     } else {
       cam.position.set(eye.x, eye.y, eye.z);
       const sway = w.swayOffset();
@@ -523,6 +530,7 @@ export class Game {
         cam.position.y += Math.sin(this.bobT * 2) * 0.025 * Math.min(1, p.speed / 3);
       }
     }
+    this._wasThird = !!third && !p.vehicle;
     if (this.fx.shake > 0) {
       cam.position.x += (Math.random() - 0.5) * this.fx.shake * 0.2;
       cam.position.y += (Math.random() - 0.5) * this.fx.shake * 0.2;
