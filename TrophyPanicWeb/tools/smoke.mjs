@@ -163,6 +163,7 @@ const scripts = {
   async portraits() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));
+    if (args.includes('--rest')) await page.evaluate(() => { window.__tp_rest = true; });
     const list = (args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : ['deer', 'grizzly', 'wolf', 'moose', 'turkey', 'rabbit', 'boar', 'cougar']);
     for (const sp of list) {
       const ok = await page.evaluate((sp) => {
@@ -179,6 +180,7 @@ const scripts = {
         const ang = f + 0.65;
         g.player.spawnAt(a.pos.x + Math.cos(ang) * d, a.pos.z + Math.sin(ang) * d, 0);
         a.alertness = 60; a.state = sp === 'wolf' || sp === 'grizzly' ? 'Aggressive' : 'Suspicious';
+        if (window.__tp_rest) { a.state = 'Calm'; a.goal = 'Rest'; a.speed = 0; for (const o of g.animals.list) { o.goal = 'Rest'; o.speed = 0; o.bed = 1; } }
         a.lookTarget = { x: g.player.pos.x, z: g.player.pos.z };
         window.__tp.debug.aimAtAnimal(a, 'brain');
         g.player.pitch -= 0.06;
@@ -189,6 +191,45 @@ const scripts = {
       await step(20);
       await shot('25_face_' + sp);
     }
+  },
+  async zones() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 12; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, M = g.animals;
+      const byNeed = {}; for (const z of M.zones) byNeed[z.need] = (byNeed[z.need] || 0) + 1;
+      const inW = (z, h) => { h = ((h % 24) + 24) % 24; return z.from <= z.to ? h >= z.from && h < z.to : h >= z.from || h < z.to; };
+      // a rest zone for deer, visited at rest time
+      const rz = M.zones.find(z => z.species === 'deer' && z.need === 'rest');
+      g.hour = (rz.from + 0.5) % 24;
+      g.player.spawnAt(rz.x + rz.r + 12, rz.z, 0);
+      M.senseZones(g.player.pos);
+      // spawn a deer group right in the rest zone and let it settle
+      for (const a of M.list) a.dispose(); M.list = []; M.groups = [];
+      M.populateAround = () => {};
+      let tries = 0;
+      while (!M.list.some(a => a.species.id === 'deer') && tries++ < 200) M.spawnGroup(g.player.pos);
+      const gp = M.groups.find(x => x.species === 'deer');
+      for (const m of gp.members) { m.pos.x = rz.x + (m.pos.x - gp.zone.x) * 0.3; m.pos.z = rz.z + (m.pos.z - gp.zone.z) * 0.3; m.zone = rz; m.target = null; m.travelling = false; }
+      gp.zone = rz;
+      for (let i = 0; i < 60 * 12; i++) g.advance(1 / 60);
+      const goals = gp.members.map(m => m.goal + ':' + m.state);
+      // migration: jump to a feeding window for this group
+      const fz = M.zones.find(z => z.species === 'deer' && z.need === 'feed' && !inW(rz, z.from + 0.2));
+      g.hour = (fz.from + 0.2) % 24;
+      M.migrate();
+      const hDist = Math.round(Math.hypot(gp.zone.x - gp.leader.pos.x, gp.zone.z - gp.leader.pos.z));
+      // pressure
+      for (let i = 0; i < 6; i++) g.sounds.emit('gunshot', rz.x, 20, rz.z, 2.5e5, g.time + 0.01 * i, 'player');
+      g.advance(1 / 60);
+      return { zones: M.zones.length, byNeed, discovered: rz.discovered, restGoals: goals.slice(0, 4), pressure: +M.pressureAt(rz.x, rz.z).toFixed(1), migratedTo: gp.zone.need, hDist, travelling: gp.members.filter(m => m.travelling).length, look: window.__tp.debug.aimAtAnimal(gp.members[0], 'lung') };
+    });
+    console.log('  zones', JSON.stringify(r));
+    await step(2);
+    await shot('95_resting');
+    await page.evaluate(() => window.__tp.game.openMenu('map'));
+    await step(1);
+    await shot('96_map_zones');
   },
   async jobs() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.cash = 300; });

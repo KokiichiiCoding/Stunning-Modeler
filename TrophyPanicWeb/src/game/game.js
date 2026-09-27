@@ -328,7 +328,7 @@ export class Game {
     if (I.mouse.wheel) w.cycle(I.mouse.wheel);
     if (I.wasPressed('KeyR')) w.reload();
     if (I.wasPressed('KeyB')) w.toggleBinoculars();
-    if (I.wasPressed('KeyQ')) this.fx.hunterSense(true);
+    if (I.wasPressed('KeyQ')) { this.fx.hunterSense(true); this.animals.senseZones(this.player.pos); }
     if (I.wasPressed('KeyE')) this.interact();
     if (I.wasPressed('KeyT')) this.useCall();
     if (I.wasPressed('KeyH')) this.bandage();

@@ -17,6 +17,13 @@ import { Biome, BIOME_NAMES, WATER_LEVEL, HALF, LAKE, POIS } from '../world/terr
 const ACTIVE_RADIUS = 330;
 const DESPAWN_RADIUS = 420;
 const TARGET_GROUPS = 12;
+// Need-zone schedule: every zone serves one need during one daily window.
+const PERIOD_HOURS = { dawn: [5, 8.5], day: [8.5, 17.5], dusk: [17.5, 21], night: [21, 29] };
+export const NEED_LABEL = { feed: 'Feeding', drink: 'Drinking', rest: 'Resting' };
+export function inWindow(hour, z) {
+  const h = ((hour % 24) + 24) % 24;
+  return z.from <= z.to ? h >= z.from && h < z.to : h >= z.from || h < z.to;
+}
 const PERCEIVE = 0.1, DECIDE = 0.2;
 
 const VOICES = { deer: 'deer', elk: 'elk', boar: 'boar', black_bear: 'growl', grizzly: 'roar', moose: 'moose', wolf: 'howl', cougar: 'cougar', turkey: 'gobble', rabbit: 'rabbit' };
@@ -307,12 +314,25 @@ export class Animal {
       const off = this.groupOffset || (this.groupOffset = { x: this.rng.range(-7, 7), z: this.rng.range(-7, 7) });
       const tx = leader.pos.x + off.x, tz = leader.pos.z + off.z;
       this.target = Math.hypot(tx - this.pos.x, tz - this.pos.z) > 3 ? { x: tx, z: tz } : null;
-      if (!this.target) this.grazeT = 1;
+      if (!this.target && leader.goal === 'Rest') this.goal = 'Rest';
+      else if (!this.target) this.grazeT = 1;
+      return;
+    }
+    const z0 = this.zone;
+    if (this.travelling) {
+      const d = Math.hypot(z0.x - this.pos.x, z0.z - this.pos.z);
+      if (d > z0.r * 0.8) { this.goal = 'Travel'; if (!this.target) this.target = this.safeTarget(z0.x, z0.z); return; }
+      this.travelling = false; this.target = null;
+    }
+    if (z0.need === 'rest' && inWindow(this.game.hour, z0)) {
+      // bedded down: mostly still, the odd shuffle
+      this.goal = 'Rest';
+      if (!this.target && this.rng.chance(0.01)) { const a = this.rng.range(0, 6.28), d = this.rng.range(2, z0.r * 0.5); this.target = this.safeTarget(z0.x + Math.cos(a) * d, z0.z + Math.sin(a) * d); this.goal = 'Graze'; }
       return;
     }
     if (!this.target || this.rng.chance(0.03)) {
       const z = this.zone;
-      const r = this.rng.chance(0.15) ? 'drink' : 'graze';
+      const r = this.rng.chance(z.need === 'drink' && inWindow(this.game.hour, z) ? 0.5 : 0.15) ? 'drink' : 'graze';
       if (r === 'drink' && z.water) { this.goal = 'Drink'; this.target = { x: z.water.x + this.rng.range(-3, 3), z: z.water.z + this.rng.range(-3, 3) }; }
       else {
         this.goal = 'Graze';
@@ -346,6 +366,7 @@ export class Animal {
       case 'Circle': intent = m.trot; break;
       case 'Investigate': case 'Drink': intent = m.walk; break;
       case 'Follow': intent = m.walk * 1.2; break;
+      case 'Travel': intent = Math.max(m.walk, m.trot * 0.75); break; // game-time is compressed: commute at a trot
       case 'Graze': case 'Wander': intent = m.walk * 0.55; break;
       default: return 0;
     }
@@ -405,7 +426,7 @@ export class Animal {
         this.setFacingYaw(newYaw);
         const mx = Math.sin(newYaw), mz = Math.cos(newYaw);
         this.pos.x += mx * speed * dt; this.pos.z += mz * speed * dt;
-      } else if (this.goal === 'Graze' || this.goal === 'Drink' || this.goal === 'Follow') {
+      } else if (this.goal === 'Graze' || this.goal === 'Drink' || this.goal === 'Follow' || this.goal === 'Travel') {
         this.target = null; this.grazeT = this.rng.range(3, 9);
       }
     }
@@ -559,7 +580,10 @@ export class Animal {
       if (limp && i === 0) l.rotation.x = 0.5;
     });
     const bob = Math.abs(Math.sin(this.phase)) * amp * 0.06 * B.leg;
-    r.body.position.y = bob + (this.lungeT > 0 ? 0.15 : 0);
+    const bedT = this.goal === 'Rest' && this.speed < 0.1 ? 1 : 0;
+    this.bed = (this.bed || 0) + (bedT - (this.bed || 0)) * Math.min(1, dt * 1.5);
+    if (this.bed > 0.01) r.legs.forEach((l, i) => { l.rotation.x = (i < 2 ? 1.45 : -1.45) * this.bed; }); // tucked under the belly
+    r.body.position.y = bob + (this.lungeT > 0 ? 0.15 : 0) - this.bed * B.leg * 0.62;
     r.body.rotation.x = this.goal === 'Charge' ? 0.12 : this.lungeT > 0 ? -0.25 : 0;
     r.body.rotation.z = limp ? Math.sin(this.phase) * 0.1 : 0;
     if (this.lungeT > 0) this.lungeT -= dt;
@@ -631,6 +655,8 @@ export class AnimalManager {
     this.sightings = [];
     this.spawnCounter = 0;
     this.zones = this.buildZones();
+    const known = (game.profile && game.profile.zones) || [];
+    for (const z of this.zones) if (known.includes(z.id)) z.discovered = true;
     this.popAcc = 0;
     this.view = this.makeView();
   }
@@ -650,7 +676,21 @@ export class AnimalManager {
         const w = sp.habitat[b] || 0;
         if (w <= 0 || !rng.chance(w / 4)) continue;
         if (POIS.some(p => Math.hypot(p.x - x, p.z - z) < p.r + 60)) continue;
-        zones.push({ species: id, x, z, r: 22 + rng.range(0, 18), water: this.nearestWater(x, z), discovered: false });
+        const water = this.nearestWater(x, z);
+        let need = ['feed', 'feed', 'feed', 'feed', 'drink', 'drink', 'drink', 'rest', 'rest', 'rest'][made];
+        let zx = x, zz = z;
+        if (need === 'drink') {
+          if (!water) need = 'feed';
+          else { const dx = x - water.x, dz = z - water.z, l = Math.hypot(dx, dz) || 1; zx = water.x + dx / l * 10; zz = water.z + dz / l * 10; }
+        }
+        // window: feeding in the species' active periods, drinking mid-day or dusk, resting when inactive
+        const act = sp.activity;
+        const inactive = ['dawn', 'day', 'dusk', 'night'].filter(p => !act.includes(p));
+        const period = need === 'feed' ? rng.pick(act) : need === 'drink' ? rng.pick(act.includes('day') ? ['day', 'dusk'] : act) : rng.pick(inactive.length ? inactive : ['day']);
+        const [p0, p1] = PERIOD_HOURS[period];
+        const len = Math.min(p1 - p0, need === 'rest' ? 5 : 3.5);
+        const from = rng.range(p0, p1 - len);
+        zones.push({ species: id, x: zx, z: zz, r: 22 + rng.range(0, 18), water, discovered: false, need, from: from % 24, to: (from + len) % 24, id: `${id}:${made}` });
         made++;
       }
     }
@@ -713,7 +753,8 @@ export class AnimalManager {
     const sp = SPECIES[id];
     const zones = this.zones.filter(z => z.species === id).map(z => ({ z, d: Math.hypot(z.x - pos.x, z.z - pos.z) })).filter(o => o.d > 120 && o.d < ACTIVE_RADIUS);
     let zone;
-    if (zones.length) zone = zones[Math.floor(rng.next() * zones.length)].z;
+    // Animals favour the zone that serves their current need, and avoid places that have been shot up.
+    if (zones.length) zone = rng.weighted(zones.map(o => ({ v: o.z, w: (inWindow(g.hour, o.z) ? 3 : 1) / (1 + this.pressureAt(o.z.x, o.z.z)) })));
     else {
       // no zone in the ring: use a random suitable spot
       for (let i = 0; i < 20 && !zone; i++) {
@@ -726,6 +767,7 @@ export class AnimalManager {
     }
     if (!zone) return false;
     const n = rng.int(sp.behavior.groupSize[0], sp.behavior.groupSize[1]);
+    if (this.pressureAt(zone.x, zone.z) > 4 && rng.chance(0.7)) return false; // too much hunting pressure
     const group = { id: this.spawnCounter, species: id, members: [], leader: null, zone };
     for (let i = 0; i < n; i++) {
       const a = rng.range(0, 6.28), d = rng.range(0, 10);
@@ -764,6 +806,10 @@ export class AnimalManager {
         }
       }
     }
+    this.stepPressure(dt);
+    // need-zone schedule: calm herds move to the zone that serves the hour
+    this.needAcc = (this.needAcc || 0) + dt;
+    if (this.needAcc > 10) { this.needAcc = 0; this.migrate(); }
     // population streaming
     this.popAcc += dt;
     if (this.popAcc > 1.5) {
@@ -771,6 +817,63 @@ export class AnimalManager {
       this.stream();
     }
     this.trackSightings();
+  }
+
+  migrate() {
+    const h = this.game.hour;
+    for (const gp of this.groups) {
+      const L = gp.leader;
+      if (!L || !L.alive || L.state !== 'Calm' || (gp.zone && gp.zone.need && inWindow(h, gp.zone))) continue;
+      let best = null, bd = 520;
+      for (const z of this.zones) {
+        if (z.species !== gp.species || !inWindow(h, z)) continue;
+        const d = Math.hypot(z.x - L.pos.x, z.z - L.pos.z);
+        const p = this.pressureAt(z.x, z.z);
+        if (d + p * 60 < bd) { bd = d + p * 60; best = z; }
+      }
+      if (!best || best === gp.zone) continue;
+      gp.zone = best;
+      for (const m of gp.members) { m.zone = best; if (m.alive && m.state === 'Calm') { m.target = null; m.travelling = true; } }
+    }
+  }
+
+  /** Gunshots leave hunting pressure that fades over ~a day; animals avoid it. */
+  stepPressure(dt) {
+    const g = this.game;
+    if (!this.pressure) { this.pressure = []; this.lastShotScan = 0; }
+    for (const e of g.sounds.since(this.lastShotScan)) {
+      if (e.category !== 'gunshot') continue;
+      const near = this.pressure.find(p => Math.hypot(p.x - e.x, p.z - e.z) < 120);
+      if (near) near.v += 1; else this.pressure.push({ x: e.x, z: e.z, v: 1 });
+      const tot = this.pressureAt(e.x, e.z);
+      if (tot > 4 && !(this.pressureWarnT > g.time)) { this.pressureWarnT = g.time + 120; g.ui.feed('Hunting pressure is building here. Animals will avoid this area for a while.', 'warn'); }
+    }
+    this.lastShotScan = g.time;
+    const decay = Math.pow(0.5, dt / (g.daySeconds * 0.35));
+    for (const p of this.pressure) p.v *= decay;
+    this.pressure = this.pressure.filter(p => p.v > 0.1);
+  }
+
+  pressureAt(x, z) {
+    let v = 0;
+    for (const p of this.pressure || []) { const d = Math.hypot(p.x - x, p.z - z); if (d < 250) v += p.v * (1 - d / 250); }
+    return v;
+  }
+
+  /** Hunter sense or a sighting inside a zone reveals it (and its schedule) on the map. */
+  discoverZone(z, how) {
+    if (z.discovered) return;
+    z.discovered = true;
+    const g = this.game;
+    const fmt = (h) => String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.round((h % 1) * 60) % 60).padStart(2, '0');
+    g.ui.feed(`Need zone found (${how}): ${SPECIES[z.species].displayName} ${NEED_LABEL[z.need].toLowerCase()} ${fmt(z.from)}–${fmt(z.to)}. It's on your map.`, 'good');
+    g.audio.play('sense');
+    const ids = g.profile.zones || (g.profile.zones = []);
+    if (!ids.includes(z.id)) { ids.push(z.id); g.profile.save(); }
+  }
+
+  senseZones(pos) {
+    for (const z of this.zones) if (!z.discovered && Math.hypot(z.x - pos.x, z.z - pos.z) < z.r + 25) this.discoverZone(z, 'reading sign');
   }
 
   stream() {
@@ -804,7 +907,7 @@ export class AnimalManager {
       if (dot < 0.85) continue;
       if (g.vegetation.segmentBlocked(p.pos.x, p.pos.y + 1.4, p.pos.z, a.pos.x, a.pos.y + 1, a.pos.z) >= 0) continue;
       a.seenByPlayer = true;
-      if (a.group && a.group.zone && !a.group.zone.discovered) a.group.zone.discovered = true;
+      if (a.group && a.group.zone && a.group.zone.need && Math.hypot(a.pos.x - a.group.zone.x, a.pos.z - a.group.zone.z) < a.group.zone.r + 15) this.discoverZone(a.group.zone, 'spotted');
       this.sightings.push({ x: a.pos.x, z: a.pos.z, label: a.species.displayName.split(' ').pop(), t: g.time });
       if (this.sightings.length > 40) this.sightings.shift();
       if (a.isDangerous && d < 160) g.ui.feed(`Careful: ${a.species.displayName} nearby!`, 'warn');

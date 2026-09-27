@@ -6,6 +6,7 @@ import { JACKETS, HATS } from '../entities/hunter.js';
 import { POIS, GRID, HALF, WORLD_SIZE, TRAIL_POLYS, LAKE } from '../world/terrainData.js';
 import { BIOME_COLORS } from '../world/terrainMesh.js';
 import { WEATHER_ICON, WEATHER_LABEL } from '../sim/weather.js';
+import { inWindow } from '../entities/animals.js';
 
 const $ = (id) => document.getElementById(id);
 const SCREENS = ['title', 'pause', 'controls', 'settings', 'harvest', 'shop', 'trophies', 'map', 'downed'];
@@ -437,6 +438,31 @@ export class UI {
     for (const t of g.profile.trophies.slice(0, 30)) if (t.x !== undefined) {
       const [x, y] = toPx(t.x, t.z);
       ctx.fillStyle = '#e8384f'; ctx.beginPath(); ctx.arc(x, y, 4, 0, 6.28); ctx.fill();
+    }
+    // hunting pressure (red haze where there's been a lot of shooting)
+    for (const pz of g.animals.pressure || []) {
+      if (pz.v < 1.5) continue;
+      const [x, y] = toPx(pz.x, pz.z);
+      const rr = 250 / WORLD_SIZE * S;
+      const grd = ctx.createRadialGradient(x, y, 0, x, y, rr);
+      grd.addColorStop(0, `rgba(232,56,79,${Math.min(0.45, pz.v * 0.07)})`); grd.addColorStop(1, 'rgba(232,56,79,0)');
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.28); ctx.fill();
+    }
+    // discovered need zones: icon by need, label with species + time window
+    const needCol = { feed: '#5bbf4a', drink: '#4fb4f0', rest: '#9a6bff' };
+    const hh = (h) => String(Math.floor(h)).padStart(2, '0');
+    for (const z of g.animals.zones) {
+      if (!z.discovered || !z.need) continue;
+      const [x, y] = toPx(z.x, z.z);
+      const active = inWindow(g.hour, z);
+      ctx.fillStyle = needCol[z.need]; ctx.strokeStyle = '#2a1f2e'; ctx.lineWidth = active ? 3 : 2;
+      ctx.beginPath();
+      if (z.need === 'drink') { ctx.moveTo(x, y - 9); ctx.quadraticCurveTo(x + 8, y + 2, x, y + 7); ctx.quadraticCurveTo(x - 8, y + 2, x, y - 9); }
+      else if (z.need === 'rest') { ctx.arc(x, y, 7, 0.6, 5.7); ctx.arc(x + 3, y - 1, 5, 5.2, 1.1, true); }
+      else { ctx.ellipse(x, y, 4.5, 8, 0.6, 0, 6.28); }
+      ctx.fill(); ctx.stroke();
+      ctx.font = '800 9px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#2a1f2e';
+      ctx.fillText(`${SPECIES[z.species].displayName.split(' ').pop()} ${hh(z.from)}–${hh(z.to)}`, x, y + 18);
     }
     // animal sightings (things you have seen recently)
     for (const s of g.animals.sightings.slice(-20)) {
