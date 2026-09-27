@@ -5,6 +5,7 @@ import { SPECIES } from '../sim/species.js';
 import { JACKETS, HATS } from '../entities/hunter.js';
 import { POIS, GRID, HALF, WORLD_SIZE, TRAIL_POLYS, LAKE } from '../world/terrainData.js';
 import { BIOME_COLORS } from '../world/terrainMesh.js';
+import { WEATHER_ICON, WEATHER_LABEL } from '../sim/weather.js';
 
 const $ = (id) => document.getElementById(id);
 const SCREENS = ['title', 'pause', 'controls', 'settings', 'harvest', 'shop', 'trophies', 'map', 'downed'];
@@ -191,7 +192,9 @@ export class UI {
     // clock
     const h = Math.floor(g.hour), m = Math.floor((g.hour - h) * 60);
     $('clock-time').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    $('clock-period').textContent = g.sky.period[0].toUpperCase() + g.sky.period.slice(1);
+    const per = g.period || g.sky.period;
+    const wk = g.weather.kind;
+    $('clock-period').textContent = `${per[0].toUpperCase() + per.slice(1)} · ${WEATHER_ICON[wk]} ${WEATHER_LABEL[wk]}`;
 
     // vitals
     $('hp-bar').style.width = Math.max(0, p.hp) + '%';

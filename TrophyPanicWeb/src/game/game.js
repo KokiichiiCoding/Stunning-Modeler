@@ -21,6 +21,8 @@ import { UI } from '../ui/ui.js';
 import { Profile } from './profile.js';
 import { Coop } from '../net/coop.js';
 import { Vehicles } from '../entities/vehicle.js';
+import { Weather } from '../sim/weather.js';
+import { WeatherFX } from '../world/weatherfx.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -72,7 +74,8 @@ export class Game {
     ui.loading(0.15, 'Raising hills and digging the lake…');
     await nextFrame();
     this.terrain = new TerrainData();
-    this.scene.add(buildTerrainMesh(this.terrain));
+    this.terrainMesh = buildTerrainMesh(this.terrain);
+    this.scene.add(this.terrainMesh);
     this.water = buildWater(buildHeightTexture(this.terrain));
     this.scene.add(this.water.mesh);
 
@@ -88,6 +91,8 @@ export class Game {
     this.structures = new Structures(this.scene, this.terrain, this.vegetation);
 
     this.wind = new Wind(this.sessionSeed ^ 0x77, 0.8, 3.2);
+    this.weather = new Weather(this.sessionSeed ^ 0xa11, this.hour);
+    this.light = this.weather.light(this.hour);
     this.scent = new ScentField();
     this.sounds = new SoundLog();
     this.evidence = new Evidence();
@@ -95,6 +100,7 @@ export class Game {
     ui.loading(0.8, 'Hiding the animals…');
     await nextFrame();
     this.fx = new FX(this);
+    this.weatherFx = new WeatherFX(this);
     this.player = new Player(this);
     this.hunterModel = buildHunter(this.profile.look());
     this.scene.add(this.hunterModel.group);
@@ -328,14 +334,31 @@ export class Game {
     this.hour = (this.hour + dt * 24 / this.daySeconds) % 24;
     this.period = periodFor(this.hour); // simulation-owned; the sky only displays it
     this.wind.update(dt);
+    if (!this.coop.isGuest()) this.weather.step(dt, this.hour);
+    if (this.weather.rain > 0.3) this.wind.speed = Math.max(this.wind.speed, 2 + this.weather.rain * 3.5);
+    if (this.weather.fog > 0.5) this.wind.speed = Math.min(this.wind.speed, 1.6);
+    this.light = this.weather.light(this.hour);
+    this.evidence.rainAccum = this.weather.rainAccum;
+    if (this.weather.changed) { this.announceWeather(this.weather.changed); this.weather.changed = null; }
     this.vehicles.step(dt, cmd || {});
     this.player.step(dt, cmd || {});
     this.weapons.step(dt, cmd || {});
-    this.scent.update(dt, this.wind, this.weapons.blowers);
+    this.scent.update(dt, this.wind, this.weapons.blowers, this.weather.scentWash());
     this.animals.step(dt);
     this.fx.step(dt);
     if (((this.time * 60) | 0) % 60 === 0) this.sounds.expire(this.time);
     if (this.waveT > 0) this.waveT -= dt;
+  }
+
+  announceWeather(kind) {
+    if (this.state !== 'play') return;
+    const msg = {
+      rain: 'It\'s starting to rain. Tracks and blood will wash out — follow them fast. Animals hear less.',
+      fog: 'Fog is rolling in. Nobody can see very far, including the bears.',
+      cloudy: 'Clouds are gathering.',
+      clear: 'The sky is clearing up.',
+    }[kind];
+    if (msg) this.ui.feed(msg, kind === 'rain' || kind === 'fog' ? 'warn' : 'info');
   }
 
   interact() {
@@ -473,13 +496,14 @@ export class Game {
     const wv = this.wind.vec();
     vegUniforms.uWind.value.set(wv.x * this.wind.speed * 0.25, wv.z * this.wind.speed * 0.25);
     vegUniforms.uGust.value = this.wind.gust;
-    this.sky.update(this.hour, center, dt, { x: wv.x * this.wind.speed, z: wv.z * this.wind.speed });
+    this.sky.update(this.hour, center, dt, { x: wv.x * this.wind.speed, z: wv.z * this.wind.speed }, this.weather);
     this.water.update(this.visualTime, this.sky.light);
 
     if (this.state !== 'title') {
       this.updateCamera(dt);
       this.updateHunterModel(dt);
     }
+    this.weatherFx.update(dt, center); // after the camera moved: rain is camera-relative
     this._cullT = (this._cullT || 0) - dt;
     const cp = this.camera.position;
     const jumped = !this._lastCull || Math.hypot(cp.x - this._lastCull.x, cp.z - this._lastCull.z) > 30;
@@ -560,6 +584,7 @@ export class Game {
         lookAt(yaw, pitch) { game.player.yaw = yaw; game.player.pitch = pitch; },
         teleport(x, z, yaw = game.player.yaw) { game.player.spawnAt(x, z, yaw); },
         setHour(h) { game.hour = h; },
+        setWeather(k, instant = true) { game.weather.set(k, instant); },
         press(code) { game.input.pressed.add(code); game.input.down.add(code); },
         release(code) { game.input.down.delete(code); },
         report() {

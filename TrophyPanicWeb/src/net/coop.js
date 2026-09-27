@@ -370,7 +370,7 @@ export class Coop {
     };
     if (this.filterCode) pres.pc = this.filterCode;
     if (this.isHost()) {
-      pres.hr = r2(g.hour); pres.wd = [r2(g.wind.dir), r2(g.wind.speed)];
+      pres.hr = r2(g.hour); pres.wd = [r2(g.wind.dir), r2(g.wind.speed)]; pres.wx = g.weather.pack();
       pres.an = this.packAnimals();
     } else pres.an = null;
     let json = JSON.stringify(pres);
@@ -397,6 +397,7 @@ export class Coop {
     const pr = host.presence;
     if (typeof pr.hr === 'number') g.hour += ((pr.hr - g.hour + 36) % 24 - 12) * Math.min(1, dt);
     if (Array.isArray(pr.wd)) { g.wind.dir = pr.wd[0]; g.wind.speed = pr.wd[1]; }
+    if (Array.isArray(pr.wx)) g.weather.unpack(pr.wx, dt);
     if (!Array.isArray(pr.an)) return;
     const seen = new Set();
     for (const row of pr.an) {

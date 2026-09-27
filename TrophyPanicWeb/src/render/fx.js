@@ -5,7 +5,6 @@
 
 import { THREE } from '../three.js';
 import { G, paint, merge, xf, toonMat, solidToon } from '../render/toon.js';
-import { clueReadability } from '../sim/worldsim.js';
 import { BIOME_NAMES } from '../world/terrainData.js';
 
 const MAX_P = 700;
@@ -280,7 +279,7 @@ export class FX {
     const up = new THREE.Vector3(0, 1, 0);
     let np = 0, nb = 0, ns = 0;
     for (const cl of near) {
-      const read = clueReadability(cl, now, surfaceName(T.biomeAt(cl.x, cl.z)));
+      const read = g.evidence.readability(cl, now, surfaceName(T.biomeAt(cl.x, cl.z)));
       const y = T.heightAt(cl.x, cl.z) + 0.04;
       if (cl.kind === 'Footprint' && np < 600) {
         const sc = (cl.printCm || 8) / 100 * 1.2;

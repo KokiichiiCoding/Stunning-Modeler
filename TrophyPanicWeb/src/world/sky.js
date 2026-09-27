@@ -46,13 +46,15 @@ export class Sky {
       uSunDir: { value: new THREE.Vector3(0, 1, 0) },
       uSunColor: { value: new THREE.Color() },
       uNight: { value: 0 },
+      uFog: { value: 0 },
+      uFogColor: { value: new THREE.Color() },
     };
     const domeGeo = new THREE.SphereGeometry(1800, 32, 16);
     const domeMat = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false, uniforms: this.uniforms,
       vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }`,
       fragmentShader: `
-        uniform vec3 uTop, uHorizon, uSunDir, uSunColor; uniform float uNight; varying vec3 vDir;
+        uniform vec3 uTop, uHorizon, uSunDir, uSunColor, uFogColor; uniform float uNight, uFog; varying vec3 vDir;
         float hash(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453); }
         void main(){
           float h = clamp(vDir.y, -0.2, 1.0);
@@ -65,6 +67,8 @@ export class Sky {
           vec3 cell = floor(vDir * 180.0);
           float s = step(0.9975, hash(cell)) * uNight * smoothstep(0.05, 0.4, h);
           col += vec3(s);
+          // mist swallows the horizon and greys the whole dome
+          col = mix(col, uFogColor, uFog * (1.0 - smoothstep(-0.05, 0.55, h) * 0.55));
           gl_FragColor = vec4(col, 1.0);
         }`,
     });
@@ -102,10 +106,10 @@ export class Sky {
     const geo = merge(puffs);
     this.cloudMat = toonMat({ flat: true }).clone();
     this.cloudMat.fog = false;
-    this.clouds = new THREE.InstancedMesh(geo, this.cloudMat, 26);
+    this.clouds = new THREE.InstancedMesh(geo, this.cloudMat, 60);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
     this.cloudData = [];
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 60; i++) {
       const d = { x: rng.range(-900, 900), z: rng.range(-900, 900), y: rng.range(170, 260), s: rng.range(0.8, 1.8), rot: rng.range(0, 6.28) };
       this.cloudData.push(d);
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), d.rot);
@@ -116,8 +120,17 @@ export class Sky {
     this.scene.add(this.clouds);
   }
 
-  update(hour, center, dt, windVec) {
+  update(hour, center, dt, windVec, weather = null) {
     const k = sampleKeys(hour);
+    const cloud = weather ? weather.cloud : 0.12, rain = weather ? weather.rain : 0, fog = weather ? weather.fog : 0;
+    // Overcast: the sky greys out and the sun loses its punch (but stays storybook-soft).
+    const bright = 0.3 + 0.7 * Math.min(1, k.hemiI * 1.25);
+    const overcast = Math.max(0, cloud - 0.15) / 0.85;
+    const greyTop = new THREE.Color(rain > 0.3 ? 0x6d7a8a : 0x8e9bab).lerp(new THREE.Color(0x6d7a8a), rain).multiplyScalar(bright);
+    const greyHor = new THREE.Color(0xb4bfca).lerp(new THREE.Color(0x98a4b0), rain).multiplyScalar(bright);
+    k.top.lerp(greyTop, overcast * 0.85); k.horizon.lerp(greyHor, overcast * 0.8);
+    k.sunI *= 1 - 0.6 * Math.max(0, cloud - 0.1);
+    k.hemiI *= 1 + 0.1 * cloud - 0.12 * rain;
     this.uniforms.uTop.value.copy(k.top);
     this.uniforms.uHorizon.value.copy(k.horizon);
 
@@ -141,9 +154,17 @@ export class Sky {
     this.hemi.intensity = k.hemiI;
 
     this.scene.fog.color.copy(k.horizon).lerp(k.top, 0.25);
+    const mist = new THREE.Color(0xe4ecef).multiplyScalar(0.3 + 0.7 * Math.min(1, k.hemiI * 1.3));
+    this.scene.fog.color.lerp(mist, fog * 0.85);
+    this.scene.fog.near = Math.max(3, 90 - 86 * fog - 45 * rain);
+    this.scene.fog.far = Math.max(95, 520 - 425 * fog - 200 * rain);
+    this.uniforms.uFog.value = Math.min(1, fog * 1.1 + rain * 0.35);
+    this.uniforms.uFogColor.value.copy(this.scene.fog.color);
+    this.uniforms.uNight.value *= 1 - cloud * 0.9; // no stars through clouds
     this.dome.position.set(center.x, 0, center.z);
     this.light = Math.min(1, 0.35 + k.sunI * 0.5);
-    this.cloudMat.color.copy(k.horizon).lerp(new THREE.Color(0xffffff), 0.55);
+    this.cloudMat.color.copy(k.horizon).lerp(new THREE.Color(0xffffff), 0.55 - rain * 0.2);
+    this.clouds.count = Math.round(18 + cloud * 42);
     this.period = periodFor(hour);
 
     // Drift clouds with the wind.
@@ -155,7 +176,8 @@ export class Sky {
         if (d.x > 1000) d.x -= 2000; if (d.x < -1000) d.x += 2000;
         if (d.z > 1000) d.z -= 2000; if (d.z < -1000) d.z += 2000;
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), d.rot);
-        m.compose(p.set(d.x, d.y, d.z), q, s.set(d.s, d.s, d.s));
+        const low = 1 - rain * 0.35, fat = 1 + cloud * 0.5;
+        m.compose(p.set(d.x, d.y * low, d.z), q, s.set(d.s * fat, d.s * (1 + rain * 0.3), d.s * fat));
         this.clouds.setMatrixAt(i, m);
       }
       this.clouds.instanceMatrix.needsUpdate = true;

@@ -38,9 +38,9 @@ export class ScentField {
     this.puffs.push({ x, z, s: strength, r: 2, born: now, tag });
     if (this.puffs.length > 1500) this.puffs.splice(0, this.puffs.length - 1500);
   }
-  update(dt, wind, blowers = null) {
+  update(dt, wind, blowers = null, wash = 0) {
     const w = wind.vec();
-    const decay = Math.exp(-0.045 * dt);
+    const decay = Math.exp(-(0.045 + wash) * dt);
     for (const p of this.puffs) {
       p.x += w.x * wind.speed * dt; p.z += w.z * wind.speed * dt;
       p.r += 0.6 * dt;
@@ -85,10 +85,10 @@ export class SoundLog {
 }
 
 // ------------------------------------------------------------------ perception
-export function visualDetection(species, ax, az, facing, tx, tz, targetSpeed, stance, cover, alert, light = 1) {
+export function visualDetection(species, ax, az, facing, tx, tz, targetSpeed, stance, cover, alert, light = 1, visibility = 1) {
   const dx = tx - ax, dz = tz - az;
   const dist = Math.hypot(dx, dz);
-  const range = species.senses.visionRange * (0.45 + 0.55 * light);
+  const range = species.senses.visionRange * (0.45 + 0.55 * light) * visibility;
   if (dist > range) return 0;
   if (dist < 1e-6) return 1;
   let off = Math.abs(Math.atan2(dz, dx) - facing);
@@ -110,7 +110,8 @@ export function movementLoudness(stance, speed, veg) {
 // ------------------------------------------------------------------ evidence
 export const Clue = { Footprint: 'Footprint', BloodDrop: 'BloodDrop', BloodSmear: 'BloodSmear', BloodPool: 'BloodPool', Hair: 'Hair', Bedding: 'Bedding', Carcass: 'Carcass', Scat: 'Scat' };
 
-export function clueReadability(clue, now, surface = 'soil', rain = 0) {
+/** `washed`: seconds of full-intensity rain that have fallen on the clue since it was left. */
+export function clueReadability(clue, now, surface = 'soil', rain = 0, washed = 0) {
   const age = Math.max(0, now - clue.time);
   let half = 600;
   switch (clue.kind) {
@@ -126,7 +127,9 @@ export function clueReadability(clue, now, surface = 'soil', rain = 0) {
     const blood = clue.kind.startsWith('Blood');
     half /= 1 + rain * (blood ? 8 : 3);
   }
-  return Math.min(1, Math.max(0, clue.base * Math.pow(0.5, age / half)));
+  let read = clue.base * Math.pow(0.5, age / half);
+  if (washed > 0) read *= Math.exp(-washed / (clue.kind.startsWith('Blood') ? 70 : clue.kind === Clue.Footprint ? 160 : 600));
+  return Math.min(1, Math.max(0, read));
 }
 
 export function gaitFor(creature, speed, sp) {
@@ -138,8 +141,9 @@ export function gaitFor(creature, speed, sp) {
 }
 
 export class Evidence {
-  constructor() { this.clues = []; this.onAdd = null; }
+  constructor() { this.clues = []; this.onAdd = null; this.rainAccum = 0; }
   add(c) {
+    c.rainAt = this.rainAccum;
     this.clues.push(c);
     if (this.clues.length > 4000) this.clues.splice(0, 400);
     if (this.onAdd) this.onAdd(c);
@@ -150,10 +154,11 @@ export class Evidence {
     for (const c of this.clues) {
       const dx = c.x - x, dz = c.z - z;
       if (dx * dx + dz * dz > r2) continue;
-      if (clueReadability(c, now, surfaceFn ? surfaceFn(c.x, c.z) : 'soil') >= minRead) out.push(c);
+      if (this.readability(c, now, surfaceFn ? surfaceFn(c.x, c.z) : 'soil') >= minRead) out.push(c);
     }
     return out;
   }
+  readability(c, now, surface = 'soil') { return clueReadability(c, now, surface, 0, this.rainAccum - (c.rainAt || 0)); }
 }
 
 /** Per-animal emitter: footprints from real stride/gait, blood from the live wound state. */

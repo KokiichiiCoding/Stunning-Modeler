@@ -160,6 +160,31 @@ const scripts = {
     await step(2);
     await shot('43_sunset');
   },
+  async weather() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    for (const [k, h] of [['rain', 11], ['fog', 7], ['cloudy', 15], ['rain', 21.5]]) {
+      const r = await page.evaluate(({ k, h }) => {
+        const g = window.__tp.game; g.hour = h; window.__tp.debug.setWeather(k);
+        g.weatherFx.wet = k === 'rain' ? 1 : 0;
+        return { kind: g.weather.kind, light: +g.weather.light(h).toFixed(2), vis: +g.weather.visibilityMult().toFixed(2), ear: +g.weather.hearingMult().toFixed(2) };
+      }, { k, h });
+      await step(8);
+      const fog = await page.evaluate(() => { const f = window.__tp.game.scene.fog; return [Math.round(f.near), Math.round(f.far)]; });
+      console.log('  ' + k + '@' + h, JSON.stringify(r), 'fog', fog);
+      await shot(`70_${k}_${h}`);
+    }
+    // washing: a fresh print should fade much faster under a minute of downpour
+    const wash = await page.evaluate(() => {
+      const g = window.__tp.game, E = g.evidence;
+      const c = { kind: 'Footprint', x: 0, y: 0, z: 0, time: g.time, base: 0.8, species: 'deer' };
+      E.add(c);
+      const before = E.readability(c, g.time, 'soil');
+      for (let i = 0; i < 60 * 60; i++) { g.weather.step(1 / 60, 11); g.evidence.rainAccum = g.weather.rainAccum; }
+      return { before: +before.toFixed(2), afterRainMin: +E.readability(c, g.time, 'soil').toFixed(2) };
+    });
+    console.log('  wash', JSON.stringify(wash));
+  },
   async atv() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
     await page.evaluate(() => window.__tp.debug.startGame({}));
@@ -221,13 +246,14 @@ const scripts = {
       g.player.tumble = null; g.player.hp = 100;
       let tries = 0;
       while (!g.animals.list.some(a => a.species.id === 'deer') && tries++ < 80) g.animals.spawnGroup(g.player.pos);
-      const info = window.__tp.debug.approach('deer', 16);
       window.__tp.debug.freeze(true);
-      const a = g.animals.list.find(x => x.id === info.id);
-      const v = g.vehicles.nearest(g.player.pos, 1e9);
-      v.crashed = false; v.pitch = v.roll = 0; v.spin = { p: 0, r: 0, y: 0 };
-      v.pos.x = g.player.pos.x; v.pos.z = g.player.pos.z; v.pos.y = g.terrain.heightAt(v.pos.x, v.pos.z) + 0.5;
-      v.yaw = Math.atan2(a.pos.x - v.pos.x, a.pos.z - v.pos.z);
+      const a = g.animals.list.find(x => x.species.id === 'deer');
+      // use the lodge quad on its flat parking spot
+      const v = g.vehicles.list[0];
+      if (v.driver) v.exit(true);
+      v.crashed = false; v.pitch = v.roll = 0; v.spin = { p: 0, r: 0, y: 0 }; v.airborne = false;
+      v.pos.x = v.home.x; v.pos.z = v.home.z; v.pos.y = g.terrain.heightAt(v.pos.x, v.pos.z) + 0.5; v.yaw = v.home.yaw;
+      g.player.spawnAt(v.pos.x, v.pos.z, 0);
       // park the deer 9 m straight ahead so no tree gets there first
       a.pos.x = v.pos.x + Math.sin(v.yaw) * 9; a.pos.z = v.pos.z + Math.cos(v.yaw) * 9;
       a.pos.y = g.terrain.heightAt(a.pos.x, a.pos.z);

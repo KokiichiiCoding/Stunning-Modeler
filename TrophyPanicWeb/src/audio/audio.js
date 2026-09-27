@@ -190,6 +190,32 @@ export class Audio {
     this.birdT = 0;
   }
 
+  /** Rain hiss (two filtered noise layers) scaled by rain intensity. */
+  setRain(level) {
+    if (!this.ctx) return;
+    if (!this.rainNode && level > 0.02) {
+      const c = this.ctx;
+      const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+      const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7000;
+      const src2 = c.createBufferSource(); src2.buffer = this.noiseBuf; src2.loop = true; src2.playbackRate.value = 0.5;
+      const lo = c.createBiquadFilter(); lo.type = 'lowpass'; lo.frequency.value = 420;
+      const g = c.createGain(); g.gain.value = 0;
+      src.connect(hp); hp.connect(lp); lp.connect(g); src2.connect(lo); lo.connect(g); g.connect(this.master);
+      src.start(0, 0.3); src2.start(0, 1.1);
+      this.rainNode = { src, src2, g };
+    }
+    if (this.rainNode) this.rainNode.g.gain.setTargetAtTime(level * 0.16, this.ctx.currentTime, 0.5);
+  }
+  thunder(strength = 1) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + 0.01;
+    const { g } = this.out(null, 0.9 * Math.max(0.3, strength));
+    this.noise(g, t, 0.35, { type: 'lowpass', f0: 2400, f1: 300, gain: 0.9 * strength });
+    this.noise(g, t + 0.1, 3.2, { type: 'lowpass', f0: 260, f1: 60, gain: 1.2, attack: 0.3 });
+    this.tone(g, t + 0.1, 2.4, { type: 'sine', curve: [48, 40, 52, 36, 30], gain: 0.5 });
+  }
+
   /** Quad bike engine: two detuned oscillators + chuggy noise, pitched by speed. */
   startEngine() {
     if (!this.ctx || this.engine) return;

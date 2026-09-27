@@ -91,11 +91,13 @@ export class Animal {
   perceive(view) {
     const g = this.game, sp = this.species, p = g.player;
     this.stimuli.length = 0;
-    const light = Math.max(0.2, g.sky.light);
+    const light = g.light ?? 1;                       // simulation-owned (time of day + cloud)
+    const vis = g.weather ? g.weather.visibilityMult() : 1;
+    const earMult = g.weather ? g.weather.hearingMult() : 1;
     const hunters = view.hunters;
     for (const h of hunters) {
       const cover = h.onTower ? 0.2 : g.terrain.coverAt(h.x, h.z);
-      let seen = visualDetection(sp, this.pos.x, this.pos.z, this.facing, h.x, h.z, h.speed, h.stance, cover, this.state !== 'Calm', light);
+      let seen = visualDetection(sp, this.pos.x, this.pos.z, this.facing, h.x, h.z, h.speed, h.stance, cover, this.state !== 'Calm', light, vis);
       if (seen > 0.05) {
         // A tree trunk between us blocks the look.
         const blocked = g.vegetation.segmentBlocked(this.pos.x, this.pos.y + 1, this.pos.z, h.x, h.y + 1, h.z) >= 0;
@@ -110,7 +112,7 @@ export class Animal {
     }
     for (const e of g.sounds.since(this.lastSound)) {
       if (e.tag === this.id) continue;
-      const loud = SoundLog.perceived(e, this.pos.x, this.pos.y + 1, this.pos.z) * sp.senses.hearing;
+      const loud = SoundLog.perceived(e, this.pos.x, this.pos.y + 1, this.pos.z) * sp.senses.hearing * (e.category === 'gunshot' ? 1 : earMult);
       if (loud < 0.02) continue;
       let s = Math.min(1, Math.max(0.05, loud / 2));
       if (e.category === 'gunshot') {
