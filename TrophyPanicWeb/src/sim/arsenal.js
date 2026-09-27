@@ -106,6 +106,11 @@ export const WEAPONS = {
     magazine: 100, reserve: 0, fireInterval: 0.05, reloadTime: 0, spread: 0, sway: 0.3, recoil: 0.02,
     zoom: 1, loudness: 2500, price: 260, range: 9, force: 26, color: 0xe24a3b, desc: 'Pushes light things, scatters scent, annoys everything. Not a weapon. Mostly.',
   },
+  camera: {
+    id: 'camera', name: 'Snappy Camera', short: 'Cam', type: 'camera', ammo: null, ammoLabel: 'Endless film', klass: 0,
+    magazine: 1, reserve: 0, fireInterval: 0.9, reloadTime: 0, spread: 0, sway: 0.6, recoil: 0,
+    zoom: 3, loudness: 25, price: 0, color: 0x4fb4f0, desc: 'Shoot animals the nice way. New species and great shots pay; the album keeps your best.',
+  },
 };
 
 export const GEAR = {
@@ -119,4 +124,4 @@ export const GEAR = {
   energy_drink: { id: 'energy_drink', name: 'Moss Cola', price: 15, stack: true, desc: 'Instant stamina. Mild jitters.' },
 };
 
-export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'boot', 'chicken', 'blower'];
+export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'camera', 'boot', 'chicken', 'blower'];

@@ -143,6 +143,7 @@ export class Audio {
       case 'splash': { const { g } = S(0.6, 150); this.noise(g, t, 0.4, { type: 'bandpass', f0: 1200, f1: 400, gain: 0.6, q: 0.8 }); break; }
       case 'reload': { const { g } = S(0.35); this.noise(g, t, 0.05, { type: 'highpass', f0: 2500, gain: 0.5 }); this.noise(g, t + 0.18, 0.05, { type: 'highpass', f0: 3000, gain: 0.5 }); break; }
       case 'bolt': { const { g } = S(0.3); this.noise(g, t, 0.04, { type: 'highpass', f0: 3000, gain: 0.4 }); this.noise(g, t + 0.12, 0.04, { type: 'highpass', f0: 2200, gain: 0.4 }); break; }
+      case 'shutter': { const { g } = S(0.5); this.noise(g, t, 0.03, { type: 'highpass', f0: 3500, gain: 0.7 }); this.tone(g, t, 0.05, { type: 'square', f0: 1800, f1: 900, gain: 0.08 }); this.noise(g, t + 0.07, 0.04, { type: 'highpass', f0: 2500, gain: 0.5 }); break; }
       case 'click': { const { g } = S(0.3); this.tone(g, t, 0.04, { type: 'square', f0: 1200, gain: 0.15 }); break; }
       case 'oof': { const { g } = S(0.7); this.tone(g, t, 0.28, { type: 'triangle', f0: 260, f1: 140, gain: 0.5 }); this.tone(g, t, 0.28, { type: 'sine', f0: 520, f1: 280, gain: 0.2 }); break; }
       case 'cash': { const { g } = S(0.5); this.tone(g, t, 0.12, { type: 'square', f0: 988, gain: 0.12 }); this.tone(g, t + 0.1, 0.35, { type: 'square', f0: 1319, gain: 0.12 }); break; }

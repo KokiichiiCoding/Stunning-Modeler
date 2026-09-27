@@ -235,3 +235,33 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 .ping span { background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; padding: 1px 7px; font: 800 12px var(--body); white-space: nowrap; box-shadow: 0 2px 0 var(--ink); }
 @keyframes pingbob { from { translate: 0 0; } to { translate: 0 -5px; } }
 @media (prefers-reduced-motion: reduce) { .ping i { animation: none; } }
+
+/* camera */
+#viewfinder { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(20,14,24,.45) 100%); }
+.vf-corners { position: absolute; inset: 14% 20%; }
+.vf-corners i { position: absolute; width: 64px; height: 64px; border: 6px solid #fff; filter: drop-shadow(0 3px 0 var(--ink)); }
+.vf-corners i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
+.vf-corners i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-radius: 0 10px 0 0; }
+.vf-corners i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 10px; }
+.vf-corners i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+.vf-dot { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; border: 2px solid #fff; border-radius: 50%; }
+#vf-read { position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%); color: #fff; font: 800 15px var(--body); text-shadow: 0 2px 0 var(--ink); white-space: nowrap; }
+#photo-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .35s ease-out; }
+#photo-flash.on { opacity: .85; transition: none; }
+/* jobs */
+#jobs-chip { position: absolute; right: 14px; top: calc(100px + env(safe-area-inset-top, 0px)); background: var(--paper); border: 3px solid var(--ink); border-radius: 12px; padding: 5px 10px; font: 700 13px var(--body); box-shadow: 0 3px 0 var(--ink); max-width: 250px; }
+#jobs-chip b { display: block; font: 800 12px var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+#jobs-chip div { padding: 1px 0; }
+#party-chip:not([hidden]) ~ #jobs-chip { top: auto; bottom: 150px; }
+.job-item h4 { display: flex; justify-content: space-between; gap: 8px; }
+.job-reward { color: #2f8a24; white-space: nowrap; }
+/* album */
+.album-h { margin: 14px 0 6px; font-family: var(--display); }
+.photo-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.photo-item { background: #fff; border: 3px solid var(--ink); border-radius: 10px; padding: 6px 6px 8px; box-shadow: 0 3px 0 var(--ink); transform: rotate(-1deg); }
+.photo-item:nth-child(even) { transform: rotate(1.2deg); }
+.photo-item img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; background: #cfe6f5; }
+.photo-item .cap { font: 700 12px var(--body); margin-top: 5px; line-height: 1.25; }
+.photo-item .stars { color: #e6a800; letter-spacing: 1px; }
+@media (prefers-reduced-motion: reduce) { .photo-item, .photo-item:nth-child(even) { transform: none; } }
+.shop-note { grid-column: 1 / -1; font: 700 14px var(--body); color: var(--ink-soft); }

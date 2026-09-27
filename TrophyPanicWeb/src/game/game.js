@@ -24,6 +24,7 @@ import { Vehicles } from '../entities/vehicle.js';
 import { Weather } from '../sim/weather.js';
 import { WeatherFX } from '../world/weatherfx.js';
 import { Social } from '../ui/social.js';
+import { Jobs } from './jobs.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -115,6 +116,7 @@ export class Game {
     this.vehicles = new Vehicles(this);
     this.coop = new Coop(this);
     this.social = new Social(this);
+    this.jobs = new Jobs(this);
 
     ui.loading(1, 'Ready!');
     await nextFrame();
@@ -349,6 +351,8 @@ export class Game {
     if (this.weather.fog > 0.5) this.wind.speed = Math.min(this.wind.speed, 1.6);
     this.light = this.weather.light(this.hour);
     this.evidence.rainAccum = this.weather.rainAccum;
+    this.tick = (this.tick || 0) + 1;
+    if (this.tick % 60 === 30) this.checkPOIs();
     if (this.weather.changed) { this.announceWeather(this.weather.changed); this.weather.changed = null; }
     this.vehicles.step(dt, cmd || {});
     this.player.step(dt, cmd || {});
@@ -358,6 +362,52 @@ export class Game {
     this.fx.step(dt);
     if (((this.time * 60) | 0) % 60 === 0) this.sounds.expire(this.time);
     if (this.waveT > 0) this.waveT -= dt;
+  }
+
+  /** Walking into an outpost discovers it (fast travel) and counts for visit jobs. */
+  checkPOIs() {
+    const p = this.player.pos;
+    for (const poi of POIS) {
+      if (Math.hypot(p.x - poi.x, p.z - poi.z) > poi.r + 6) continue;
+      if (!this.profile.discovered.includes(poi.id)) {
+        this.profile.discover(poi.id);
+        this.ui.toast(`Discovered ${poi.name}!`, 'big', 2.4);
+        this.ui.feed(`${poi.name} added to your map. Fast travel there any time.`, 'good');
+      }
+      if (this._lastPoi !== poi.id) { this._lastPoi = poi.id; this.jobs.onEvent('visit', { poi: poi.id }); }
+      return;
+    }
+    this._lastPoi = null;
+  }
+
+  /** Called right after the main scene render when a photo was taken this frame. */
+  capturePhoto() {
+    const ph = this.pendingPhoto;
+    this.pendingPhoto = null;
+    const res = ph.res;
+    if (!res) { this.ui.feed('Lovely photo of some scenery. (No animals in frame.)', 'info'); return; }
+    let img = null;
+    try {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 144;
+      const src = this.renderer.domElement;
+      const sw = src.width, sh = src.height, ar = 16 / 9;
+      const cw = Math.min(sw, sh * ar), ch = cw / ar;
+      c.getContext('2d').drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, 256, 144);
+      img = c.toDataURL('image/jpeg', 0.72);
+    } catch { img = null; }
+    const pr = this.profile;
+    const isNew = !pr.snapped.includes(res.sp);
+    let pay = res.stars >= 4 ? res.stars * 4 : 0;
+    if (isNew) { pr.snapped.push(res.sp); pay += 40; }
+    if (res.charging && res.danger >= 2) pay += 50;
+    pr.cash += pay;
+    pr.addPhoto({ img, sp: res.sp, name: res.name, nickname: res.nickname, stars: res.stars, action: res.action, dist: res.dist, rare: res.rare, date: `Day ${Math.floor(this.time / this.daySeconds) + 1}` });
+    const stars = '★'.repeat(res.stars) + '☆'.repeat(5 - res.stars);
+    this.ui.toast(`${stars}  ${res.name}, ${res.action}, ${res.dist.toFixed(0)} m${pay ? `  +$${pay}` : ''}`, 'hit', 2.6);
+    if (isNew) this.ui.feed(`New in your field journal: ${res.name}!`, 'good');
+    if (res.charging && res.danger >= 2) this.ui.feed('Incredible action shot. Also: RUN.', 'warn');
+    if (pay) this.audio.play('cash');
+    this.jobs.onEvent('photo', { sp: res.sp, stars: res.stars, dist: res.dist, charging: res.charging });
   }
 
   announceWeather(kind) {
@@ -534,6 +584,7 @@ export class Game {
     r.info.reset();
     r.clear();
     r.render(this.scene, this.camera);
+    if (this.pendingPhoto) this.capturePhoto();
     if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && !this.player.vehicle && this.weapons.viewmodelVisible()) {
       r.clearDepth();
       r.render(this.viewScene, this.viewCamera);

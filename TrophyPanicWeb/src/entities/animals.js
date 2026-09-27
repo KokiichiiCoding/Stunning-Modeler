@@ -977,8 +977,8 @@ export class AnimalManager {
     if (what === 'charge') {
       const d = Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z);
       if (d < 60) g.ui.toast(a.bluff ? `The ${a.species.displayName.split(' ').pop()} is bluff charging!` : `${a.species.displayName.toUpperCase()} IS CHARGING!`, 'big', 1.8);
-    } else if (what === 'staredown') g.ui.feed('You stared the cougar down. It slinks away.', 'good');
-    else if (what === 'playdead') g.ui.feed('You play dead. The bear sniffs you… and loses interest.', 'good');
+    } else if (what === 'staredown') { g.ui.feed('You stared the cougar down. It slinks away.', 'good'); g.jobs.onEvent('staredown', { sp: a.species.id }); }
+    else if (what === 'playdead') { g.ui.feed('You play dead. The bear sniffs you… and loses interest.', 'good'); g.jobs.onEvent('playdead', { sp: a.species.id }); }
   }
 
   onCall(kind, pos) {
@@ -1072,7 +1072,10 @@ export class AnimalManager {
     g.audio.play('cash');
     if (g.profile.level > lvl) { g.audio.play('levelup'); g.ui.feed(`Level up! You are now level ${g.profile.level}.`, 'good'); }
     g.fx.burst(a.pos.x, a.pos.y + 0.5, a.pos.z, { count: 24, kind: 'confetti', speed: 4, up: 5, size: 0.06 });
+    const w0 = first && WEAPONS[first.weaponId];
+    const recovery = a.firstHitPos ? Math.hypot(a.pos.x - a.firstHitPos.x, a.pos.z - a.firstHitPos.z) : 0;
     this.removeAnimal(a);
+    g.jobs.onEvent('harvest', { sp: h.species.id, overall: h.score.overall, tier: h.score.tier, wtype: w0 ? w0.type : null, dist: first ? first.distance : 0, recovery });
     g.openMenu('harvest');
     g.ui.showHarvest(h);
   }

@@ -255,6 +255,7 @@ export class Coop {
         pr.cash += h.cash; pr.xp += h.xp;
         pr.addTrophy({ nickname: h.animal.nickname, speciesName: h.species.displayName, speciesId: h.species.id, sex: h.animal.sex, mass: h.animal.bodyMassKg, tier: h.score.tier, overall: h.score.overall, weapon: h.weapon || '?', distance: h.distance || 0, date: 'Party hunt', x: g.player.pos.x, z: g.player.pos.z });
         g.audio.play('cash');
+        g.jobs.onEvent('harvest', { sp: h.species.id, overall: h.score.overall, tier: h.score.tier, wtype: null, dist: h.distance || 0, recovery: 0 });
         g.openMenu('harvest');
         g.ui.showHarvest(h);
         break;

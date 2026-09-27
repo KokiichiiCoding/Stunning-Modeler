@@ -220,6 +220,7 @@ export class UI {
       $('weapon-name').textContent = w.binoculars ? 'Binoculars' : cur.name;
       const st = w.state[cur.id];
       if (cur.type === 'blower') { $('ammo-mag').textContent = '∞'; $('ammo-res').textContent = ''; }
+      else if (cur.type === 'camera') { $('ammo-mag').textContent = g.profile.photos.length; $('ammo-res').textContent = 'photos'; }
       else { $('ammo-mag').textContent = st ? st.mag : 0; $('ammo-res').textContent = g.profile.ammo[cur.id] ?? 0; }
       $('ammo-type').textContent = cur.type === 'shotgun' ? AMMO[w.shellType()].name.replace(' pellet', '') : '';
     }
@@ -234,10 +235,22 @@ export class UI {
     $('level').textContent = 'Lv ' + g.profile.level;
 
     // aim overlays
-    const scoped = w.aiming && cur && cur.zoom >= 3 && !w.binoculars;
+    const camAim = w.aiming && cur && cur.type === 'camera' && !p.vehicle;
+    const scoped = w.aiming && cur && cur.zoom >= 3 && !w.binoculars && !camAim;
     $('scope').hidden = !scoped;
+    $('viewfinder').hidden = !camAim;
+    if (camAim) {
+      this.vfT = (this.vfT || 0) - dt;
+      if (this.vfT <= 0) { this.vfT = 0.25; const r = w.rangeReadout(); $('vf-read').textContent = r.text.split('\n').slice(0, 2).join(' · ') + '  ·  click to snap'; }
+    }
+    // ranger jobs
+    const jl = g.jobs.hudLines();
+    const jc = $('jobs-chip');
+    jc.hidden = !jl.length;
+    const jkey = jl.join('|');
+    if (jc.dataset.key !== jkey) { jc.dataset.key = jkey; jc.innerHTML = '<b>Ranger jobs</b>' + jl.map(t => `<div>• ${esc(t)}</div>`).join(''); }
     $('binos').hidden = !w.binoculars;
-    $('crosshair').hidden = scoped || w.binoculars || (g.thirdPerson && false);
+    $('crosshair').hidden = scoped || w.binoculars || camAim;
     if (scoped || w.binoculars) {
       const read = w.rangeReadout();
       if (scoped) $('range-read').textContent = read.text;
@@ -324,10 +337,18 @@ export class UI {
       for (const w of Object.values(WEAPONS)) {
         const owned = p.owned.includes(w.id);
         const klass = w.klass ? `Class ${w.klass}` : 'Gadget';
-        items.push(`<div class="shop-item"><h4>${esc(w.name)}</h4><div class="meta">${klass} · ${esc(AMMO[w.ammo].name)}</div><p>${esc(w.desc)}</p>
+        items.push(`<div class="shop-item"><h4>${esc(w.name)}</h4><div class="meta">${klass} · ${esc(w.ammoLabel || AMMO[w.ammo].name)}</div><p>${esc(w.desc)}</p>
           <div class="buy-row">${owned ? '<span class="owned-tag">Owned</span>' : `<span class="price">${money(w.price)}</span>`}
-          ${owned ? (w.type === 'blower' ? '' : `<button class="btn alt" data-ammo="${w.id}">Ammo ${money(p.ammoPrice(w.id))}</button>`) : `<button class="btn" data-buy="${w.id}" ${p.cash < w.price ? 'disabled' : ''}>Buy</button>`}</div></div>`);
+          ${owned ? (w.type === 'blower' || w.type === 'camera' ? '' : `<button class="btn alt" data-ammo="${w.id}">Ammo ${money(p.ammoPrice(w.id))}</button>`) : `<button class="btn" data-buy="${w.id}" ${p.cash < w.price ? 'disabled' : ''}>Buy</button>`}</div></div>`);
       }
+    } else if (this.shopTab === 'jobs') {
+      g.jobs.refreshOffers();
+      const S = g.profile.jobs;
+      items.push(`<div class="shop-note">Optional jobs from the rangers. Hold up to 3. New ones get posted every in-game day.</div>`);
+      for (const j of S.active) items.push(`<div class="shop-item job-item"><h4><span>${esc(j.title)}</span><span class="job-reward">$${j.cash}</span></h4><div class="meta">Active · +${j.xp} XP</div><p>${esc(j.desc)}</p>
+        <div class="buy-row"><span class="owned-tag">In progress</span><button class="btn ghost" data-abandon="${esc(j.id)}">Abandon</button></div></div>`);
+      for (const j of S.offers) items.push(`<div class="shop-item job-item"><h4><span>${esc(j.title)}</span><span class="job-reward">$${j.cash}</span></h4><div class="meta">Posted by the rangers · +${j.xp} XP</div><p>${esc(j.desc)}</p>
+        <div class="buy-row"><span></span><button class="btn" data-accept="${esc(j.id)}" ${S.active.length >= 3 ? 'disabled' : ''}>Take job</button></div></div>`);
     } else {
       for (const gr of Object.values(GEAR)) {
         const have = p.gear[gr.id] || 0;
@@ -341,17 +362,43 @@ export class UI {
     list.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (p.buyWeapon(b.dataset.buy)) { g.audio.play('cash'); g.weapons.onInventoryChanged(); this.feed(`Bought the ${WEAPONS[b.dataset.buy].name}!`, 'good'); } this.renderShop(); });
     list.querySelectorAll('[data-ammo]').forEach(b => b.onclick = () => { if (p.buyAmmo(b.dataset.ammo)) g.audio.play('cash'); this.renderShop(); });
     list.querySelectorAll('[data-gear]').forEach(b => b.onclick = () => { if (p.buyGear(b.dataset.gear)) { g.audio.play('cash'); if (GEAR[b.dataset.gear].call) p.selectedCall = b.dataset.gear; } this.renderShop(); });
+    list.querySelectorAll('[data-accept]').forEach(b => b.onclick = () => { g.jobs.accept(b.dataset.accept); this.renderShop(); });
+    list.querySelectorAll('[data-abandon]').forEach(b => b.onclick = () => { g.jobs.abandon(b.dataset.abandon); this.renderShop(); });
     list.querySelectorAll('[data-callsel]').forEach(b => b.onclick = () => { p.selectedCall = b.dataset.callsel; p.save(); this.renderShop(); });
   }
 
   renderTrophies() {
     const p = this.game.profile;
+    this.renderAlbum();
     const list = $('trophy-list');
     if (!p.trophies.length) { list.innerHTML = '<div class="trophy-empty">Nothing on the wall yet. The wall is waiting.</div>'; return; }
     list.innerHTML = p.trophies.map(t => `<div class="trophy-item"><h4>${esc(t.nickname)}</h4>
       <div>${esc(t.speciesName)} · ${esc(t.sex)} · ${t.mass.toFixed(0)} kg</div>
       <div><b>${esc(t.tier)}</b> · ${t.overall.toFixed(1)} pts · ${esc(t.weapon)} at ${t.distance.toFixed(0)} m</div>
       <div>${esc(t.date)}</div></div>`).join('');
+  }
+
+  renderAlbum() {
+    const p = this.game.profile, list = $('photo-list');
+    list.textContent = '';
+    if (!p.photos.length) { const d = document.createElement('div'); d.className = 'trophy-empty'; d.textContent = 'No photos yet. Pick the camera (it is in your slots) and aim with right click.'; list.appendChild(d); return; }
+    for (const ph of p.photos) {
+      const item = document.createElement('div'); item.className = 'photo-item';
+      const img = document.createElement('img'); img.alt = `Photo of ${ph.name}`;
+      if (typeof ph.img === 'string' && ph.img.startsWith('data:image/jpeg')) img.src = ph.img;
+      const cap = document.createElement('div'); cap.className = 'cap';
+      const st = document.createElement('span'); st.className = 'stars'; st.textContent = '★'.repeat(ph.stars) + '☆'.repeat(5 - ph.stars);
+      cap.append(st, document.createElement('br'), `${ph.nickname} the ${ph.name}, ${ph.action}, ${Math.round(ph.dist)} m`);
+      item.append(img, cap);
+      list.appendChild(item);
+    }
+  }
+
+  photoFlash(bright) {
+    const el = $('photo-flash');
+    el.style.background = bright ? '#fff' : '#000';
+    el.classList.add('on');
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('on')));
   }
 
   // ------------------------------------------------------------------ map

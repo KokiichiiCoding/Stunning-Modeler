@@ -181,6 +181,7 @@ export class Vehicle {
         if (bad) this.crash('Stuck the landing! (with your face)');
         else {
           this.vel.y = 0; this.spin.p = this.spin.r = 0;
+          if (driving) this.game.jobs.onEvent('air', { t: this.airT });
           if (driving && this.airT > 0.6) this.game.ui.toast(this.airT > 1.4 ? `HUGE air! ${this.airT.toFixed(1)} s` : 'Nice air!', 'hit');
         }
       }

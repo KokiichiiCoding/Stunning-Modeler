@@ -160,6 +160,44 @@ const scripts = {
     await step(2);
     await shot('43_sunset');
   },
+  async jobs() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.cash = 300; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await step(2);
+    await page.evaluate(() => { const g = window.__tp.game; g.openMenu('shop'); document.querySelector('[data-tab=jobs]').click(); });
+    await step(1);
+    await shot('90_jobs_board');
+    const took = await page.evaluate(() => { const g = window.__tp.game; const o = g.profile.jobs.offers.map(j => j.title); g.jobs.accept(g.profile.jobs.offers[0].id); g.closeMenu(); return o; });
+    console.log('  offers', JSON.stringify(took));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game;
+      g.weather.set('clear', true);
+      g.profile.jobs.active.push({ type: 'photo', sp: 'deer', minStars: 1, need: 1, have: 0, title: 'Photograph a deer', cash: 50, xp: 10, id: 'test-photo' });
+      let tries = 0;
+      while (!g.animals.list.some(a => a.species.id === 'deer') && tries++ < 80) g.animals.spawnGroup(g.player.pos);
+      window.__tp.debug.freeze(true);
+      window.__tp.debug.approach('deer', 18);
+      window.__tp.debug.selectWeapon('camera');
+      g.input.mouse.right = true;
+      return { cash0: g.profile.cash };
+    });
+    for (let i = 0; i < 3; i++) await step(10);
+    await shot('91_viewfinder');
+    const after = await page.evaluate(() => {
+      const g = window.__tp.game;
+      window.__tp.debug.aimAtAnimal(g.animals.list.filter(a => a.species.id === 'deer').sort((a, b) => Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z) - Math.hypot(b.pos.x - g.player.pos.x, b.pos.z - g.player.pos.z))[0], 'lung');
+      window.__tp.debug.renderOnce();
+      g.weapons.snap();
+      window.__tp.debug.renderOnce();
+      g.input.mouse.right = false;
+      const ph = g.profile.photos[0];
+      return { photos: g.profile.photos.length, stars: ph && ph.stars, sp: ph && ph.sp, imgKB: ph && ph.img ? Math.round(ph.img.length / 1024) : 0, jobsLeft: g.profile.jobs.active.map(j => j.title), cash: g.profile.cash, done: g.profile.jobs.done };
+    });
+    console.log('  photo', JSON.stringify(after), 'cash0', r.cash0);
+    await page.evaluate(() => window.__tp.game.openMenu('trophies'));
+    await step(1);
+    await shot('92_album');
+  },
   async social() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

@@ -3,6 +3,7 @@
 // simulation. Absurd gadgets are physical props or air impulses — no damage
 // numbers. Also binoculars with a rangefinder.
 
+import { evaluatePhoto } from '../game/photo.js';
 import { THREE } from '../three.js';
 import { WEAPONS, AMMO, dragPerMeter } from '../sim/arsenal.js';
 import { Viewmodel } from './viewmodel.js';
@@ -87,7 +88,7 @@ export class Weapons {
 
   reload() {
     const w = this.current, st = this.state[w.id], prof = this.game.profile;
-    if (!w || w.type === 'blower' || this.reloading > 0) return;
+    if (!w || w.type === 'blower' || w.type === 'camera' || this.reloading > 0) return;
     if (w.type === 'shotgun' && st.mag >= w.magazine) {
       // Full tube: R cycles the shell type instead.
       const order = w.ammoAlt;
@@ -147,7 +148,9 @@ export class Weapons {
     this.blowing = false;
     this.blowers.length = 0;
     if (!busy && !this.binoculars && this.reloading <= 0) {
-      if (w.type === 'blower') {
+      if (w.type === 'camera') {
+        if (cmd.firePressed && this.cooldown <= 0) this.snap();
+      } else if (w.type === 'blower') {
         if (cmd.fire) this.blow(dt);
       } else if (w.type === 'bow') {
         if (cmd.fire && st.mag > 0) this.draw = Math.min(1, this.draw + dt / (w.drawTime || 0.8));
@@ -371,6 +374,7 @@ export class Weapons {
         if (hit) {
           pr.hitAnimal = true;
           g.animals.applyHit(hit, fake);
+          g.jobs.onEvent('bonk', { sp: hit.animal.species.id, prop: pr.kind });
           pr.vx *= -0.3; pr.vz *= -0.3; pr.vy = 2;
           g.ui.toast(pr.kind === 'boot' ? 'BONK!' : 'SQUEAK!', 'hit');
         }
@@ -413,6 +417,18 @@ export class Weapons {
     if (g.profile.owned.includes(id)) g.profile.ammo[id] = (g.profile.ammo[id] || 0) + 1;
     g.audio.play('click');
     g.ui.feed(`Picked up the ${pr.label}.`, 'info');
+  }
+
+  // ------------------------------------------------------------------ camera
+  snap() {
+    const g = this.game, p = g.player;
+    this.cooldown = this.current.fireInterval;
+    g.audio.play('shutter');
+    const dark = g.light < 0.55;
+    // The shutter (and the flash, in the dark) is a small world event.
+    g.sounds.emit('equipment', p.pos.x, p.pos.y + 1.3, p.pos.z, dark ? 90 : 25, g.time, 'player');
+    g.pendingPhoto = { res: evaluatePhoto(g), dark };
+    g.ui.photoFlash(dark);
   }
 
   // ------------------------------------------------------------------ leaf blower
@@ -496,7 +512,7 @@ export class Weapons {
   viewmodelVisible() {
     const w = this.current;
     if (!w) return false;
-    const scoped = this.aiming && w.zoom >= 3;
+    const scoped = this.aiming && (w.zoom >= 3 || w.type === 'camera');
     return !scoped && !this.game.player.swimming;
   }
 

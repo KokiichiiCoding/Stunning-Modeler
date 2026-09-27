@@ -14,11 +14,14 @@ const DEFAULTS = () => ({
   skin: 0,
   cash: 300,
   xp: 0,
-  owned: ['rifle_243', 'boot', 'chicken'],
+  owned: ['rifle_243', 'camera', 'boot', 'chicken'],
   ammo: {},        // weapon id -> reserve rounds
   gear: { bandage: 3, grunt_call: 1, binoculars: 1, scent_spray: 1, energy_drink: 1 },
   shells: '12ga_bird',
   trophies: [],
+  photos: [],
+  snapped: [],
+  jobs: { offers: [], active: [], done: 0, day: -1 },
   discovered: ['lodge'],
   stats: { harvests: 0, shots: 0, downs: 0, bestScore: 0, distance: 0 },
   settings: { sens: 1, volume: 0.7, fov: 72, quality: 'auto', reports: true, gore: 'full' },
@@ -36,6 +39,9 @@ export class Profile {
     this.settings = { ...d.settings, ...(data && data.settings) };
     this.stats = { ...d.stats, ...(data && data.stats) };
     this.gear = { ...(data && data.gear ? data.gear : d.gear) };
+    if (!this.owned.includes('camera')) this.owned.push('camera'); // older saves: everyone gets a camera
+    if (!Array.isArray(this.photos)) this.photos = [];
+    if (!Array.isArray(this.snapped)) this.snapped = [];
     for (const id of this.owned) if (this.ammo[id] === undefined) this.ammo[id] = WEAPONS[id] ? WEAPONS[id].reserve : 0;
   }
 
@@ -48,8 +54,8 @@ export class Profile {
   }
 
   toJSON() {
-    const { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, discovered, stats, settings } = this;
-    return { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, discovered, stats, settings };
+    const { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, stats, settings } = this;
+    return { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, stats, settings };
   }
 
   save() {
@@ -72,7 +78,7 @@ export class Profile {
     const w = WEAPONS[id];
     if (!w) return 0;
     if (w.type === 'thrown') return 10;
-    if (w.type === 'blower') return 0;
+    if (w.type === 'blower' || w.type === 'camera') return 0;
     return w.klass >= 4 ? 45 : w.klass === 3 ? 30 : w.type === 'bow' ? 35 : 18;
   }
   buyAmmo(id) {
@@ -110,6 +116,17 @@ export class Profile {
   callName(kind) {
     const g = Object.values(GEAR).find(x => x.call === kind);
     return g ? g.name : 'call';
+  }
+
+  addPhoto(ph) {
+    this.photos.unshift(ph);
+    // keep the album small: the 18 newest, but never drop a 5-star shot for a worse one
+    while (this.photos.length > 18) {
+      let worst = this.photos.length - 1;
+      for (let i = this.photos.length - 1; i > 0; i--) if (this.photos[i].stars < this.photos[worst].stars) worst = i;
+      this.photos.splice(worst, 1);
+    }
+    this.save();
   }
 
   discover(poiId) { if (!this.discovered.includes(poiId)) { this.discovered.push(poiId); this.save(); } }

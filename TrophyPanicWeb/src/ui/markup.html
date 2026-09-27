@@ -36,6 +36,9 @@
     <div id="cash-chip"><b id="cash">$0</b><span id="level">Lv 1</span></div>
     <div id="party-chip" hidden></div>
     <div id="scope" hidden><div class="scope-ring"></div><div class="scope-cross"></div><div id="range-read"></div></div>
+    <div id="viewfinder" hidden><div class="vf-corners"><i></i><i></i><i></i><i></i></div><div class="vf-dot"></div><div id="vf-read">Click to snap</div></div>
+    <div id="photo-flash"></div>
+    <div id="jobs-chip" hidden></div>
     <div id="binos" hidden><div class="bino-l"></div><div class="bino-r"></div><div id="bino-read"></div></div>
     <div id="pings" aria-live="polite"></div>
     <div id="chat-box" hidden><input id="chat-input" maxlength="80" autocomplete="off" placeholder="Say something… (Enter sends, Esc cancels)" aria-label="Chat message"></div>
@@ -167,6 +170,7 @@
       <div class="tabs" role="tablist">
         <button class="tab on" data-tab="weapons" role="tab">Weapons</button>
         <button class="tab" data-tab="gear" role="tab">Gear &amp; ammo</button>
+        <button class="tab" data-tab="jobs" role="tab">Ranger jobs</button>
       </div>
       <div id="shop-list" class="shop-list"></div>
       <button class="btn big close-screen" data-close="shop">Leave the lodge</button>
@@ -177,6 +181,8 @@
     <div class="card trophy-card">
       <h2>Trophy wall</h2>
       <div id="trophy-list" class="trophy-list"></div>
+      <h3 class="album-h">Photo album</h3>
+      <div id="photo-list" class="photo-list"></div>
       <button class="btn big close-screen" data-close="trophies">Close</button>
     </div>
   </div>

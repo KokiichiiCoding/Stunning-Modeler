@@ -106,6 +106,18 @@ function build(w) {
       parts.push(...mitten(0.02, -0.06, 0.05, 0.3));
       break;
     }
+    case 'camera': {
+      parts.push(
+        paint(xf(G.box(0.2, 0.12, 0.08), [0, 0, 0]), 0x4fb4f0, { bottom: 0x2f7fb0 }),
+        paint(xf(G.cyl(0.045, 0.05, 0.07, 14), [0, -0.005, -0.07], [Math.PI / 2, 0, 0]), 0x2a2a30),
+        paint(xf(G.cyl(0.032, 0.032, 0.012, 14), [0, -0.005, -0.106], [Math.PI / 2, 0, 0]), 0x8fd3ff),
+        paint(xf(G.box(0.05, 0.03, 0.03), [0.06, 0.075, 0]), 0xfff4de),
+        paint(xf(G.sphere(0.018, 8, 6), [-0.07, 0.07, 0.0]), 0xe8384f),
+        paint(xf(G.box(0.04, 0.025, 0.012), [0.065, 0.02, -0.043]), 0xffffff),
+      );
+      parts.push(...mitten(-0.12, -0.03, 0.02, 0.2), ...mitten(0.12, -0.03, 0.02, 0.2));
+      break;
+    }
     case 'blower': {
       parts.push(
         paint(xf(G.sphere(0.12, 10, 8), [0, -0.02, 0.1], [0, 0, 0], [1, 0.9, 1.1]), 0xe24a3b),
