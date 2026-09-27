@@ -471,6 +471,19 @@ const scripts = {
     await step(2);
     await shot('63_atv_bonk');
   },
+  async tips() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.tips = []; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const shown = await page.evaluate(() => {
+      const g = window.__tp.game; const out = [];
+      for (let i = 0; i < 60 * 40; i++) { g.advance(1 / 60); const t = g.tips.txt.textContent.slice(0, 40); if (g.tips.showT > 0 && out[out.length - 1] !== t) out.push(t); }
+      return { seen: g.profile.tips, shown: out };
+    });
+    console.log('  tips', JSON.stringify(shown));
+    await page.evaluate(() => { const g = window.__tp.game; g.tips.cool = 0; g.tips.show('Animals smell you downwind. The wind arrow (top) shows where your scent drifts — keep it blowing away from them.'); });
+    await step(2);
+    await shot('99_tip');
+  },
   async basic() {
     await shot('00_title');
     if (args.includes('--low')) await page.evaluate(() => { const g = window.__tp.game; g.profile.settings.quality = 'low'; g.applySettings(); });

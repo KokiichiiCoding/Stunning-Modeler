@@ -40,6 +40,7 @@
     <div id="viewfinder" hidden><div class="vf-corners"><i></i><i></i><i></i><i></i></div><div class="vf-dot"></div><div id="vf-read">Click to snap</div></div>
     <div id="photo-flash"></div>
     <div id="jobs-chip" hidden></div>
+    <div id="tip-card" role="status"><b>Ranger tip</b><span id="tip-text"></span></div>
     <div id="binos" hidden><div class="bino-l"></div><div class="bino-r"></div><div id="bino-read"></div></div>
     <div id="pings" aria-live="polite"></div>
     <div id="chat-box" hidden><input id="chat-input" maxlength="80" autocomplete="off" placeholder="Say something… (Enter sends, Esc cancels)" aria-label="Chat message"></div>
@@ -139,6 +140,7 @@
       <label class="set-row" for="set-fov"><span>Field of view</span><input type="range" id="set-fov" min="60" max="95" step="1" value="72"></label>
       <label class="set-row" for="set-quality"><span>Graphics</span><select id="set-quality"><option value="auto">Auto (recommended)</option><option value="high">Cosy (always shadows)</option><option value="low">Potato (fast)</option></select></label>
       <label class="set-row" for="set-reports"><span>Shot reports</span><input type="checkbox" id="set-reports" checked></label>
+      <label class="set-row" for="set-tips"><span>Ranger tips</span><input type="checkbox" id="set-tips" checked></label>
       <label class="set-row" for="set-gore"><span>Cartoon splats</span><select id="set-gore"><option value="full">Full splat</option><option value="mild">Mild</option><option value="confetti">Confetti instead</option></select></label>
       <button class="btn big close-screen" data-close="settings">Done</button>
     </div>

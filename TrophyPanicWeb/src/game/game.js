@@ -27,6 +27,7 @@ import { Social } from '../ui/social.js';
 import { Jobs } from './jobs.js';
 import { Dog } from '../entities/dog.js';
 import { Blinds } from '../entities/blind.js';
+import { Tips } from '../ui/tips.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -118,6 +119,7 @@ export class Game {
     this.vehicles = new Vehicles(this);
     this.dog = new Dog(this);
     this.blinds = new Blinds(this);
+    this.tips = new Tips(this);
     this.coop = new Coop(this);
     this.social = new Social(this);
     this.jobs = new Jobs(this);
@@ -292,6 +294,7 @@ export class Game {
     // Cosmetic time keeps flowing on the title screen (clouds, water, sway).
     this.visualTime = (this.visualTime || 0) + dt;
     if (!playing && this.state === 'title') this.titleCam(dt);
+    this.tips.step(dt);
     this.coop.update(dt);
   }
 

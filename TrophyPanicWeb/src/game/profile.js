@@ -24,8 +24,9 @@ const DEFAULTS = () => ({
   jobs: { offers: [], active: [], done: 0, day: -1 },
   discovered: ['lodge'],
   zones: [],
+  tips: [],
   stats: { harvests: 0, shots: 0, downs: 0, bestScore: 0, distance: 0 },
-  settings: { sens: 1, volume: 0.7, fov: 72, quality: 'auto', reports: true, gore: 'full' },
+  settings: { sens: 1, volume: 0.7, fov: 72, quality: 'auto', reports: true, gore: 'full', tips: true },
 });
 
 export class Profile {
@@ -55,8 +56,8 @@ export class Profile {
   }
 
   toJSON() {
-    const { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, zones, stats, settings } = this;
-    return { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, zones, stats, settings };
+    const { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, zones, tips, stats, settings } = this;
+    return { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, zones, tips, stats, settings };
   }
 
   save() {
