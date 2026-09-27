@@ -471,6 +471,32 @@ const scripts = {
     await step(2);
     await shot('63_atv_bonk');
   },
+  async slapstick() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, V = g.vegetation;
+      // find a big tree with open ground on one side and sprint straight at it
+      let tree = null;
+      for (let x = -400; x < 400 && !tree; x += 9) for (let z = -400; z < 400; z += 9) {
+        const o = V.query(x, z, 4, []).find(o => !o.soft && o.h > 5 && o.r > 0.25);
+        if (o && g.terrain.normalAt(o.x, o.z).y > 0.95 && g.terrain.waterDepth(o.x, o.z) < 0.1) { tree = o; break; }
+      }
+      p.spawnAt(tree.x + 7, tree.z, Math.PI / 2); // yaw pi/2 looks toward -x
+      const I = g.input;
+      I.down.add('KeyW'); I.down.add('ShiftLeft');
+      let bonk = false;
+      for (let i = 0; i < 120 && !bonk; i++) { g.advance(1 / 60); I.endFrame(); if (p.tumble) bonk = true; }
+      I.down.delete('KeyW'); I.down.delete('ShiftLeft');
+      // gunshot near trees: birds
+      g.fx.flushBirds(tree.x, tree.z);
+      return { tree: [Math.round(tree.x), Math.round(tree.z)], bonk, stars: g.fx.stars.length, birds: g.fx.birds.length };
+    });
+    console.log('  slapstick', JSON.stringify(r));
+    await page.evaluate(() => { window.__tp.debug.third(true); });
+    for (let i = 0; i < 4; i++) await step(3);
+    await shot('99_bonk_birds');
+  },
   async tips() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.tips = []; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

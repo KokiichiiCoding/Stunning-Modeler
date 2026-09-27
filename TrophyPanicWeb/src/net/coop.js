@@ -201,7 +201,7 @@ export class Coop {
         if (!w) return;
         const pos = { x: num(d.x), y: num(d.y), z: num(d.z) };
         g.audio.play(w.type === 'shotgun' ? 'shotgun' : w.type === 'bow' ? 'bow' : 'rifle', pos);
-        if (w.type !== 'bow') g.sounds.emit('gunshot', pos.x, pos.y, pos.z, w.loudness, g.time, r.peer);
+        if (w.type !== 'bow') { g.sounds.emit('gunshot', pos.x, pos.y, pos.z, w.loudness, g.time, r.peer); g.fx.flushBirds(pos.x, pos.z); }
         const dir = new THREE.Vector3(num(d.dx, -1, 1), num(d.dy, -1, 1), num(d.dz, -1, 1)).normalize();
         const ammoId = AMMO[d.a] ? d.a : w.ammo;
         // Host simulates the guest's projectile against the real anatomy.
@@ -509,7 +509,7 @@ export class Coop {
       if (pr.tb) { r.spin = (r.spin || 0) + dt * 9; m.group.rotation.set(r.spin, r.target.yaw, r.spin * 0.6); }
       else { m.group.rotation.set(0, (r.target.yaw || 0) + Math.PI, 0); }
       if (r.waveT > 0) r.waveT -= dt;
-      m.animate(dt, { speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
+      m.animate(dt, { flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
       r.tag.position.set(r.pos.x, r.pos.y + 2.05, r.pos.z);
     }
   }

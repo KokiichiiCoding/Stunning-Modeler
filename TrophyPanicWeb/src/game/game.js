@@ -565,7 +565,7 @@ export class Game {
     } else {
       hm.group.rotation.set(0, p.yaw + Math.PI, 0);
     }
-    hm.animate(dt, { speed: p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming, showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' });
+    hm.animate(dt, { flail: !!p.tumble, speed: p.tumble ? 3 : p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming, showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' });
   }
 
   render(dt) {

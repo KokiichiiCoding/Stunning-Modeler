@@ -75,6 +75,19 @@ export class FX {
     ]);
     this.ghostMat = new THREE.MeshToonMaterial({ vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false });
 
+    // --- startled birds -------------------------------------------------
+    const birdGeo = merge([
+      paint(xf(G.sphere(0.09, 7, 5), [0, 0, 0], [0, 0, 0], [0.8, 0.8, 1.2]), 0xffffff),
+      paint(xf(G.sphere(0.06, 6, 5), [0, 0.05, 0.09]), 0xffffff),
+      paint(xf(G.cone(0.02, 0.05, 4), [0, 0.04, 0.16], [Math.PI / 2, 0, 0]), 0xffb03a),
+      paint(xf(G.box(0.26, 0.015, 0.1), [0.15, 0.02, 0], [0, 0, 0.35]), 0xffffff),
+      paint(xf(G.box(0.26, 0.015, 0.1), [-0.15, 0.02, 0], [0, 0, -0.35]), 0xffffff),
+    ]);
+    this.birdMesh = new THREE.InstancedMesh(birdGeo, toonMat(), 64);
+    this.birdMesh.frustumCulled = false; this.birdMesh.count = 0;
+    scene.add(this.birdMesh);
+    this.birds = [];
+
     // --- chimney & campfire smoke ---------------------------------------
     this.smokeT = 0;
 
@@ -132,6 +145,25 @@ export class FX {
   }
 
   feathers(x, y, z) { this.burst(x, y, z, { count: 18, color: 0x7a5a44, speed: 3, up: 3, kind: 'feather', size: 0.07 }); }
+
+  /** A gunshot flushes little birds out of the nearest trees. */
+  flushBirds(x, z) {
+    const g = this.game;
+    const trees = g.vegetation.query(x, z, 45, []).filter(o => !o.soft && (o.h || 0) > 3);
+    if (!trees.length) return;
+    const cols = [0x62c3f2, 0xe8384f, 0xffd23f, 0xff8fc7, 0x5a4a6a];
+    for (let k = 0; k < Math.min(3, trees.length); k++) {
+      const t = trees[Math.floor(Math.random() * trees.length)];
+      const ty = (t.y ?? g.terrain.heightAt(t.x, t.z)) + (t.h || 6) * 0.85;
+      const away = Math.atan2(t.z - z, t.x - x);
+      const n = 3 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < n && this.birds.length < 64; i++) {
+        const a = away + (Math.random() - 0.5) * 1.4, sp = 5 + Math.random() * 4;
+        this.birds.push({ x: t.x + (Math.random() - 0.5) * 2, y: ty + Math.random(), z: t.z + (Math.random() - 0.5) * 2, vx: Math.cos(a) * sp, vy: 3 + Math.random() * 3, vz: Math.sin(a) * sp, ph: Math.random() * 6, t: 0, col: cols[(k + i) % cols.length] });
+      }
+      g.audio.play('flutter', { x: t.x, y: ty, z: t.z });
+    }
+  }
 
   dazed(target, seconds = 3) { this.stars.push({ target, t: seconds, mesh: null }); }
 
@@ -226,6 +258,24 @@ export class FX {
     if (this.dMesh.instanceColor) this.dMesh.instanceColor.needsUpdate = true;
 
     this.renderEvidence(dt);
+
+    // birds: flap (squash the wings), climb, then drift away and vanish
+    n = 0;
+    for (const b of this.birds) {
+      b.t += dt; b.ph += dt * 22;
+      b.vy = Math.max(-0.5, b.vy - dt * 1.5);
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+      q.setFromAxisAngle(up, Math.atan2(b.vx, b.vz));
+      const k = Math.min(1, (6 - b.t) * 2) * 1.3;
+      m.compose(p.set(b.x, b.y, b.z), q, s.set(k, k * (0.35 + Math.abs(Math.sin(b.ph)) * 1.1), k));
+      this.birdMesh.setMatrixAt(n, m);
+      this.birdMesh.setColorAt(n, c.setHex(b.col));
+      n++;
+    }
+    this.birds = this.birds.filter(b => b.t < 6);
+    this.birdMesh.count = n;
+    this.birdMesh.instanceMatrix.needsUpdate = true;
+    if (this.birdMesh.instanceColor) this.birdMesh.instanceColor.needsUpdate = true;
 
     // stars circling dazed heads
     for (const st of this.stars) {

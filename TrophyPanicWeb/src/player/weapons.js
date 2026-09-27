@@ -206,7 +206,7 @@ export class Weapons {
     g.audio.play(sound, null, { gain: w.klass >= 4 ? 1.2 : 1 });
     // The shot is a world event every animal can hear.
     if (w.type === 'bow') g.sounds.emit('equipment', p.pos.x, p.pos.y + 1.3, p.pos.z, w.loudness, g.time, 'player');
-    else g.sounds.emit('gunshot', p.pos.x, p.pos.y + 1.3, p.pos.z, w.loudness, g.time, 'player');
+    else { g.sounds.emit('gunshot', p.pos.x, p.pos.y + 1.3, p.pos.z, w.loudness, g.time, 'player'); g.fx.flushBirds(p.pos.x, p.pos.z); }
     g.coop.broadcastEvent('shot', { x: p.pos.x, y: p.pos.y + 1.3, z: p.pos.z, w: w.id, dx: dir.x, dy: dir.y, dz: dir.z, a: ammoId });
     if (st.mag <= 0 && (g.profile.ammo[w.id] || 0) > 0 && w.type !== 'bow') setTimeout(() => this.currentId === w.id && this.reload(), 450);
     if (w.type === 'bow' && st.mag <= 0) this.reload();

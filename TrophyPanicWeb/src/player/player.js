@@ -251,6 +251,16 @@ export class Player {
         const push = (min - d);
         this.pos.x += dx / d * push; this.pos.z += dz / d * push;
         const vn = (this.vel.x * dx + this.vel.z * dz) / d;
+        // Sprinting face-first into a tree: BONK, a little lie-down, stars.
+        if (vn < -5 && !this.tumble && !this.vehicle && o.h > 2 && !(this.bonkT > g.time)) {
+          this.bonkT = g.time + 3;
+          g.audio.play('bonk', this.pos); g.audio.play('wood', this.pos);
+          this.startTumble(dx / d * 3, 1.5, dz / d * 3);
+          const self = this;
+          g.fx.dazed({ headWorld: () => ({ x: self.pos.x, y: self.pos.y + 0.6, z: self.pos.z }) }, 2.5);
+          g.ui.toast('BONK. The tree was fine.', 'big', 1.8);
+          g.sounds.emit('equipment', this.pos.x, this.pos.y + 1, this.pos.z, 400, g.time, 'player');
+        }
         if (vn < 0) { this.vel.x -= vn * dx / d; this.vel.z -= vn * dz / d; }
       }
     }

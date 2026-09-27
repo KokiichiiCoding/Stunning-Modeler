@@ -187,6 +187,14 @@ export function buildHunter({ jacket = 0xff6b2c, hat = 'beanie', skin = 0 } = {}
         arms[0].rotation.x = -s * sw * 0.8; arms[1].rotation.x = s * sw * 0.8;
         arms[0].rotation.z = 0.15; arms[1].rotation.z = -0.15;
       }
+      if (st.flail && !st.dead) {
+        // ragdoll-ish panic: everything windmills
+        const f = this.phase * 3.2;
+        arms[0].rotation.x = Math.sin(f) * 2.2; arms[1].rotation.x = Math.sin(f + 2) * 2.2;
+        arms[0].rotation.z = 0.9 + Math.sin(f * 1.3) * 0.6; arms[1].rotation.z = -0.9 - Math.sin(f * 1.1) * 0.6;
+        legs[0].rotation.x = Math.sin(f + 1) * 1.4; legs[1].rotation.x = Math.sin(f + 3) * 1.4;
+        head.rotation.z = Math.sin(f * 0.7) * 0.4;
+      } else head.rotation.z = 0;
       if (st.seated) {
         // astride the quad: knees up, hands on the bars, leaning into turns
         legs[0].rotation.x = legs[1].rotation.x = -1.35;
