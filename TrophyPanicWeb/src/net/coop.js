@@ -16,6 +16,7 @@ import { SPECIES, SPECIES_IDS } from '../sim/species.js';
 import { Animal } from '../entities/animals.js';
 import { WEAPONS, AMMO } from '../sim/arsenal.js';
 import { Life } from '../sim/creature.js';
+import { Rng } from '../core/rng.js';
 
 const SEND_HZ = 12;
 const EV_RING = 10;
@@ -52,6 +53,7 @@ export class Coop {
     this.joinedAt = 0;
     this.shadow = new Map(); // guest: animal key -> Animal (shadow, no AI)
     this.pendingJoin = null;
+    this.rng = new Rng(game.sessionSeed ^ 0xc00b);
   }
 
   myId() { return 'player'; }
@@ -204,7 +206,7 @@ export class Coop {
         const pellets = w.pellets ? w.pellets[ammoId] : 1;
         for (let i = 0; i < pellets; i++) {
           const dd = dir.clone();
-          if (pellets > 1) { const s = w.pelletSpread[ammoId]; dd.x += (Math.random() - 0.5) * 2 * s; dd.y += (Math.random() - 0.5) * 2 * s; dd.z += (Math.random() - 0.5) * 2 * s; dd.normalize(); }
+          if (pellets > 1) { const s = w.pelletSpread[ammoId]; dd.x += this.rng.range(-s, s); dd.y += this.rng.range(-s, s); dd.z += this.rng.range(-s, s); dd.normalize(); }
           g.weapons.spawnProjectile({ origin: new THREE.Vector3(pos.x, pos.y, pos.z), dir: dd, ammoId, weaponId: w.id, klass: w.klassByAmmo ? w.klassByAmmo[ammoId] : w.klass, speed: AMMO[ammoId].muzzleVelocityMps, owner: r.peer, remote: true, tracer: i === 0 && w.type !== 'bow', arrow: w.type === 'bow' });
         }
         break;
@@ -231,6 +233,8 @@ export class Coop {
         break;
       }
       case 'wave': r.waveT = 2.2; break;
+      case 'chat': g.social.receive(r, d.t); break;
+      case 'ping': g.social.receivePing(r, d); break;
       case 'downed': g.ui.feed(`${r.name} went down (${String(d.by || '').slice(0, 20)}). Rangers are on it.`, 'warn'); break;
       case 'harvest': g.ui.feed(`${r.name} harvested a ${SPECIES[d.sp] ? SPECIES[d.sp].displayName : 'critter'}!`, 'good'); this.removeShadowById(d.id); break;
       case 'harvestreq': {
@@ -368,6 +372,8 @@ export class Coop {
       tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0,
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,
     };
+    const v = p.vehicle;
+    if (v) pres.vh = [g.vehicles.list.indexOf(v), r2(v.pos.x), r2(v.pos.y), r2(v.pos.z), r2(v.yaw), r2(v.pitch), r2(v.roll), r2(v.steer), r2(v.speed())];
     if (this.filterCode) pres.pc = this.filterCode;
     if (this.isHost()) {
       pres.hr = r2(g.hour); pres.wd = [r2(g.wind.dir), r2(g.wind.speed)]; pres.wx = g.weather.pack();
@@ -455,6 +461,25 @@ export class Coop {
       const pr = r.presence;
       const m = r.model;
       m.group.position.set(r.pos.x, r.pos.y, r.pos.z);
+      // Riding: pose our copy of that quad where they are and seat them on it.
+      const vh = Array.isArray(pr.vh) ? pr.vh : null;
+      const quad = vh && g.vehicles.list[vh[0] | 0];
+      if (quad && quad.driver !== g.player) {
+        quad.remoteT = g.time;
+        const k2 = Math.min(1, dt * 10);
+        quad.pos.x += (vh[1] - quad.pos.x) * k2; quad.pos.y += (vh[2] - quad.pos.y) * k2; quad.pos.z += (vh[3] - quad.pos.z) * k2;
+        quad.yaw = vh[4]; quad.pitch = vh[5]; quad.roll = vh[6]; quad.steer = vh[7];
+        quad.wheelSpin += (vh[8] || 0) * dt / 0.36;
+        quad.crashed = false;
+        const s = quad.seat();
+        m.group.position.set(s.x, s.y - 0.36, s.z);
+        m.group.rotation.order = 'YXZ';
+        m.group.rotation.set(-quad.pitch, quad.yaw, quad.roll);
+        m.animate(dt, { speed: 0, stance: 'stand', pitch: 0, seated: true, lean: quad.steer, showRifle: false });
+        r.tag.position.set(s.x, s.y + 1.5, s.z);
+        continue;
+      }
+      m.group.rotation.order = 'XYZ';
       if (pr.tb) { r.spin = (r.spin || 0) + dt * 9; m.group.rotation.set(r.spin, r.target.yaw, r.spin * 0.6); }
       else { m.group.rotation.set(0, (r.target.yaw || 0) + Math.PI, 0); }
       if (r.waveT > 0) r.waveT -= dt;

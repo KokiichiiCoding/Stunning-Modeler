@@ -160,6 +160,35 @@ const scripts = {
     await step(2);
     await shot('43_sunset');
   },
+  async social() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game;
+      let tries = 0;
+      while (!g.animals.list.some(a => a.species.id === 'deer') && tries++ < 80) g.animals.spawnGroup(g.player.pos);
+      window.__tp.debug.freeze(true);
+      const info = window.__tp.debug.approach('deer', 30);
+      window.__tp.debug.stepFrames(1);
+      g.social.ping();
+      g.social.send('shh, deer at 30 metres');
+      // fake a party member riding the lodge quad next to us
+      g.coop.room = { presence: async () => {}, onPeers() {}, leave: async () => {} };
+      g.coop.myPeer = 'me'; g.coop.joinedAt = 0; g.coop.code = 'test';
+      const p = g.player.pos, q = g.vehicles.list[0];
+      const pres = { v: 1, n: 'Bob', c: 0x4fb4f0, h: 2, since: 5, p: [p.x + 3, p.y + 1, p.z + 3, 0, 0], s: 's', sp: 0, w: 'rifle_243',
+        vh: [0, p.x + 3, p.y + 0.5, p.z - 4, 1.2, 0.1, -0.1, 0.3, 6],
+        ev: [[1, 'chat', { t: 'wait for me!! the quad is FAST' }], [2, 'ping', { x: p.x + 20, y: p.y, z: p.z + 10, l: 'Over here' }]] };
+      g.coop.onPeers({ peers: [{ peer: 'me', sameTab: true, presence: null }, { peer: 'bob', presence: pres }], left: [] });
+      window.__tp.debug.third(true);
+      return { target: info && info.species, pings: g.social.pings.map(x => x.label), bubbles: g.social.bubbles.length, host: g.coop.isHost(), quadRemote: !!q.remoteT };
+    });
+    console.log('  social', JSON.stringify(r));
+    for (let i = 0; i < 3; i++) await step(10);
+    await shot('80_social');
+    const after = await page.evaluate(() => { const g = window.__tp.game; return { canRideBobs: g.vehicles.nearest(g.vehicles.list[0].pos, 3) === g.vehicles.list[0] }; });
+    console.log('  after', JSON.stringify(after));
+  },
   async weather() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

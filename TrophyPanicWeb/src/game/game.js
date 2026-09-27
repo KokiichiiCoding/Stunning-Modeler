@@ -23,6 +23,7 @@ import { Coop } from '../net/coop.js';
 import { Vehicles } from '../entities/vehicle.js';
 import { Weather } from '../sim/weather.js';
 import { WeatherFX } from '../world/weatherfx.js';
+import { Social } from '../ui/social.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -68,7 +69,11 @@ export class Game {
     this.profile = new Profile(this.saved.profile);
     this.input = new Input(this.canvas);
     this.input.sensitivity = this.profile.settings.sens;
-    this.input.onLockChange = (locked) => { if (!locked && this.state === 'play' && !this._suppressPause) this.pause(); this._suppressPause = false; };
+    this.input.onLockChange = (locked) => {
+      if (!locked && this.social && this.social.isOpen) { this._suppressPause = false; return; }
+      if (!locked && this.state === 'play' && !this._suppressPause) this.pause();
+      this._suppressPause = false;
+    };
     this.audio = new Audio(this);
 
     ui.loading(0.15, 'Raising hills and digging the lake…');
@@ -109,6 +114,7 @@ export class Game {
     this.weapons = new Weapons(this);
     this.vehicles = new Vehicles(this);
     this.coop = new Coop(this);
+    this.social = new Social(this);
 
     ui.loading(1, 'Ready!');
     await nextFrame();
@@ -217,6 +223,8 @@ export class Game {
   }
   quitToTitle() {
     this.coop.leave();
+    this.social.clear();
+    if (this.player.vehicle) this.player.vehicle.exit(true);
     this.state = 'title';
     this.profile.save();
     this.ui.showTitle();
@@ -326,6 +334,8 @@ export class Game {
     if (I.wasPressed('KeyG')) { this.waveT = 2.2; this.coop.broadcastEvent('wave', {}); }
     if (I.wasPressed('KeyV')) this.thirdPerson = !this.thirdPerson;
     if (I.wasPressed('KeyM')) this.openMenu('map');
+    if (I.wasPressed('KeyX')) this.social.ping();
+    if (I.wasPressed('Enter') || I.wasPressed('NumpadEnter')) this.social.open();
     if (I.wasPressed('Escape')) this.pause();
   }
 
@@ -517,6 +527,7 @@ export class Game {
     this.fx.render(dt);
     this.weapons.render(dt);
     this.coop.render(dt);
+    if (this.state !== 'title') this.social.render(dt);
     if (this.state === 'play' || this.state === 'paused') this.ui.updateHUD(dt);
 
     const r = this.renderer;
@@ -566,7 +577,7 @@ export class Game {
           if (!a) return false;
           a.syncRig();
           const vol = a.volumes.find(v => v.region === region) || a.volumes[0];
-          a.rig.body.updateMatrixWorld(true);
+          a.rig.root.updateMatrixWorld(true); // root may have moved since the last render
           const wp = new THREE.Vector3(vol.c[0], vol.c[1], vol.c[2]).applyMatrix4(a.rig.body.matrixWorld);
           const e = game.player.eyePos();
           const dx = wp.x - e.x, dy = wp.y - e.y, dz = wp.z - e.z;

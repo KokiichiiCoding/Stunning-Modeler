@@ -223,3 +223,15 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 
 @media (prefers-reduced-motion: reduce) { .logo span, .downed-ghost { animation: none; } .feed-item, .toast { animation: none; } }
 @media (max-width: 700px) { #vitals { width: 170px; } #weapon-box { min-width: 150px; } #ammo-line { font-size: 24px; } #feed { max-width: 60vw; } }
+
+/* social: chat + pings */
+.feed-item.chat { background: #fff; border-color: var(--ink); }
+#chat-box { position: absolute; left: 14px; bottom: 150px; width: min(420px, 70vw); pointer-events: auto; }
+#chat-input { width: 100%; font: 700 16px var(--body); color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 8px 12px; box-shadow: 0 3px 0 var(--ink); outline: none; }
+#chat-input:focus-visible { border-color: var(--blaze); }
+#pings { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.ping { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -34px 0 0 -60px; width: 120px; will-change: transform; }
+.ping i { width: 18px; height: 18px; border: 3px solid var(--ink); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 0 var(--ink); animation: pingbob 1s ease-in-out infinite alternate; }
+.ping span { background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; padding: 1px 7px; font: 800 12px var(--body); white-space: nowrap; box-shadow: 0 2px 0 var(--ink); }
+@keyframes pingbob { from { translate: 0 0; } to { translate: 0 -5px; } }
+@media (prefers-reduced-motion: reduce) { .ping i { animation: none; } }

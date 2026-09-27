@@ -334,10 +334,25 @@ export class Vehicles {
   }
   nearest(pos, r) {
     let best = null, bd = r;
-    for (const v of this.list) { const d = Math.hypot(v.pos.x - pos.x, v.pos.z - pos.z); if (d < bd) { bd = d; best = v; } }
+    const t = this.game.time;
+    for (const v of this.list) {
+      if (v.remoteT && t - v.remoteT < 1) continue; // a friend is riding it
+      const d = Math.hypot(v.pos.x - pos.x, v.pos.z - pos.z); if (d < bd) { bd = d; best = v; }
+    }
     return best;
   }
-  step(dt, cmd) { for (const v of this.list) v.step(dt, v.driver ? cmd : null); }
+  step(dt, cmd) {
+    const g = this.game;
+    for (const v of this.list) {
+      if (!v.driver && v.remoteT && g.time - v.remoteT < 1) {
+        // a party member is riding it: coop poses it; wildlife still hears it
+        v.noiseAcc = (v.noiseAcc || 0) + dt;
+        if (v.noiseAcc > 0.5) { v.noiseAcc = 0; g.sounds.emit('engine', v.pos.x, v.pos.y, v.pos.z, 1200 + 8 * 120, g.time, 'remote'); }
+        continue;
+      }
+      v.step(dt, v.driver ? cmd : null);
+    }
+  }
   render() {
     const cam = this.game.camera.position;
     for (const v of this.list) {
