@@ -621,11 +621,21 @@ export class Game {
           if (!list.length) return null;
           const p = game.player;
           list.sort((a, b) => Math.hypot(a.pos.x - p.pos.x, a.pos.z - p.pos.z) - Math.hypot(b.pos.x - p.pos.x, b.pos.z - p.pos.z));
-          const a = list[0];
-          const yaw = a.facingYaw();
-          // broadside: stand off the animal's flank
-          const fx = Math.sin(yaw), fz = Math.cos(yaw);
-          const px = a.pos.x + fz * dist * side, pz = a.pos.z - fx * dist * side;
+          // broadside: stand off the animal's flank, preferring a clear line of fire
+          const T = game.terrain;
+          const clear = (a, px, pz) => {
+            const ey = T.heightAt(px, pz) + 1.36, ty = a.pos.y + a.species.body.leg + a.species.body.h * 0.5;
+            if (game.vegetation.segmentBlocked(px, ey, pz, a.pos.x, ty, a.pos.z) >= 0) return false;
+            for (let i = 1; i < 16; i++) { const t = i / 16; const x = px + (a.pos.x - px) * t, z = pz + (a.pos.z - pz) * t; if (ey + (ty - ey) * t < T.heightAt(x, z) + 0.2) return false; }
+            return true;
+          };
+          let a = list[0], px, pz;
+          search: for (const c of list.slice(0, 12)) for (const sd of [side, -side]) {
+            const yaw = c.facingYaw(), fx = Math.sin(yaw), fz = Math.cos(yaw);
+            const x = c.pos.x + fz * dist * sd, z = c.pos.z - fx * dist * sd;
+            if (px === undefined) { a = c; px = x; pz = z; }
+            if (T.waterDepth(x, z) < 0.3 && clear(c, x, z)) { a = c; px = x; pz = z; break search; }
+          }
           p.spawnAt(px, pz, 0);
           game.debugApi().debug.aimAtAnimal(a, 'lung');
           a.alertness = 0; a.memory.hasThreat = false;
