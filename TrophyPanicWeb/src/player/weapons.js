@@ -486,7 +486,7 @@ export class Weapons {
     const dark = g.light < 0.55;
     // The shutter (and the flash, in the dark) is a small world event.
     g.sounds.emit('equipment', p.pos.x, p.pos.y + 1.3, p.pos.z, dark ? 90 : 25, g.time, 'player');
-    g.pendingPhoto = { res: evaluatePhoto(g), dark };
+    g.pendingPhoto = { res: (g.cryptid && g.cryptid.photo(g.camera)) || evaluatePhoto(g), dark };
     g.ui.photoFlash(dark);
   }
 

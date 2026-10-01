@@ -56,6 +56,10 @@ artifact declaring the `room` capability to get online co-op.
   the line is about to snap). Perch, trout, bass, Grumpy Pike, Old Man
   Sturgeon, a very rare Golden Koi, and the odd boot, tin can or rubber
   duck. Catches pay and you hold each one up for the camera.
+- **The Hairy Hiker.** Some nights the radio crackles about a very tall,
+  very hairy hiker. It strolls across distant clearings; get close (or
+  shine a flashlight on it) and it waves, then sprints off flailing,
+  leaving giant footprints. A photo of it pays $500. Bullets don't help.
 - **Campfires.** L lights one. Standing close heals you, wolves and cougars
   pace outside the firelight, and E roasts a marshmallow: pull it out
   golden for a sugar rush, or leave it until it catches fire. At night the
@@ -181,4 +185,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
-- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`, `hiker`

@@ -54,6 +54,58 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async hiker() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 19.4; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, C = g.cryptid;
+      p.spawnAt(-60, 200, 0);
+      for (let i = 0; i < 5; i++) g.advance(1 / 60);
+      let ok = false, n = 0; while (!ok && n++ < 20) ok = C.spawn({ r: 64 });
+      const h = C.h;
+      const face = () => { p.yaw = Math.atan2(-(h.x - p.pos.x), -(h.z - p.pos.z)); p.pitch = Math.atan2(h.y + 1.5 - (p.pos.y + 1.6), Math.hypot(h.x - p.pos.x, h.z - p.pos.z)); };
+      face();
+      for (let i = 0; i < 60; i++) g.advance(1 / 60);
+      face();
+      window.__face = face;
+      return { ok, mode: h.mode, d: +Math.hypot(h.x - p.pos.x, h.z - p.pos.z).toFixed(1) };
+    });
+    console.log('  hiker', JSON.stringify(r));
+    if (!r.ok) { errors.push('hiker did not spawn'); return; }
+    await page.evaluate(() => { window.__tp.game.weapons.select('camera'); window.__face(); });
+    for (let i = 0; i < 2; i++) await step(2);
+    await shot('103_hiker_stroll');
+    // walk toward it until it notices you
+    const w = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, h = g.cryptid.h;
+      const modes = new Set();
+      for (let i = 0; i < 60 * 8 && h.mode === 'stroll'; i++) { const dx = h.x - p.pos.x, dz = h.z - p.pos.z, l = Math.hypot(dx, dz); p.pos.x += dx / l * 0.12; p.pos.z += dz / l * 0.12; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z); g.advance(1 / 60); modes.add(h.mode); }
+      for (let i = 0; i < 20; i++) g.advance(1 / 60);
+      window.__face();
+      return { mode: h.mode, modes: [...modes] };
+    });
+    await page.evaluate(() => { window.__tp.debug.renderOnce(); window.__tp.game.weapons.snap(); });
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('103_hiker_wave');
+    const after = await page.evaluate(() => { const g = window.__tp.game; return { cash: g.profile.cash, snapped: g.profile.snapped.includes('hiker'), photos: g.profile.photos.length }; });
+    console.log('  wave', JSON.stringify(w), JSON.stringify(after));
+    if (w.mode !== 'wave' || !after.snapped) errors.push('hiker photo failed: ' + JSON.stringify({ w, after }));
+    const f = await page.evaluate(() => { const g = window.__tp.game, h = g.cryptid.h; for (let i = 0; i < 60 * 2.5; i++) g.advance(1 / 60); window.__face && g.cryptid.h && window.__face(); return g.cryptid.h ? g.cryptid.h.mode : 'gone'; });
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('103_hiker_flee');
+    console.log('  then', f);
+    // close-up portrait, in daylight
+    await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, C = g.cryptid;
+      C.despawn(); g.hour = 16; g.weather.set('clear', true);
+      for (let i = 0; i < 3; i++) g.advance(1 / 60);
+      C.spawn({ r: 7 }); const h = C.h; h.mode = 'wave'; h.mt = -100; h.yaw = Math.atan2(p.pos.x - h.x, p.pos.z - h.z);
+      p.yaw = Math.atan2(-(h.x - p.pos.x), -(h.z - p.pos.z)); p.pitch = 0.12; g.weapons.select('rod');
+      for (let i = 0; i < 4; i++) g.advance(1 / 60);
+    });
+    for (let i = 0; i < 2; i++) await step(2);
+    await shot('103_hiker_closeup');
+  },
   async fishing() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 17.8; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

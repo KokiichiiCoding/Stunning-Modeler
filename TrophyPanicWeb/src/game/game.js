@@ -35,6 +35,7 @@ import { Buddies } from '../entities/buddies.js';
 import { TouchControls } from '../core/touch.js';
 import { Campfires } from '../entities/campfire.js';
 import { Fishing } from '../player/fishing.js';
+import { Cryptid } from '../entities/cryptid.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -133,6 +134,7 @@ export class Game {
     this.campfires = new Campfires(this);
     this.tips = new Tips(this);
     this.buddies = new Buddies(this);
+    this.cryptid = new Cryptid(this);
     this.touch = new TouchControls(this);
     this.coop = new Coop(this);
     this.social = new Social(this);
@@ -251,6 +253,7 @@ export class Game {
     this.blinds.clear();
     this.campfires.clear();
     this.fishing.reset();
+    this.cryptid.clear();
     this.buddies.clear();
     if (this.player.vehicle) this.player.vehicle.exit(true);
     this.state = 'title';
@@ -511,6 +514,7 @@ export class Game {
     this.animals.step(dt);
     this.dog.step(dt);
     this.buddies.step(dt);
+    this.cryptid.step(dt);
     this.fx.step(dt);
     if (((this.time * 60) | 0) % 60 === 0) this.sounds.expire(this.time);
     if (this.waveT > 0) this.waveT -= dt;
@@ -584,6 +588,7 @@ export class Game {
     const ph = this.pendingPhoto;
     this.pendingPhoto = null;
     const res = ph.res;
+    if (res && res.cryptid) { this.cryptidPhoto(res, ph); return; }
     if (!res) { this.ui.feed('Lovely photo of some scenery. (No animals in frame.)', 'info'); return; }
     let img = null;
     try {
@@ -607,6 +612,30 @@ export class Game {
     if (res.charging && res.danger >= 2) this.ui.feed('Incredible action shot. Also: RUN.', 'warn');
     if (pay) this.audio.play('cash');
     this.jobs.onEvent('photo', { sp: res.sp, stars: res.stars, dist: res.dist, charging: res.charging });
+  }
+
+  /** The Hairy Hiker, on film. Blurry, obviously. */
+  cryptidPhoto(res) {
+    let img = null;
+    try {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 144;
+      const src = this.renderer.domElement, sw = src.width, sh = src.height, cw = Math.min(sw, sh * 16 / 9), ch = cw / (16 / 9);
+      const ctx = c.getContext('2d');
+      ctx.filter = 'blur(1.2px)';
+      ctx.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, 256, 144);
+      img = c.toDataURL('image/jpeg', 0.7);
+    } catch { img = null; }
+    const pr = this.profile;
+    const first = !pr.snapped.includes('hiker');
+    if (first) pr.snapped.push('hiker');
+    const pay = first ? 500 : 60 + res.stars * 20;
+    pr.cash += pay; pr.xp += first ? 300 : 40;
+    pr.stats.hiker = (pr.stats.hiker || 0) + 1;
+    pr.addPhoto({ img, sp: 'hiker', name: res.name, nickname: res.nickname, stars: Math.max(res.stars, 5), action: res.action, dist: res.dist, rare: true, date: `Day ${Math.floor(this.time / this.daySeconds) + 1}` });
+    this.ui.toast(`BLURRY PHOTO OF THE HAIRY HIKER! +$${pay}`, 'big', 3);
+    this.ui.feed(first ? 'The rangers will never believe this. They pay you $500 to stop talking about it.' : 'Another one for the wall of "evidence".', 'good');
+    this.audio.play('levelup');
+    this.coop.broadcastEvent('chat', { t: 'just photographed the HAIRY HIKER!!' });
   }
 
   announceWeather(kind) {
@@ -833,6 +862,7 @@ export class Game {
     this.vehicles.render(dt);
     this.dog.render(dt);
     this.buddies.render(dt);
+    this.cryptid.render(dt);
     this.blinds.render(this.camera.position);
     this.campfires.render(dt);
     this.fx.render(dt);
