@@ -1,6 +1,7 @@
 // DOM user interface. Reads game state, never writes simulation facts.
 
 import { WEAPONS, GEAR, AMMO } from '../sim/arsenal.js';
+import { FISH } from '../player/fishing.js';
 import { SPECIES } from '../sim/species.js';
 import { JACKETS, HATS, SKINS } from '../entities/hunter.js';
 import { POIS, GRID, HALF, WORLD_SIZE, TRAIL_POLYS, LAKE } from '../world/terrainData.js';
@@ -480,6 +481,14 @@ export class UI {
   renderTrophies() {
     const p = this.game.profile;
     this.renderAlbum();
+    const fish = p.fish || {};
+    $('fish-records').innerHTML = FISH.filter(f => !f.junk).map(f => `<div class="rec${fish[f.id] ? '' : ' none'}"><span>${esc(f.name)}${f.legendary ? ' ✦' : ''}</span><b>${fish[f.id] ? fish[f.id].toFixed(2) + ' kg' : '—'}</b></div>`).join('');
+    const s = p.stats;
+    const log = [
+      ['Clean harvests', s.harvests || 0], ['Fish caught', s.fish || 0], ['Perfect marshmallows', s.smores || 0], ['Marshmallows cremated', s.charcoal || 0],
+      ['Fish slaps delivered', s.slaps || 0], ['Loot rescued from raccoons', s.recovered || 0], ['Ranger jobs done', s.jobs || 0], ['Hairy Hiker photos', s.hiker || 0],
+    ];
+    $('ranger-log').innerHTML = log.map(([k, v]) => `<div class="rec${v ? '' : ' none'}"><span>${k}</span><b>${v}</b></div>`).join('');
     const list = $('trophy-list');
     if (!p.trophies.length) { list.innerHTML = '<div class="trophy-empty">Nothing on the wall yet. The wall is waiting.</div>'; return; }
     list.innerHTML = p.trophies.map(t => `<div class="trophy-item"><h4>${esc(t.nickname)}</h4>

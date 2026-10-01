@@ -393,3 +393,9 @@ body.is-touch #feed { max-width: 46vw; }
 #fish-meter.danger { border-color: #ff5a4a; animation: rm-shake .12s infinite; }
 #fish-meter.danger b { color: #ff5a4a; }
 body.is-touch #fish-meter { top: 180px; }
+
+/* records on the trophy wall */
+.records { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 14px; font-family: 'VT323', monospace; font-size: 19px; }
+.records .rec { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed rgba(60,40,30,.2); padding: 2px 0; }
+.records .rec b { font-weight: normal; color: #3f7a22; }
+.records .rec.none { opacity: .45; }

@@ -1036,6 +1036,7 @@ export class AnimalManager {
   /** E on dropped loot: back in the pack. */
   returnLoot(loot) {
     const g = this.game, pr = g.profile;
+    pr.stats.recovered = (pr.stats.recovered || 0) + 1;
     if (loot.kind === 'cash') pr.cash += loot.amount;
     if (loot.kind === 'gear') pr.gear[loot.id] = (pr.gear[loot.id] || 0) + 1;
     if (loot.kind === 'ammo') pr.ammo[loot.id] = (pr.ammo[loot.id] || 0) + loot.amount;

@@ -215,6 +215,9 @@ const scripts = {
     }).then(d => console.log('  second cast', JSON.stringify(d)));
     await page.evaluate(() => window.__tp.debug.renderOnce());
     await shot('102_fish_fight');
+    await page.evaluate(() => { const g = window.__tp.game; g.profile.stats.smores = 3; g.profile.stats.slaps = 1; g.openMenu('trophies'); });
+    await step(1);
+    await shot('102_records');
   },
   async raccoon() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 19.6; g.weather.set('clear', true); g.profile.settings.buddies = 0; });
