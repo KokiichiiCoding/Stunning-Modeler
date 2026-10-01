@@ -6,6 +6,19 @@
 
 import { buildHunter, JACKETS, SKINS } from './hunter.js';
 import { Rng } from '../core/rng.js';
+import { THREE } from '../three.js';
+import { G, paint, merge, xf, toonMat } from '../render/toon.js';
+
+// a buddy's roasting stick: a twig with a marshmallow, angled at the flames
+function buildBuddyStick() {
+  const g = new THREE.Group(), pivot = new THREE.Group();
+  pivot.add(new THREE.Mesh(merge([
+    paint(xf(G.cyl(0.012, 0.016, 1.3, 5), [0, 0, 0.65], [Math.PI / 2, 0, 0]), 0x8a5a36),
+    paint(xf(G.cyl(0.045, 0.045, 0.07, 8), [0, 0, 1.28], [Math.PI / 2, 0, 0]), 0xf2c27a),
+  ]), toonMat()));
+  g.add(pivot);
+  return g;
+}
 
 const NAMES = ['Bean', 'Pickle', 'Toast', 'Moss', 'Nugget', 'Waffle', 'Sprout', 'Dumpling'];
 const HATS = ['beanie', 'beanie', 'cap', 'trapper', 'bucket'];
@@ -21,7 +34,7 @@ export class Buddies {
 
   sync() {
     const g = this.game;
-    while (this.list.length > this.want) { const b = this.list.pop(); g.scene.remove(b.model.group); }
+    while (this.list.length > this.want) { const b = this.list.pop(); g.scene.remove(b.model.group); if (b.stick) g.scene.remove(b.stick); }
     while (this.list.length < this.want) {
       const i = this.list.length;
       const look = { jacket: i === 0 ? 0x5f6e34 : this.rng.pick(JACKETS).hex, hat: this.rng.pick(HATS), skin: this.rng.int(0, SKINS.length - 1) };
@@ -63,12 +76,22 @@ export class Buddies {
         }
       }
       if (b.tumble) continue;
-      // formation: behind and to either side
+      // formation: behind and to either side, or a log by your campfire
       const side = b.slot === 0 ? 1 : -1;
       const back = P.vehicle ? 6 : 3 + b.slot * 1.2;
-      const tx = P.pos.x - fx * back + fz * side * 1.8, tz = P.pos.z - fz * back - fx * side * 1.8;
+      const fire = g.campfires.mine;
+      const seat = fire && b.scared <= 0 && Math.hypot(P.pos.x - fire.x, P.pos.z - fire.z) < 9 ? g.campfires.seatFor(b.slot) : null;
+      const tx = seat ? seat.x : P.pos.x - fx * back + fz * side * 1.8, tz = seat ? seat.z : P.pos.z - fz * back - fx * side * 1.8;
       const d = Math.hypot(tx - b.pos.x, tz - b.pos.z);
       if (Math.hypot(P.pos.x - b.pos.x, P.pos.z - b.pos.z) > 80) { b.pos.x = tx; b.pos.z = tz; }
+      b.sitting = !!seat && d < 0.7;
+      if (b.sitting) {
+        b.speed = 0; b.pos.x += (tx - b.pos.x) * Math.min(1, dt * 6); b.pos.z += (tz - b.pos.z) * Math.min(1, dt * 6);
+        b.yaw = seat.yaw; b.pos.y = T.heightAt(b.pos.x, b.pos.z);
+        b.chatT -= dt;
+        if (b.chatT <= 0) { b.chatT = this.rng.range(14, 30); g.audio.babble(b.pos, this.rng.chance(0.5) ? 'happy' : 'huh', b.voice); }
+        continue;
+      }
       const run = b.scared > 0 ? 6 : P.vehicle ? Math.min(14, 2 + d * 1.2) : Math.min(6.4, d * 1.4);
       if (d > 0.6) {
         const want = Math.atan2(tx - b.pos.x, tz - b.pos.z);
@@ -125,7 +148,18 @@ export class Buddies {
       const m = b.model;
       m.setVisible(g.state !== 'title');
       m.group.rotation.order = 'XYZ';
-      m.group.position.set(b.pos.x, b.pos.y, b.pos.z);
+      m.group.position.set(b.pos.x, b.pos.y - (b.sitting ? 0.02 : 0), b.pos.z);
+      if (b.sitting) {
+        m.group.rotation.set(0, b.yaw, 0);
+        m.animate(dt, { seated: true, speed: 0, stance: 'stand', pitch: -0.2, dance: g.danceT > 0, showRifle: false });
+        if (!b.stick) { b.stick = buildBuddyStick(); g.scene.add(b.stick); }
+        b.stick.visible = true;
+        b.stick.position.set(b.pos.x + Math.sin(b.yaw) * 0.45, b.pos.y + 0.62, b.pos.z + Math.cos(b.yaw) * 0.45);
+        b.stick.rotation.set(0, b.yaw, 0);
+        b.stick.children[0].rotation.x = 0.35 + Math.sin(g.visualTime * 1.3 + b.slot) * 0.05;
+        continue;
+      }
+      if (b.stick) b.stick.visible = false;
       m.group.rotation.set(b.tumble ? b.tumble.rx : 0, b.yaw, b.tumble ? b.tumble.rz : 0);
       m.animate(dt, {
         flail: !!b.tumble, speed: b.tumble ? 3 : b.speed, stance: b.scared > 0 ? 'stand' : P.stance, pitch: 0,
@@ -134,5 +168,5 @@ export class Buddies {
     }
   }
 
-  clear() { for (const b of this.list) this.game.scene.remove(b.model.group); this.list = []; }
+  clear() { for (const b of this.list) { this.game.scene.remove(b.model.group); if (b.stick) this.game.scene.remove(b.stick); } this.list = []; }
 }

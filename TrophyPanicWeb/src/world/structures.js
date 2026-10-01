@@ -131,7 +131,7 @@ function lanternFrame() {
     ...[0, 1, 2, 3].map(i => paint(xf(G.box(0.02, 0.22, 0.02), [0.4 + Math.cos(i * 1.57 + 0.78) * 0.1, 1.2, Math.sin(i * 1.57 + 0.78) * 0.1]), 0x2a2a30)),
   ]);
 }
-function glowTexture() {
+export function glowTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d');
   const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);

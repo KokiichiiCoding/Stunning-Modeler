@@ -33,6 +33,7 @@ import { Blinds } from '../entities/blind.js';
 import { Tips } from '../ui/tips.js';
 import { Buddies } from '../entities/buddies.js';
 import { TouchControls } from '../core/touch.js';
+import { Campfires } from '../entities/campfire.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -127,6 +128,7 @@ export class Game {
     this.vehicles = new Vehicles(this);
     this.dog = new Dog(this);
     this.blinds = new Blinds(this);
+    this.campfires = new Campfires(this);
     this.tips = new Tips(this);
     this.buddies = new Buddies(this);
     this.touch = new TouchControls(this);
@@ -245,6 +247,7 @@ export class Game {
     this.coop.leave();
     this.social.clear();
     this.blinds.clear();
+    this.campfires.clear();
     this.buddies.clear();
     if (this.player.vehicle) this.player.vehicle.exit(true);
     this.state = 'title';
@@ -450,6 +453,10 @@ export class Game {
       cmd.moveX = cmd.moveZ = 0; cmd.jump = cmd.crouch = cmd.prone = false;
       cmd.aiming = cmd.fire = cmd.firePressed = false;
     }
+    if (this.campfires.roast) {
+      if (cmd.firePressed) this.campfires.eat();
+      cmd.aiming = cmd.fire = cmd.firePressed = false;
+    }
     this.handleActionKeys(I);
     return cmd;
   }
@@ -471,6 +478,7 @@ export class Game {
     if (I.wasPressed('KeyX')) this.social.ping();
     if (I.wasPressed('KeyK')) this.dog.command();
     if (I.wasPressed('KeyP')) this.blinds.toggle();
+    if (I.wasPressed('KeyL')) this.campfires.toggle();
     if (I.wasPressed('KeyN')) this.useScentKiller();
     if (I.wasPressed('KeyY')) this.drinkCola();
     if (I.wasPressed('KeyJ') && !this.player.vehicle && !this.player.tumble) { this.danceT = 4; this.coop.broadcastEvent('dance', {}); this.audio.play('levelup', this.player.pos); this.say('yay'); }
@@ -494,6 +502,7 @@ export class Game {
     if (this.weather.changed) { this.announceWeather(this.weather.changed); this.weather.changed = null; }
     this.vehicles.step(dt, cmd || {});
     this.player.step(dt, cmd || {});
+    this.campfires.step(dt);
     this.weapons.step(dt, cmd || {});
     this.scent.update(dt, this.wind, this.weapons.blowers, this.weather.scentWash());
     this.animals.step(dt);
@@ -621,11 +630,13 @@ export class Game {
       }
     }
     if (p.vehicle) { p.vehicle.exit(); this.ui.feed('You hop off. The quad ticks as it cools.', 'info'); return; }
+    if (this.campfires.roast) { this.campfires.eat(); return; }
     // Harvest a downed animal in reach
     const a = this.animals.nearestDowned(p.pos, 3.2);
     if (a) { this.animals.harvest(a); return; }
     const item = this.weapons.nearestPickup(p.pos, 2.5);
     if (item) { this.weapons.pickup(item); return; }
+    if (this.campfires.startRoast()) return;
     // the first-aid crate by a camp tent patches you up
     const kit = this.nearestKit(p.pos);
     if (kit && (p.hp < 99 || p.bleed > 0)) {
@@ -820,6 +831,7 @@ export class Game {
     this.dog.render(dt);
     this.buddies.render(dt);
     this.blinds.render(this.camera.position);
+    this.campfires.render(dt);
     this.fx.render(dt);
     this.weapons.render(dt);
     this.coop.render(dt);

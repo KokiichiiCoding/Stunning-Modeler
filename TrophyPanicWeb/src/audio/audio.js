@@ -149,6 +149,8 @@ export class Audio {
       case 'woof': { const { g } = S(0.8, 400); for (let i = 0; i < 2; i++) { this.tone(g, t + i * 0.2, 0.12, { type: 'sawtooth', curve: [420, 520, 300], gain: 0.22 }); this.noise(g, t + i * 0.2, 0.1, { type: 'bandpass', f0: 900, gain: 0.35, q: 1.5 }); } break; }
       case 'growl_small': { const { g } = S(0.5, 120); this.noise(g, t, 0.7, { type: 'lowpass', f0: 500, gain: 0.5, attack: 0.08 }); this.tone(g, t, 0.7, { type: 'sawtooth', curve: [110, 130, 100], gain: 0.12, vibrato: 10, vibRate: 22 }); break; }
       case 'shutter': { const { g } = S(0.5); this.noise(g, t, 0.03, { type: 'highpass', f0: 3500, gain: 0.7 }); this.tone(g, t, 0.05, { type: 'square', f0: 1800, f1: 900, gain: 0.08 }); this.noise(g, t + 0.07, 0.04, { type: 'highpass', f0: 2500, gain: 0.5 }); break; }
+      case 'fwoosh': { const { g } = S(0.8, 80); this.noise(g, t, 0.6, { type: 'bandpass', f0: 300, f1: 1800, gain: 0.9, q: 0.7, attack: 0.04 }); this.noise(g, t + 0.05, 0.5, { type: 'lowpass', f0: 600, f1: 200, gain: 0.6 }); break; }
+      case 'nom': { const { g } = S(0.45); [0, 0.16].forEach(o => { this.tone(g, t + o, 0.09, { type: 'triangle', curve: [330, 240], gain: 0.35 }); this.noise(g, t + o, 0.06, { type: 'bandpass', f0: 1200, gain: 0.25, q: 2 }); }); break; }
       case 'click': { const { g } = S(0.3); this.tone(g, t, 0.04, { type: 'square', f0: 1200, gain: 0.15 }); break; }
       case 'oof': { const { g } = S(0.7); this.tone(g, t, 0.28, { type: 'triangle', f0: 260, f1: 140, gain: 0.5 }); this.tone(g, t, 0.28, { type: 'sine', f0: 520, f1: 280, gain: 0.2 }); break; }
       case 'cash': { const { g } = S(0.5); this.tone(g, t, 0.12, { type: 'square', f0: 988, gain: 0.12 }); this.tone(g, t + 0.1, 0.35, { type: 'square', f0: 1319, gain: 0.12 }); break; }
@@ -226,6 +228,28 @@ export class Audio {
       this.fallsNode = { g };
     }
     if (this.fallsNode) this.fallsNode.g.gain.setTargetAtTime(level * level * 0.35, this.ctx.currentTime, 0.4);
+  }
+
+  /** Campfire crackle: low roar + random pops, by distance to the nearest fire. */
+  setFire(level) {
+    if (!this.ctx) return;
+    if (!this.fireNode && level > 0.01) {
+      const c = this.ctx;
+      const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true; src.playbackRate.value = 0.45;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;
+      const g = c.createGain(); g.gain.value = 0;
+      src.connect(lp); lp.connect(g); g.connect(this.master); src.start(0, 0.2);
+      this.fireNode = { g, popT: 0 };
+    }
+    if (!this.fireNode) return;
+    this.fireNode.g.gain.setTargetAtTime(level * level * 0.22, this.ctx.currentTime, 0.3);
+    this.fireNode.popT -= 1 / 60;
+    if (level > 0.05 && this.fireNode.popT <= 0) {
+      this.fireNode.popT = 0.08 + Math.random() * 0.5;
+      const t = this.ctx.currentTime;
+      const g = this.ctx.createGain(); g.gain.value = level * 0.5; g.connect(this.master);
+      this.noise(g, t, 0.02 + Math.random() * 0.03, { type: 'highpass', f0: 1500 + Math.random() * 3000, gain: 0.6 });
+    }
   }
 
   /** Rain hiss (two filtered noise layers) scaled by rain intensity. */

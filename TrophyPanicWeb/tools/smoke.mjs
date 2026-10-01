@@ -54,6 +54,82 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async campfire() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 21; g.weather.set('clear', true); g.profile.settings.buddies = 2; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, I = g.input, p = g.player;
+      I.down.add('KeyW');
+      for (let i = 0; i < 60 * 4; i++) { g.advance(1 / 60); I.endFrame(); }
+      I.down.delete('KeyW');
+      for (let i = 0; i < 30; i++) g.advance(1 / 60);
+      I.pressed.add('KeyL'); g.advance(1 / 60); I.endFrame();
+      const f = g.campfires.mine;
+      for (let i = 0; i < 60 * 5; i++) g.advance(1 / 60);
+      const sitting = g.buddies.list.map(b => !!b.sitting);
+      // roast: wait for golden, then pull it out
+      p.hp = 60;
+      I.pressed.add('KeyE'); g.advance(1 / 60); I.endFrame();
+      const roasting = !!g.campfires.roast;
+      let n = 0; while (g.campfires.roast && g.campfires.roast.toast < 0.63 && n++ < 600) g.advance(1 / 60);
+      const toast = g.campfires.roast && g.campfires.roast.toast;
+      I.pressed.add('KeyE'); g.advance(1 / 60); I.endFrame();
+      return { lit: !!f, sitting, roasting, toast, smores: g.profile.stats.smores || 0, hp: Math.round(p.hp), sugar: p.sugar > 0, lures: g.animals.lures.length };
+    });
+    console.log('  campfire', JSON.stringify(r));
+    if (!r.lit || !r.roasting || r.smores < 1) errors.push('campfire failed: ' + JSON.stringify(r));
+    // a second roast, left too long: it catches fire
+    await page.evaluate(() => { const g = window.__tp.game, I = g.input; I.pressed.add('KeyE'); g.advance(1 / 60); I.endFrame(); let n = 0; while (g.campfires.roast && !g.campfires.roast.burning && n++ < 900) g.advance(1 / 60); g.advance(0.3); });
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('100_roast_fire');
+    await page.evaluate(() => { const g = window.__tp.game, I = g.input; I.pressed.add('KeyE'); g.advance(1 / 60); I.endFrame(); });
+    // third-person: the camp
+    await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, f = g.campfires.mine, ry = f.model.group.rotation.y;
+      p.pos.x = f.x + Math.sin(ry) * 4.2; p.pos.z = f.z + Math.cos(ry) * 4.2; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z);
+      p.yaw = Math.atan2(-(f.x - p.pos.x), -(f.z - p.pos.z)); p.pitch = -0.28; g.weapons.select('camera');
+      for (let i = 0; i < 90; i++) g.advance(1 / 60);
+    });
+    for (let i = 0; i < 3; i++) await step(3);
+    await shot('100_campfire');
+    // wolves pace around the firelight but don't come in
+    const w = await page.evaluate(() => {
+      const g = window.__tp.game, M = g.animals, f = g.campfires.mine, p = g.player;
+      for (const a of M.list) a.dispose(); M.list = []; M.groups = [];
+      let tries = 0; while (!M.list.some(a => a.species.id === 'wolf') && tries++ < 400) { for (const a of M.list) a.dispose(); M.list = []; M.groups = []; M.spawnGroup(p.pos); }
+      const wolves = M.list.filter(a => a.species.id === 'wolf');
+      wolves.forEach((a, i) => { a.pos.x = f.x + 45 + i * 3; a.pos.z = f.z; a.pos.y = g.terrain.heightAt(a.pos.x, a.pos.z); });
+      let minD = 1e9, hp0 = p.hp; const goals = new Set();
+      for (let i = 0; i < 60 * 30; i++) { g.advance(1 / 60); for (const a of wolves) { minD = Math.min(minD, Math.hypot(a.pos.x - f.x, a.pos.z - f.z)); goals.add(a.goal); } }
+      return { n: wolves.length, minD: +minD.toFixed(1), goals: [...goals], hurt: +(hp0 - p.hp).toFixed(1) };
+    });
+    console.log('  wolves', JSON.stringify(w));
+    if (w.n && w.minD < 12) errors.push('wolves walked into the campfire: ' + JSON.stringify(w));
+    // a bear smells the marshmallows
+    const b = await page.evaluate(() => {
+      const g = window.__tp.game, M = g.animals, f = g.campfires.mine, p = g.player, I = g.input;
+      for (const a of M.list) a.dispose(); M.list = []; M.groups = [];
+      let tries = 0; while (!M.list.some(a => a.species.id === 'black_bear') && tries++ < 400) { for (const a of M.list) a.dispose(); M.list = []; M.groups = []; M.spawnGroup(p.pos); }
+      const bear = M.list.find(a => a.species.id === 'black_bear');
+      for (const a of M.list) if (a !== bear) { a.dispose(); } M.list = [bear];
+      bear.pos.x = f.x - 70; bear.pos.z = f.z; bear.pos.y = g.terrain.heightAt(bear.pos.x, bear.pos.z);
+      // step back from the fire so the bear isn't spooked by you
+      p.pos.x = f.x + 32; p.pos.z = f.z + 32; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z);
+      g.animals.addLure(f.bag.x, f.bag.z, { kind: 'marsh', dur: 90, quiet: true, fire: f });
+      let minD = 1e9; const goals = new Set();
+      const trace = []; let last = '';
+      for (let i = 0; i < 60 * 80; i++) {
+        g.advance(1 / 60); minD = Math.min(minD, Math.hypot(bear.pos.x - f.bag.x, bear.pos.z - f.bag.z)); goals.add(bear.goal);
+        const k = bear.goal + '/' + bear.state;
+        if (k !== last) { last = k; trace.push(`${(i / 60).toFixed(1)}s ${k} al=${bear.alertness.toFixed(0)} d=${Math.hypot(bear.pos.x - f.bag.x, bear.pos.z - f.bag.z).toFixed(0)} st=${bear.stimuli.map(s => s.kind + ':' + (+s.s).toFixed(2)).join(',')} cu=${bear.curiousAbout ? bear.curiousAbout.cat + '@' + (g.time - bear.curiousAbout.t).toFixed(1) : '-'} shot=${(g.time - bear.memory.shotT).toFixed(0)}`); }
+      }
+      return { minD: +minD.toFixed(1), goals: [...goals], snacks: f.snacks, trace: trace.slice(-3) };
+    });
+    console.log('  bear', JSON.stringify(b));
+    await page.evaluate(() => { const g = window.__tp.game, f = g.campfires.mine, p = g.player; p.pos.x = f.x + 7; p.pos.z = f.z + 7; p.yaw = Math.atan2(7, 7); p.pitch = -0.15; g.thirdPerson = false; });
+    for (let i = 0; i < 3; i++) await step(2);
+    await shot('100_bear_camp');
+  },
   async touch() {
     // phones/tablets: stick moves, right-side drag looks, FIRE fires
     await page.evaluate(() => window.__tp.debug.startGame({}));

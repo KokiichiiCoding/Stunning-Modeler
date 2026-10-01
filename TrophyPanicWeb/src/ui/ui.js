@@ -320,7 +320,10 @@ export class UI {
     if (p.downed) { const di = g.downedInfo; state = 'DOWNED'; detail = di && di.party ? `WAIT FOR A FRIEND ${Math.max(0, Math.ceil(di.wait - di.t))}S · E: RANGERS` : 'RANGERS EN ROUTE'; danger = true; }
     else if (threat && tLevel >= 2) { state = 'MOST DANGEROUS HUNT'; detail = `${short(threat.species)} THREAT: ${tLevel === 3 ? 'HIGH' : 'MEDIUM'}`; danger = true; }
     else if (p.tumble) { state = 'TUMBLING'; detail = 'TRY TO LAND ON SOMETHING SOFT'; }
+    else if (g.campfires.roast) { state = 'ROASTING'; detail = g.campfires.roast.burning ? 'IT IS ON FIRE. PULL IT OUT!' : 'WAIT FOR GOLDEN…'; }
+    else if (p.warm && g.period === 'night') { state = 'SURVIVE THE NIGHT'; detail = threat ? `${short(threat.species)} NEARBY` : 'WARM BY THE FIRE. WOLVES KEEP CLEAR.'; }
     else if (g.period === 'night') { state = 'SURVIVE THE NIGHT'; detail = threat ? `${short(threat.species)} NEARBY` : null; }
+    else if (p.warm && !wounded) { state = 'CAMPING'; detail = p.sugar > 0 ? 'SUGAR RUSH!' : 'E: ROAST A MARSHMALLOW'; }
     else if (wounded && !wounded.downed) { state = 'TRACKING'; detail = `WOUNDED ${short(wounded.species)} · FOLLOW THE BLOOD`; }
     else if (wounded && wounded.downed) { state = 'RECOVERY'; detail = `${short(wounded.species)} DOWN ${dir8(wounded.pos.x - p.pos.x, wounded.pos.z - p.pos.z)} ${Math.round(Math.hypot(wounded.pos.x - p.pos.x, wounded.pos.z - p.pos.z))}M`; }
     else if (p.vehicle) state = 'RIDING';
@@ -343,7 +346,7 @@ export class UI {
     const h = Math.floor(g.hour), m = Math.floor((g.hour - h) * 60);
     this.txt('sp-clock', `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
     // bottom bar
-    const stance = p.vehicle ? 'RIDING' : p.tumble ? 'TUMBLING' : p.swimming ? 'SWIMMING' : p.inBlind ? 'HIDDEN' : danger && p.stance === 'stand' ? 'DEFENSIVE' : { stand: 'STANDING', crouch: 'CROUCHING', prone: 'CRAWLING' }[p.stance];
+    const stance = g.campfires.roast ? 'ROASTING' : p.sugar > 0 && p.speed > 0.5 ? 'ZOOMING' : p.vehicle ? 'RIDING' : p.tumble ? 'TUMBLING' : p.swimming ? 'SWIMMING' : p.inBlind ? 'HIDDEN' : danger && p.stance === 'stand' ? 'DEFENSIVE' : { stand: 'STANDING', crouch: 'CROUCHING', prone: 'CRAWLING' }[p.stance];
     this.txt('sb-stance', stance);
     const wv = g.wind.vec();
     const from = ((Math.atan2(wv.x, -wv.z) * 180 / Math.PI + 180) % 360 + 360) % 360;
@@ -382,6 +385,8 @@ export class UI {
     else if (p.vehicle) text = g.time - p.vehicle.mountedAt > 6 ? null : '<kbd>E</kbd>Hop off · <kbd>Space</kbd>handbrake · <kbd>V</kbd>chase cam';
     else if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
     else if (g.weapons.nearestPickup(p.pos, 2.5)) text = `<kbd>E</kbd>Pick up ${esc(g.weapons.nearestPickup(p.pos, 2.5).label)}`;
+    else if (g.campfires.roast) text = null;
+    else if (g.campfires.canRoast()) text = '<kbd>E</kbd>Roast a marshmallow · <kbd>L</kbd>put the fire out';
     else if (g.nearestKit(p.pos)) text = p.hp < 99 || p.bleed > 0 ? '<kbd>E</kbd>Use first-aid crate' : '<kbd>E</kbd>Nap in the tent';
     else if (quad) text = quad.crashed ? '<kbd>E</kbd>Heave the quad back over' : '<kbd>E</kbd>Ride quad bike';
     else {

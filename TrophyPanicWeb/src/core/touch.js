@@ -16,6 +16,7 @@ const BTN = [
   ['sense', 'Q', 'KeyQ', 'b-sense'],
   ['cycle', '⟳', 'wheel', 'b-cycle'],
   ['ping', 'X', 'KeyX', 'b-ping'],
+  ['camp', 'L', 'KeyL', 'b-camp'],
   ['pause', 'II', 'Escape', 'b-pause'],
 ];
 

@@ -32,6 +32,7 @@ artifact declaring the `room` capability to get online co-op.
 | T / H / F / G | animal call / bandage / flashlight / wave |
 | X | ping what you're looking at (the party sees it) |
 | K / P / J | dog: find it or heel / pitch or pack the ground blind / victory dance |
+| L | light or stomp out a campfire; E next to it roasts a marshmallow |
 | N / Y | Scent Killer (cures skunk stink) / Moss Cola (stamina, shaky aim) |
 | Enter | party chat |
 | V | first or third person (chase cam on a quad) |

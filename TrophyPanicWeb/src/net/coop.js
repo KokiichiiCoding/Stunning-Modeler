@@ -91,7 +91,7 @@ export class Coop {
   }
 
   drop() {
-    for (const p of this.peers.values()) { if (p.model) this.game.scene.remove(p.model.group); if (p.tag) this.game.scene.remove(p.tag); if (p.dog) this.game.scene.remove(p.dog.root); if (p.blind) this.game.scene.remove(p.blind.mesh); }
+    for (const p of this.peers.values()) { if (p.model) this.game.scene.remove(p.model.group); if (p.tag) this.game.scene.remove(p.tag); if (p.dog) this.game.scene.remove(p.dog.root); if (p.blind) this.game.scene.remove(p.blind.mesh); if (p.fire) this.game.scene.remove(p.fire.model.group); }
     this.peers.clear();
     for (const a of this.shadow.values()) a.dispose();
     this.shadow.clear();
@@ -121,7 +121,7 @@ export class Coop {
     }
     for (const p of change.left) {
       const r = this.peers.get(p.peer);
-      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); if (r.dog) g.scene.remove(r.dog.root); if (r.blind) g.scene.remove(r.blind.mesh); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
+      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); if (r.dog) g.scene.remove(r.dog.root); if (r.blind) g.scene.remove(r.blind.mesh); if (r.fire) g.scene.remove(r.fire.model.group); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
     }
     for (const p of valid) {
       if (p.sameTab) continue;
@@ -237,6 +237,7 @@ export class Coop {
       case 'wave': r.waveT = 2.2; if (r.target) g.audio.babble(r.target, 'happy', 0.85 + ((r.presence && r.presence.sk) | 0) * 0.07); break;
       case 'dance': r.danceT = 4; if (r.target) g.audio.babble(r.target, 'yay', 0.85 + ((r.presence && r.presence.sk) | 0) * 0.07); break;
       case 'skunked': g.player.skunked(); break;
+      case 'smore': g.ui.feed(`${r.name} roasted a perfect golden marshmallow!`, 'good'); if (r.target) g.audio.babble(r.target, 'yay', 0.85 + ((r.presence && r.presence.sk) | 0) * 0.07); break;
       case 'sprayed': {
         const p = g.player;
         g.ui.toast(`${String(d.n || r.name).slice(0, 14)} got you with bear spray! *cough*`, 'big');
@@ -387,6 +388,8 @@ export class Coop {
       tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0, ho: g.hatOff ? 1 : 0,
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,
     };
+    const cf = g.campfires && g.campfires.presence();
+    if (cf) pres.cf = cf;
     const bm = g.blinds && g.blinds.mine;
     if (bm) pres.bl = [r2(bm.x), r2(bm.z), r2(bm.yaw)];
     const dg = g.dog;
@@ -487,6 +490,9 @@ export class Coop {
         const mesh = buildBlind(); mesh.position.set(bl[0], g.terrain.heightAt(bl[0], bl[1]) - 0.05, bl[1]); mesh.rotation.y = bl[2] || 0;
         g.scene.add(mesh); r.blind = { x: bl[0], z: bl[1], mesh };
       } else if (!bl && r.blind) { g.scene.remove(r.blind.mesh); r.blind = null; }
+      // their campfire
+      const cf = Array.isArray(pr.cf) && pr.cf.length === 2 && pr.cf.every(Number.isFinite) ? pr.cf : null;
+      g.campfires.syncRemote(r, cf);
       // their dog, if they brought one
       if (Array.isArray(pr.dg)) {
         if (!r.dog) { r.dog = buildDog(); g.scene.add(r.dog.root); r.dogPos = { x: pr.dg[0], y: pr.dg[1], z: pr.dg[2] }; r.dogPh = 0; }

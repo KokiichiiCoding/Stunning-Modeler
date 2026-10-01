@@ -363,6 +363,22 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 .b-aim { right: 124px; bottom: 186px; } .b-use { right: 124px; bottom: 252px; } .b-jump { right: 40px; bottom: 270px; }
 .b-crouch { right: 190px; bottom: 164px; } .b-prone { right: 190px; bottom: 228px; } .b-reload { right: 40px; bottom: 112px; width: 46px; height: 46px; }
 .b-binos { right: 26px; top: 120px; } .b-sense { right: 90px; top: 120px; } .b-cycle { right: 154px; top: 120px; } .b-ping { right: 218px; top: 120px; }
+.b-camp { right: 282px; top: 120px; }
+body.is-touch #roast-meter { top: 180px; }
 .b-pause { left: 50%; top: 52px; transform: translateX(-50%); width: 44px; height: 44px; font-size: 18px; }
 body.is-touch #weapon-box { transform: scale(.8); transform-origin: right bottom; bottom: 6px; right: 6px; }
 body.is-touch #feed { max-width: 46vw; }
+
+/* marshmallow roast meter */
+#roast-meter { position: absolute; right: 14px; top: 62px; width: min(300px, 60vw); padding: 8px 12px 10px; background: rgba(14,16,14,.82); border: 2px solid #b6f25a; border-radius: 6px; font-family: 'VT323', monospace; color: #e8f0dc; text-align: center; letter-spacing: 1px; }
+#roast-meter b { display: block; color: #b6f25a; font-size: 20px; font-weight: normal; }
+#roast-meter em { display: block; font-style: normal; font-size: 16px; opacity: .8; margin-top: 4px; }
+#roast-meter .rm-bar { position: relative; height: 16px; margin-top: 4px; border-radius: 3px; background: linear-gradient(90deg, #fff8f0, #f2b24a 54%, #8a4a1c 74%, #1e1410); overflow: hidden; }
+#roast-meter .rm-gold { position: absolute; top: 0; bottom: 0; border: 2px solid #ffe066; box-shadow: 0 0 8px #ffd34a inset; }
+#roast-meter .rm-fire { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(255,90,40,.55) 0 6px, rgba(255,200,60,.4) 6px 12px); }
+#roast-meter .rm-needle { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; box-shadow: 0 0 4px #000; }
+#roast-meter.golden { border-color: #ffe066; box-shadow: 0 0 18px rgba(255,214,80,.6); }
+#roast-meter.golden b::after { content: ' · NOW!'; color: #ffe066; }
+#roast-meter.burning { border-color: #ff5a4a; animation: rm-shake .12s infinite; }
+#roast-meter.burning b { color: #ff5a4a; }
+@keyframes rm-shake { 0%,100% { transform: none; } 50% { transform: translateX(3px); } }

@@ -13,6 +13,8 @@ import { visualDetection, SoundLog, SignEmitter } from '../sim/worldsim.js';
 import { Rng, hash01 } from '../core/rng.js';
 import { buildAnimalRig, buildHitVolumes } from './animalModels.js';
 import { Biome, BIOME_NAMES, WATER_LEVEL, HALF, LAKE, POIS } from '../world/terrainData.js';
+import { FEAR_R } from './campfire.js';
+
 
 const ACTIVE_RADIUS = 330;
 const DESPAWN_RADIUS = 420;
@@ -98,11 +100,16 @@ export class Animal {
   perceive(view) {
     const g = this.game, sp = this.species, p = g.player;
     this.stimuli.length = 0;
+    const a0 = this.alertness;
+    const cu0 = this.curiousAbout;
+    const sweet = cu0 && cu0.cat === 'honey' && g.time - cu0.t < 40 && (sp.id.includes('bear') || sp.id === 'grizzly');
     const light = g.light ?? 1;                       // simulation-owned (time of day + cloud)
     const vis = g.weather ? g.weather.visibilityMult() : 1;
     const earMult = g.weather ? g.weather.hearingMult() : 1;
     const hunters = view.hunters;
     for (const h of hunters) {
+      // nose full of something sweet: only notices hunters once it's close
+      if (sweet && Math.hypot(h.x - this.pos.x, h.z - this.pos.z) > Math.max(12, sp.behavior.defensiveRadius || 0)) continue;
       const cover = h.cover !== undefined ? h.cover : h.onTower ? 0.2 : g.terrain.coverAt(h.x, h.z);
       let seen = visualDetection(sp, this.pos.x, this.pos.z, this.facing, h.x, h.z, h.speed, h.stance, cover, this.state !== 'Calm', light, vis);
       if (seen > 0.05) {
@@ -161,6 +168,10 @@ export class Animal {
       this.alertness += s * 35;
       this.setThreat(this.pos.x - w.x * 30, this.pos.z - w.z * 30, 'scent');
       this.smelledT = g.time;
+    }
+    // a bear on the trail of something sweet is single-minded about it
+    if (sweet && this.alertness > a0) {
+      this.alertness = a0 + (this.alertness - a0) * 0.3;
     }
     this.alertness = Math.min(100, Math.max(0, this.alertness));
   }
@@ -233,6 +244,18 @@ export class Animal {
       this.chaseId = h ? h.id : null;
     };
 
+    // ---- campfires: wolves, cougars and foxes won't step into the firelight;
+    // they pace around the edge of it instead (eyes in the dark)
+    if ((B.predator || sp.id === 'fox') && !sp.id.includes('bear') && sp.id !== 'grizzly' && g.campfires) {
+      const f = g.campfires.near(this.pos.x, this.pos.z, FEAR_R);
+      if (f) {
+        const ang = Math.atan2(this.pos.z - f.z, this.pos.x - f.x) + 0.5;
+        this.state = 'Stalking'; this.goal = 'Circle';
+        this.target = { x: f.x + Math.cos(ang) * (FEAR_R + 4), z: f.z + Math.sin(ang) * (FEAR_R + 4) };
+        return;
+      }
+    }
+
     // ---- predators hunting the hunter -----------------------------------
     if (B.predator && !wounded && nearestHunter) {
       const bold = g.period === 'night' || g.period === 'dusk' || nearestHunter.bleeding > 0 || this.identity.temperament === 'Ornery' || this.called;
@@ -297,14 +320,16 @@ export class Animal {
       charge(nearestHunter); return;
     }
 
-    const fear = B.fear;
+    // a bear that smells something sweet shrugs off mild suspicion (not gunshots)
+    const sweetTooth = (sp.id.includes('bear') || sp.id === 'grizzly') && this.curiousAbout && this.curiousAbout.cat === 'honey' && g.time - this.curiousAbout.t < 40 && g.time - this.memory.shotT > 30;
+    const fear = B.fear + (sweetTooth ? 35 : 0);
     if (this.alertness >= fear) {
       if (B.defensiveRadius > 0 && hd < B.defensiveRadius && (this.identity.temperament === 'Bold' || this.identity.temperament === 'Ornery')) {
         this.state = 'Defensive'; this.goal = 'Watch'; this.target = null; this.lookAt(this.memory.x, this.memory.z); return;
       }
       flee(); return;
     }
-    if (this.alertness >= fear * 0.66) {
+    if (this.alertness >= fear * 0.66 && !sweetTooth) {
       this.state = 'Suspicious'; this.goal = 'Watch'; this.target = null;
       if (this.memory.hasThreat) this.lookAt(this.memory.x, this.memory.z);
       return;
@@ -313,7 +338,7 @@ export class Animal {
     const sweet = sp.id.includes('bear') || sp.id === 'grizzly' || sp.id === 'boar';
     if (sweet) {
       const lure = this.mgr.lures.find(l => g.time < l.until && Math.hypot(l.x - this.pos.x, l.z - this.pos.z) < 3.5);
-      if (lure) { this.state = 'Calm'; this.goal = 'Graze'; this.target = null; this.grazeT = 3; if (!lure.found) { lure.found = true; this.mgr.announce(this, 'honey'); } return; }
+      if (lure) { this.state = 'Calm'; this.goal = 'Graze'; this.target = null; this.grazeT = 3; if (!lure.found) { lure.found = true; this.mgr.announce(this, lure.kind === 'marsh' ? 'marsh' : 'honey', lure); } return; }
     }
     // curiosity: calls, squeaks, carcasses, honey
     if (this.curiousAbout && g.time - this.curiousAbout.t < 40) {
@@ -325,7 +350,7 @@ export class Animal {
         return;
       }
     }
-    if (this.alertness >= fear * 0.33) {
+    if (this.alertness >= fear * 0.33 && !sweetTooth) {
       this.state = 'Curious'; this.goal = 'Watch'; this.target = null;
       if (this.memory.hasThreat) this.lookAt(this.memory.x, this.memory.z);
       return;
@@ -909,9 +934,12 @@ export class AnimalManager {
   }
 
   /** Honey on the ground: a scent beacon that pulses for a minute. */
-  addLure(x, z) {
-    this.lures.push({ x, z, until: this.game.time + 70, pulse: 0 });
-    this.game.ui.feed('Sticky. Every bear nearby can smell that now.', 'info');
+  addLure(x, z, { kind = 'honey', dur = 70, quiet = false, fire = null } = {}) {
+    // a fresh roast just refreshes the campfire's bag
+    const old = fire && this.lures.find(l => l.fire === fire);
+    if (old) { old.until = Math.max(old.until, this.game.time + dur); return; }
+    this.lures.push({ x, z, until: this.game.time + dur, pulse: 0, kind, fire });
+    if (!quiet) this.game.ui.feed('Sticky. Every bear nearby can smell that now.', 'info');
   }
 
   stepLures(dt) {
@@ -1169,8 +1197,16 @@ export class AnimalManager {
     }
   }
 
-  announce(a, what) {
+  announce(a, what, lure = null) {
     const g = this.game;
+    if (what === 'marsh') {
+      const nm = a.species.displayName.split(' ').pop().toLowerCase();
+      if (lure && lure.fire && g.campfires.mine === lure.fire) lure.fire.snacks = 0;
+      const d = Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z);
+      if (d < 120) { g.ui.toast(`A ${nm.toUpperCase()} IS EATING YOUR MARSHMALLOWS`, 'big', 2.4); g.say('scared'); }
+      g.ui.feed(`The ${nm} found the marshmallow bag. Every last one. Rude.`, 'warn');
+      return;
+    }
     if (what === 'charge') {
       const d = Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z);
       if (d < 40 && !(this.lastYelp > g.time)) { this.lastYelp = g.time + 6; g.say('scared'); }

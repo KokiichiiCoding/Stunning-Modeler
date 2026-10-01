@@ -161,6 +161,7 @@ export class Player {
     const biomeCost = this.onTower ? 1 : T.costAt(this.pos.x, this.pos.z);
     if (!this.swimming) speed /= Math.max(1, biomeCost * 0.8);
     if (this.hp < 35) speed *= 0.8;
+    if (this.sugar > 0) speed *= 1.18; // marshmallow sugar rush
     if (depth > 0.3 && !this.swimming) speed *= 0.7; // wading
 
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
