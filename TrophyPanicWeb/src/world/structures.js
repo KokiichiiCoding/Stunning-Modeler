@@ -2,7 +2,7 @@
 
 import { THREE } from '../three.js';
 import { G, paint, merge, xf, toonMat, addOutline } from '../render/toon.js';
-import { POIS } from './terrainData.js';
+import { POIS, TRAILS, TRAIL_POLYS } from './terrainData.js';
 
 function signTexture(text, bg = '#f4d9a0', fg = '#4a2c1a') {
   const c = document.createElement('canvas');
@@ -110,9 +110,13 @@ function signpost(text) {
   const g = new THREE.Group();
   const post = new THREE.Mesh(paint(xf(G.cyl(0.08, 0.1, 2.4, 5), [0, 1.2, 0]), 0x7a4f35), toonMat());
   g.add(post);
-  const board = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), new THREE.MeshBasicMaterial({ map: signTexture(text), side: THREE.DoubleSide }));
+  // two single-sided boards back to back, so the text reads correctly from both sides
+  const mat = new THREE.MeshBasicMaterial({ map: signTexture(text) });
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), mat);
   board.position.set(0, 2.1, 0.1);
-  g.add(board);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), mat);
+  back.position.set(0, 2.1, 0.06); back.rotation.y = Math.PI;
+  g.add(board); g.add(back);
   return g;
 }
 
@@ -207,6 +211,32 @@ export class Structures {
     }
     this.placeTowers(terrain, vegetation, mat);
     this.placeCamps(terrain, vegetation, mat);
+    this.placeTrailSigns(terrain, mat);
+  }
+
+  /** Arrow signposts halfway along each trail, pointing at both ends. */
+  placeTrailSigns(terrain, mat) {
+    const byId = Object.fromEntries(POIS.map(p => [p.id, p]));
+    TRAILS.forEach(([a, b], i) => {
+      const pts = TRAIL_POLYS[i];
+      const mid = pts[Math.floor(pts.length / 2)];
+      const mx = mid[0] + 2.5, mz = mid[1] + 2.5;
+      const y = terrain.heightAt(mx, mz);
+      const post = new THREE.Mesh(paint(xf(G.cyl(0.07, 0.09, 2.3, 5), [0, 1.15, 0]), 0x7a4f35, { flat: true }), mat);
+      post.position.set(mx, y, mz); post.castShadow = true; this.group.add(post);
+      [[byId[a], 1.95], [byId[b], 1.55]].forEach(([poi, hgt]) => {
+        const ang = Math.atan2(-(poi.z - mz), poi.x - mx); // turn the board's +x toward the destination
+        const name = poi.name.replace(' Outpost', '').replace('Wobblewood ', '');
+        const arm = new THREE.Group();
+        arm.position.set(mx, y + hgt, mz); arm.rotation.y = ang;
+        const front = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.36), new THREE.MeshBasicMaterial({ map: signTexture(`${name} ►`, '#e9c98c') }));
+        front.position.set(0.7, 0, 0.03);
+        const back = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.36), new THREE.MeshBasicMaterial({ map: signTexture(`◄ ${name}`, '#e9c98c') }));
+        back.position.set(0.7, 0, -0.03); back.rotation.y = Math.PI;
+        arm.add(front); arm.add(back);
+        this.group.add(arm);
+      });
+    });
   }
 
   /** Lanterns and tents around every camp; they glow after sunset. */

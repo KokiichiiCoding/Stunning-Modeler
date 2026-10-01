@@ -675,6 +675,19 @@ const scripts = {
     await step(1);
     await shot('99_soak');
   },
+  async signs() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 17.5; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await page.evaluate(() => {
+      const g = window.__tp.game, gs = g.structures.group.children.filter(o => o.isGroup), s = gs[gs.length - 1];
+      const x = s.position.x + 3.2, z = s.position.z + 3.2;
+      g.player.spawnAt(x, z, 0);
+      const dx = s.position.x - x, dz = s.position.z - z;
+      g.player.yaw = Math.atan2(-dx, -dz); g.player.pitch = 0.12;
+    });
+    for (let i = 0; i < 3; i++) await step(3);
+    await shot('99_signs');
+  },
   async turkey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
     await page.evaluate(() => window.__tp.debug.startGame({}));
