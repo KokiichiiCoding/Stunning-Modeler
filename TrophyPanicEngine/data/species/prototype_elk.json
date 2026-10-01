@@ -1,0 +1,111 @@
+{
+  "id": "prototype_elk",
+  "display_name": "Prototype Highland Elk",
+  "max_blood_volume_ml": 12000.0,
+  "body_mass_kg_range": [220.0, 450.0],
+  "trophy": {
+    "organ": "antler_rack",
+    "base_score_range": [35.0, 95.0]
+  },
+  "movement": {
+    "walk_mps": 1.4,
+    "trot_mps": 4.5,
+    "run_mps": 11.0,
+    "max_stamina_s": 90.0
+  },
+  "senses": {
+    "vision_range_m": 220.0,
+    "vision_fov_deg": 300.0,
+    "hearing_sensitivity": 1.0,
+    "smell_threshold": 0.12
+  },
+  "behavior": {
+    "grouping": "herd",
+    "fear_threshold": 45.0,
+    "aggression_threshold": 999.0,
+    "curiosity": 0.35,
+    "defensive_radius_m": 0.0,
+    "wounded_style": "flee_bed",
+    "preferred_terrain": ["meadow", "forest"],
+    "active_periods": ["dawn", "dusk"]
+  },
+  "tracks": {
+    "stride_m": 1.7,
+    "print_size_cm": 11.0
+  },
+  "body_parts": [
+    {
+      "id": "antler_rack",
+      "tissue": "dense_bone",
+      "bone_integrity": 25.0,
+      "trophy_organ": true
+    },
+    {
+      "id": "gait_column_front_left",
+      "tissue": "dense_bone",
+      "bone_integrity": 60.0,
+      "load_bearing": true
+    },
+    {
+      "id": "gait_column_front_right",
+      "tissue": "dense_bone",
+      "bone_integrity": 60.0,
+      "load_bearing": true
+    },
+    {
+      "id": "gait_column_rear_left",
+      "tissue": "dense_bone",
+      "bone_integrity": 65.0,
+      "load_bearing": true
+    },
+    {
+      "id": "gait_column_rear_right",
+      "tissue": "dense_bone",
+      "bone_integrity": 65.0,
+      "load_bearing": true
+    },
+    {
+      "id": "primary_thorax_left",
+      "tissue": "lung",
+      "layers": [
+        {"tissue_name": "hide", "thickness_cm": 0.5, "resistance": 0.5},
+        {"tissue_name": "muscle", "thickness_cm": 5.0, "resistance": 1.0},
+        {"tissue_name": "rib_bone", "thickness_cm": 1.4, "resistance": 4.5, "is_bone_layer": true},
+        {"tissue_name": "lung", "thickness_cm": 18.0, "resistance": 0.7, "is_organ_layer": true}
+      ]
+    },
+    {
+      "id": "primary_thorax_right",
+      "tissue": "lung",
+      "layers": [
+        {"tissue_name": "hide", "thickness_cm": 0.5, "resistance": 0.5},
+        {"tissue_name": "muscle", "thickness_cm": 5.0, "resistance": 1.0},
+        {"tissue_name": "rib_bone", "thickness_cm": 1.4, "resistance": 4.5, "is_bone_layer": true},
+        {"tissue_name": "lung", "thickness_cm": 18.0, "resistance": 0.7, "is_organ_layer": true}
+      ]
+    },
+    {
+      "id": "core_pump_cavity",
+      "tissue": "heart",
+      "layers": [
+        {"tissue_name": "hide", "thickness_cm": 0.5, "resistance": 0.5},
+        {"tissue_name": "muscle", "thickness_cm": 6.0, "resistance": 1.1},
+        {"tissue_name": "sternum_rib", "thickness_cm": 1.8, "resistance": 4.8, "is_bone_layer": true},
+        {"tissue_name": "heart", "thickness_cm": 10.0, "resistance": 0.9, "is_organ_layer": true}
+      ]
+    },
+    {
+      "id": "gait_column_neck",
+      "tissue": "major_vessel"
+    },
+    {
+      "id": "spine_thoracic",
+      "tissue": "dense_bone",
+      "bone_integrity": 45.0
+    },
+    {
+      "id": "wobble_rump",
+      "tissue": "liver_gut"
+    }
+  ]
+}

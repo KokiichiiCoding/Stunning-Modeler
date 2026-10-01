@@ -1,0 +1,248 @@
+<div id="app">
+  <canvas id="game" tabindex="0" aria-label="Trophy Panic 3D view"></canvas>
+
+  <div id="loading" class="screen">
+    <div class="load-card">
+      <div class="logo small">TROPHY<span>PANIC</span></div>
+      <div class="load-msg" id="load-msg">Growing trees…</div>
+      <div class="load-bar"><i id="load-bar"></i></div>
+    </div>
+  </div>
+
+  <!-- HUD ------------------------------------------------------------ -->
+  <div id="hud" hidden>
+    <div id="blind-frame" hidden></div>
+    <div id="status-panel">
+      <div class="sp-title">TROPHY PANIC</div>
+      <div class="sp-row"><span id="sp-state">TRAVELING</span><span id="sp-clock">06:30</span></div>
+      <div id="sp-detail">FIND SOMETHING TO HUNT</div>
+    </div>
+    <div id="status-bar"><span>STANCE <b id="sb-stance">STANDING</b></span><span>WIND <b id="sb-wind">000</b> <b id="sb-wspd">0 M/S</b></span><span id="sb-weather">CLEAR</span><span id="sb-warn" hidden>⚠</span></div>
+    <div id="compass"><div id="compass-strip"></div><div id="compass-needle"></div><div id="wind-chip"><i id="wind-arrow">➤</i><span id="wind-speed">3 m/s</span></div></div>
+    <div id="clock"><span id="clock-time">06:30</span><span id="clock-period">Dawn</span></div>
+    <div id="feed"></div>
+    <div id="crosshair"><i></i></div>
+    <div id="hitmark" hidden></div>
+    <div id="prompt" hidden></div>
+    <div id="clue-card" hidden></div>
+    <div id="toast-stack"></div>
+    <div id="vitals">
+      <div class="vit-row"><span class="vit-ico" aria-hidden="true">♥</span><div class="bar"><i id="hp-bar"></i><b id="bleed-bar"></b></div></div>
+      <div class="vit-row"><span class="vit-ico" aria-hidden="true">⚡</span><div class="bar stam"><i id="st-bar"></i></div></div>
+      <div id="meters">
+        <div class="meter" title="How much noise you make"><span>Noise</span><div class="mbar"><i id="noise-bar"></i></div></div>
+        <div class="meter" title="How visible you are"><span>Seen</span><div class="mbar"><i id="vis-bar"></i></div></div>
+        <div id="stance-chip">Standing</div>
+      </div>
+    </div>
+    <div id="weapon-box">
+      <div id="weapon-name">.243 Varminter</div>
+      <div id="ammo-line"><span id="ammo-mag">4</span><span class="sep">/</span><span id="ammo-res">20</span><span id="ammo-type"></span></div>
+      <div id="slots"></div>
+    </div>
+    <div id="cash-chip"><b id="cash">$0</b><span id="level">Lv 1</span></div>
+    <div id="party-chip" hidden></div>
+    <div id="scope" hidden><div class="scope-ring"></div><div class="scope-cross"></div><div id="range-read"></div></div>
+    <div id="viewfinder" hidden><div class="vf-corners"><i></i><i></i><i></i><i></i></div><div class="vf-dot"></div><div id="vf-read">Click to snap</div></div>
+    <div id="photo-flash"></div>
+    <div id="jobs-chip" hidden></div>
+    <div id="tip-card" role="status"><b>Ranger tip</b><span id="tip-text"></span></div>
+    <div id="binos" hidden><div class="bino-l"></div><div class="bino-r"></div><div id="bino-read"></div></div>
+    <div id="pings" aria-live="polite"></div>
+    <div id="chat-box" hidden><input id="chat-input" maxlength="80" autocomplete="off" placeholder="Say something… (Enter sends, Esc cancels)" aria-label="Chat message"></div>
+    <div id="damage-vignette"></div>
+    <div id="sense-vignette"></div>
+  </div>
+
+  <!-- TITLE ---------------------------------------------------------- -->
+  <div id="title" class="screen" hidden>
+    <div class="title-wrap">
+      <div class="logo">TROPHY<span>PANIC</span></div>
+      <p class="tagline">A serious hunting simulation for extremely underprepared people.</p>
+      <div class="title-grid">
+        <div class="card hunter-card">
+          <h3>Your hunter</h3>
+          <label class="fld" for="hunter-name">Name</label>
+          <input id="hunter-name" maxlength="14" value="Pip">
+          <label class="fld">Jacket</label>
+          <div id="jacket-swatches" class="swatches"></div>
+          <label class="fld">Skin</label>
+          <div id="skin-swatches" class="swatches"></div>
+          <label class="fld">Hat</label>
+          <div id="hat-choices" class="chips"></div>
+          <div id="hunter-preview-note">Olive is traditional. Blaze orange is safer. Green skin is a lifestyle.</div>
+        </div>
+        <div class="card play-card">
+          <button id="btn-play" class="btn big">Head into the reserve</button>
+          <div class="party-row">
+            <input id="party-code" maxlength="20" placeholder="party code, e.g. moose-pals" aria-label="Hunting party code">
+            <button id="btn-party" class="btn alt">Join party</button>
+          </div>
+          <label class="fld">Solo squad</label>
+          <div id="buddy-choices" class="chips"></div>
+          <p class="hint" id="party-hint">Friends who open this page and type the same code hunt in the same reserve.</p>
+          <div class="btn-row">
+            <button id="btn-lodge" class="btn ghost">Lodge shop</button>
+            <button id="btn-trophies" class="btn ghost">Trophy wall</button>
+            <button id="btn-controls" class="btn ghost">Controls</button>
+          </div>
+          <div class="profile-line" id="profile-line"></div>
+        </div>
+      </div>
+      <p class="fineprint" id="fineprint">Keyboard + mouse. Click the view to capture the mouse; Esc releases it.</p>
+    </div>
+  </div>
+
+  <!-- PAUSE ---------------------------------------------------------- -->
+  <div id="pause" class="screen dim" hidden>
+    <div class="card pause-card">
+      <h2>Paused</h2>
+      <div class="btn-col">
+        <button id="btn-resume" class="btn big">Resume</button>
+        <button id="btn-map2" class="btn alt">Map</button>
+        <button id="btn-lodge2" class="btn alt">Lodge shop</button>
+        <button id="btn-controls2" class="btn ghost">Controls</button>
+        <button id="btn-settings" class="btn ghost">Settings</button>
+        <button id="btn-quit" class="btn ghost">Back to title</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls" class="screen dim" hidden>
+    <div class="card controls-card">
+      <h2>Controls</h2>
+      <div class="keys">
+        <div><kbd>W A S D</kbd><span>walk</span></div>
+        <div><kbd>Shift</kbd><span>sprint · hold breath while aiming</span></div>
+        <div><kbd>C</kbd><span>crouch</span></div>
+        <div><kbd>Z</kbd><span>go prone</span></div>
+        <div><kbd>Space</kbd><span>jump (badly)</span></div>
+        <div><kbd>Mouse</kbd><span>look</span></div>
+        <div><kbd>Left click</kbd><span>fire / throw / blow</span></div>
+        <div><kbd>Right click</kbd><span>aim / scope</span></div>
+        <div><kbd>R</kbd><span>reload · cycle shotgun shells when full</span></div>
+        <div><kbd>1 – 9, wheel</kbd><span>switch equipment</span></div>
+        <div><kbd>B</kbd><span>binoculars + rangefinder</span></div>
+        <div><kbd>Q</kbd><span>hunter sense: highlight tracks and blood</span></div>
+        <div><kbd>E</kbd><span>harvest · pick up · climb tower · ride quad · use</span></div>
+        <div><kbd>W A S D</kbd><span>on a quad: throttle, brake/reverse, steer (in the air: flip!)</span></div>
+        <div><kbd>T</kbd><span>use animal call</span></div>
+        <div><kbd>H</kbd><span>bandage yourself</span></div>
+        <div><kbd>N</kbd><span>Scent Killer (also un-skunks you)</span></div>
+        <div><kbd>Y</kbd><span>Moss Cola: full stamina, shaky aim</span></div>
+        <div><kbd>F</kbd><span>flashlight</span></div>
+        <div><kbd>G</kbd><span>wave</span></div>
+        <div><kbd>J</kbd><span>victory dance</span></div>
+        <div><kbd>X</kbd><span>ping what you're looking at (party sees it)</span></div>
+        <div><kbd>K</kbd><span>dog: find the animal you hit / heel</span></div>
+        <div><kbd>P</kbd><span>pitch / pack your ground blind</span></div>
+        <div><kbd>L</kbd><span>light / stomp out a campfire (E by it: roast a marshmallow)</span></div>
+        <div><kbd>Enter</kbd><span>chat with your party</span></div>
+        <div><kbd>V</kbd><span>first / third person</span></div>
+        <div><kbd>M</kbd><span>map · fast travel</span></div>
+        <div><kbd>Esc</kbd><span>pause</span></div>
+      </div>
+      <button class="btn big close-screen" data-close="controls">Got it</button>
+    </div>
+  </div>
+
+  <div id="settings" class="screen dim" hidden>
+    <div class="card settings-card">
+      <h2>Settings</h2>
+      <label class="set-row" for="set-sens"><span>Mouse sensitivity</span><input type="range" id="set-sens" min="0.3" max="3" step="0.05" value="1"></label>
+      <label class="set-row" for="set-vol"><span>Volume</span><input type="range" id="set-vol" min="0" max="1" step="0.05" value="0.7"></label>
+      <label class="set-row" for="set-fov"><span>Field of view</span><input type="range" id="set-fov" min="60" max="95" step="1" value="72"></label>
+      <label class="set-row" for="set-quality"><span>Graphics</span><select id="set-quality"><option value="auto">Auto (recommended)</option><option value="high">Cosy (always shadows)</option><option value="low">Potato (fast)</option></select></label>
+      <label class="set-row" for="set-reports"><span>Shot reports</span><input type="checkbox" id="set-reports" checked></label>
+      <label class="set-row" for="set-post"><span>Storybook glow (bloom)</span><input type="checkbox" id="set-post" checked></label>
+      <label class="set-row" for="set-tips"><span>Ranger tips</span><input type="checkbox" id="set-tips" checked></label>
+      <label class="set-row" for="set-gore"><span>Cartoon splats</span><select id="set-gore"><option value="full">Full splat</option><option value="mild">Mild</option><option value="confetti">Confetti instead</option></select></label>
+      <button class="btn big close-screen" data-close="settings">Done</button>
+    </div>
+  </div>
+
+  <!-- HARVEST -------------------------------------------------------- -->
+  <div id="harvest" class="screen dim" hidden>
+    <div class="card harvest-card">
+      <div class="harvest-head">
+        <div>
+          <div class="eyebrow" id="hv-species">Ridge Deer</div>
+          <h2 id="hv-name">Sir Muffin</h2>
+          <div class="hv-sub" id="hv-sub">Male · Mature · 88 kg</div>
+        </div>
+        <div class="tier-badge" id="hv-tier">Gold</div>
+      </div>
+      <div class="hv-grid">
+        <div class="hv-scores" id="hv-scores"></div>
+        <div class="hv-report" id="hv-report"></div>
+      </div>
+      <div class="hv-foot">
+        <div class="hv-pay" id="hv-pay">+$0</div>
+        <button id="btn-harvest-ok" class="btn big">Tag it &amp; keep hunting</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOP ----------------------------------------------------------- -->
+  <div id="shop" class="screen dim" hidden>
+    <div class="card shop-card">
+      <div class="shop-head"><h2>Wobblewood Lodge</h2><div class="shop-cash" id="shop-cash">$0</div></div>
+      <div class="tabs" role="tablist">
+        <button class="tab on" data-tab="weapons" role="tab">Weapons</button>
+        <button class="tab" data-tab="gear" role="tab">Gear &amp; ammo</button>
+        <button class="tab" data-tab="jobs" role="tab">Ranger jobs</button>
+      </div>
+      <div id="shop-list" class="shop-list"></div>
+      <button class="btn big close-screen" data-close="shop">Leave the lodge</button>
+    </div>
+  </div>
+
+  <div id="trophies" class="screen dim" hidden>
+    <div class="card trophy-card">
+      <h2>Trophy wall</h2>
+      <div id="trophy-list" class="trophy-list"></div>
+      <h3 class="album-h">Fishing records</h3>
+      <div id="fish-records" class="records"></div>
+      <h3 class="album-h">Ranger log</h3>
+      <div id="ranger-log" class="records"></div>
+      <h3 class="album-h">Photo album</h3>
+      <div id="photo-list" class="photo-list"></div>
+      <button class="btn big close-screen" data-close="trophies">Close</button>
+    </div>
+  </div>
+
+  <!-- MAP ------------------------------------------------------------ -->
+  <div id="map" class="screen dim" hidden>
+    <div class="card map-card">
+      <div class="map-head"><h2>Wobblewood Reserve</h2><span class="hint">Click an outpost to fast travel ($25). Need zones: leaf = feeding, drop = drinking, moon = resting (with their hours). Press Q inside one to read its sign.</span></div>
+      <div class="map-wrap"><canvas id="map-canvas" width="720" height="720"></canvas></div>
+      <button class="btn big close-screen" data-close="map">Close map</button>
+    </div>
+  </div>
+
+  <!-- REST -->
+  <div id="rest" class="screen dim" hidden>
+    <div class="card rest-card">
+      <h2>Have a nap in the tent?</h2>
+      <p class="hint">Time passes, wildlife moves on, and you wake up feeling great. (In a party, only the host can sleep the clock forward.)</p>
+      <div class="btn-col">
+        <button class="btn alt" data-rest="5.3">Until dawn (05:20)</button>
+        <button class="btn alt" data-rest="12">Until midday</button>
+        <button class="btn alt" data-rest="17.6">Until golden hour (17:35)</button>
+        <button class="btn alt" data-rest="21">Until night (21:00)</button>
+      </div>
+      <button class="btn big close-screen" data-close="rest">Not sleepy</button>
+    </div>
+  </div>
+
+  <!-- DOWNED --------------------------------------------------------- -->
+  <div id="downed" class="screen dim" hidden>
+    <div class="card downed-card">
+      <div class="downed-ghost" aria-hidden="true"></div>
+      <h2 id="downed-title">You got mauled.</h2>
+      <p id="downed-text">The rangers carried you back to the lodge. They were very nice about it.</p>
+      <p class="downed-bill" id="downed-bill">Medical bill: $80</p>
+      <button id="btn-respawn" class="btn big">Get back out there</button>
+    </div>
+  </div>
+</div>

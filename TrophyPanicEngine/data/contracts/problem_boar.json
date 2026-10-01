@@ -1,0 +1,14 @@
+{
+  "id": "problem_boar",
+  "title": "Problem Animal: boar tearing up the creek banks",
+  "type": "problem_animal",
+  "species": "prototype_boar",
+  "region": "dense_cover",
+  "min_trophy_quality": 0.0,
+  "max_shots": 5,
+  "time_limit_s": 1800.0,
+  "reward_credits": 300.0,
+  "allowed_equipment": ["bolt_rifle_3006", "binoculars", "field_knife", "throwing_boot"],
+  "world_seed": 1234,
+  "animal_seed": 77
+}

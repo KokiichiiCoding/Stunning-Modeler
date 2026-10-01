@@ -1,0 +1,78 @@
+{
+  "items": {
+    "bolt_rifle_308": {
+      "display_name": "Bolt-Action Rifle (.308)",
+      "kind": "rifle",
+      "projectile": "308_soft_point",
+      "magazine_size": 4,
+      "fire_sound": "gunshot",
+      "fire_loudness": 250000.0
+    },
+    "bolt_rifle_3006": {
+      "display_name": "Bolt-Action Rifle (.30-06)",
+      "kind": "rifle",
+      "projectile": "3006_soft_point",
+      "magazine_size": 4,
+      "fire_sound": "gunshot",
+      "fire_loudness": 250000.0
+    },
+    "recurve_bow": {
+      "display_name": "Recurve Bow",
+      "kind": "bow",
+      "projectile": "recurve_broadhead",
+      "magazine_size": 1,
+      "fire_sound": "equipment_impact",
+      "fire_loudness": 12.0
+    },
+    "binoculars": {
+      "display_name": "Binoculars",
+      "kind": "optic",
+      "magnification": 8.0
+    },
+    "rangefinder": {
+      "display_name": "Laser Rangefinder",
+      "kind": "optic",
+      "magnification": 6.0,
+      "ranging": true
+    },
+    "elk_call": {
+      "display_name": "Elk Call",
+      "kind": "call",
+      "fire_sound": "hunter_call",
+      "fire_loudness": 400.0
+    },
+    "field_knife": {
+      "display_name": "Field Dressing Knife",
+      "kind": "harvest_tool"
+    },
+    "flashlight": {
+      "display_name": "Flashlight",
+      "kind": "utility"
+    },
+    "wind_ribbon": {
+      "display_name": "Wind Ribbon",
+      "kind": "utility"
+    },
+    "throwing_boot": {
+      "display_name": "Throwing Boot",
+      "kind": "thrown",
+      "projectile": "throwing_boot",
+      "fire_sound": "equipment_impact",
+      "fire_loudness": 150.0
+    },
+    "rubber_chicken": {
+      "display_name": "Rubber Chicken",
+      "kind": "thrown",
+      "projectile": "rubber_chicken",
+      "fire_sound": "chicken_squeak",
+      "fire_loudness": 900.0
+    },
+    "leaf_blower": {
+      "display_name": "Leaf Blower",
+      "kind": "tool",
+      "projectile": "leaf_blower",
+      "fire_sound": "leaf_blower",
+      "fire_loudness": 2500.0
+    }
+  }
+}

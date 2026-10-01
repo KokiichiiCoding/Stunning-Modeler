@@ -1,0 +1,9 @@
+{
+  "title": "Black bear heart shot, .30-06, 40m broadside",
+  "species": "prototype_black_bear",
+  "shots": [
+    {"ammunition": "3006_soft_point", "body_part": "core_pump_cavity", "distance_m": 40, "angle_deg": 90}
+  ],
+  "run_duration_seconds": 40,
+  "biological_quality_percent": 95
+}
