@@ -196,9 +196,25 @@ export function buildHunter({ jacket = 0x5f6e34, hat = 'beanie', skin = 0 } = {}
   ]), mat);
   rifle.position.set(0.12, 0.5, 0.25);
   body.add(rifle);
+  // a fishing rod for the third-person view
+  const rod = new THREE.Mesh(merge([
+    paint(xf(G.cyl(0.02, 0.022, 0.2, 6), [0, 0, 0], [Math.PI / 2, 0, 0]), 0xc9a26a),
+    paint(xf(G.cyl(0.007, 0.014, 1.5, 5), [0, -0.31, 0.68], [Math.PI / 2 + 0.43, 0, 0]), 0x2f6fb0),
+    paint(xf(G.cyl(0.035, 0.035, 0.03, 10), [0.03, -0.03, 0.02], [0, 0, Math.PI / 2]), 0xe8384f),
+  ]), mat);
+  rod.position.set(0, -0.36, 0.05); rod.visible = false;
+  arms[1].add(rod);
+  const rodTip = new THREE.Object3D(); rodTip.position.set(0, -0.62, 1.36); rod.add(rodTip);
 
   const api = {
-    group: root, body, head, eyes, deadEyes, brows, arms, legs, rifle, pack, hat: hatMesh,
+    group: root, body, head, eyes, deadEyes, brows, arms, legs, rifle, pack, hat: hatMesh, rod, rodTip, held: null,
+    /** Put something in the right hand (a fish, say), or null to empty it. */
+    setHeld(obj) {
+      if (this.held === obj) return;
+      if (this.held) arms[1].remove(this.held);
+      this.held = obj;
+      if (obj) { obj.position.set(0, -0.42, 0.08); arms[1].add(obj); }
+    },
     phase: 0,
     /** Pose the rig. state: { speed, stance, pitch, dead, wave, aiming } */
     animate(dt, st) {
@@ -226,6 +242,12 @@ export function buildHunter({ jacket = 0x5f6e34, hat = 'beanie', skin = 0 } = {}
       } else {
         arms[0].rotation.x = -s * sw * 0.8; arms[1].rotation.x = s * sw * 0.8;
         arms[0].rotation.z = 0.15; arms[1].rotation.z = -0.15;
+      }
+      rod.visible = !!st.rod && !st.dead;
+      if (st.rod && !st.dead && !st.holdUp) { arms[1].rotation.x = -0.9 - (st.reel || 0) * 0.3 + Math.sin(this.phase * 12) * (st.reel || 0) * 0.08; arms[1].rotation.z = -0.1; }
+      if (st.holdUp && !st.dead) {
+        // proudly showing off the catch… or swinging it
+        arms[1].rotation.x = st.slap ? -1.4 : -0.25; arms[1].rotation.z = st.slap ? 1.2 * Math.sin(this.phase * 9) : 2.35;
       }
       if (st.point && !st.dead) {
         // "Look! Over there!"

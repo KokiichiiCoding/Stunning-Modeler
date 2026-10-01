@@ -188,4 +188,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
-- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`, `hiker`, `bearfish`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`, `hiker`, `bearfish`, `coopfish`

@@ -91,7 +91,7 @@ export class Coop {
   }
 
   drop() {
-    for (const p of this.peers.values()) { if (p.model) this.game.scene.remove(p.model.group); if (p.tag) this.game.scene.remove(p.tag); if (p.dog) this.game.scene.remove(p.dog.root); if (p.blind) this.game.scene.remove(p.blind.mesh); if (p.fire) this.game.scene.remove(p.fire.model.group); }
+    for (const p of this.peers.values()) { if (p.model) this.game.scene.remove(p.model.group); if (p.tag) this.game.scene.remove(p.tag); if (p.dog) this.game.scene.remove(p.dog.root); if (p.blind) this.game.scene.remove(p.blind.mesh); if (p.fire) this.game.scene.remove(p.fire.model.group); this.game.fishing.disposeRemote(p); }
     this.peers.clear();
     for (const a of this.shadow.values()) a.dispose();
     this.shadow.clear();
@@ -121,7 +121,7 @@ export class Coop {
     }
     for (const p of change.left) {
       const r = this.peers.get(p.peer);
-      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); if (r.dog) g.scene.remove(r.dog.root); if (r.blind) g.scene.remove(r.blind.mesh); if (r.fire) g.scene.remove(r.fire.model.group); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
+      if (r) { if (r.model) g.scene.remove(r.model.group); if (r.tag) g.scene.remove(r.tag); if (r.dog) g.scene.remove(r.dog.root); if (r.blind) g.scene.remove(r.blind.mesh); if (r.fire) g.scene.remove(r.fire.model.group); g.fishing.disposeRemote(r); this.peers.delete(p.peer); g.ui.feed(`${r.name || 'A hunter'} left the party.`, 'info'); }
     }
     for (const p of valid) {
       if (p.sameTab) continue;
@@ -388,6 +388,7 @@ export class Coop {
       tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0, ho: g.hatOff ? 1 : 0,
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,
     };
+    if (g.fishing) g.fishing.presence(pres);
     const cf = g.campfires && g.campfires.presence();
     if (cf) pres.cf = cf;
     const bm = g.blinds && g.blinds.mine;
@@ -531,7 +532,10 @@ export class Coop {
       if (r.danceT > 0) r.danceT -= dt;
       if (r.pointT > 0) r.pointT -= dt;
       if (r.model.hat) r.model.hat.visible = !pr.ho;
-      m.animate(dt, { point: r.pointT > 0, dance: r.danceT > 0, flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
+      const rod = pr.w === 'rod';
+      m.animate(dt, { point: r.pointT > 0, dance: r.danceT > 0, flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim,
+        showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' && !rod, rod: rod && !pr.hf, holdUp: !!pr.hf, slap: !!pr.sw, reel: pr.rl ? 1 : 0 });
+      g.fishing.renderRemote(r, pr);
       r.tag.position.set(r.pos.x, r.pos.y + 2.05, r.pos.z);
     }
   }

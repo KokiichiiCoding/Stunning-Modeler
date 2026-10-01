@@ -830,7 +830,9 @@ export class Game {
       hm.group.rotation.set(0, p.yaw + Math.PI, 0);
     }
     if (this.pointT > 0) this.pointT -= dt;
-    hm.animate(dt, { point: this.pointT > 0, dance: this.danceT > 0, flail: !!p.tumble, speed: p.tumble ? 3 : p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming, showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' });
+    const fs = this.fishing, rod = this.weapons.current && this.weapons.current.type === 'rod';
+    hm.animate(dt, { point: this.pointT > 0, dance: this.danceT > 0, flail: !!p.tumble, speed: p.tumble ? 3 : p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming,
+      showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' && !rod, rod: rod && fs.state !== 'show', holdUp: fs.state === 'show', slap: fs.slapAnim > 0, reel: fs.state === 'fight' && this.input.mouse.left ? 1 : 0 });
   }
 
   render(dt) {

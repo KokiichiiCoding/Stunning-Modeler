@@ -101,6 +101,8 @@ export class Fishing {
     this.state = 'idle'; this.draw = 0; this.fish = null;
     this.bobber.visible = false; this.line.visible = false; this.meter.style.display = 'none';
     if (this.held) { this.game.viewScene.remove(this.held); this.held = null; }
+    this.heldWorld = null; this.heldId = null; this.slapAnim = 0;
+    if (this.game.hunterModel) this.game.hunterModel.setHeld(null);
     if (msg) this.game.ui.feed(msg, 'info');
   }
 
@@ -247,6 +249,8 @@ export class Fishing {
     m.scale.setScalar(s);
     this.held = m; this.heldScale = s;
     g.viewScene.add(m);
+    this.heldWorld = buildFish(f); this.heldWorld.scale.setScalar(s * 0.85); this.heldWorld.rotation.set(0, Math.PI / 2, Math.PI / 2);
+    this.heldId = f.id;
     this.state = 'show'; this.showT = 8;
   }
 
@@ -342,17 +346,55 @@ export class Fishing {
         this.held.rotation.y += -sw * 1.2; this.held.rotation.z += sw * 0.6;
       }
     }
+    g.hunterModel.setHeld(this.state === 'show' ? this.heldWorld : null);
     const vm = g.weapons.vm;
     vm.rodBend = this.state === 'fight' ? Math.min(1, this.tension) : this.state === 'bite' ? 0.3 : 0;
     vm.rodDraw = this.state === 'idle' ? this.draw : 0;
     vm.hideHeld = !!this.held;
   }
 
+  /** Presence bits so friends see your bobber, line and catch. */
+  presence(pres) {
+    const r2 = (v) => Math.round(v * 100) / 100;
+    if (this.line.visible) pres.fb = [r2(this.b.x), r2(this.b.y), r2(this.b.z)];
+    if (this.state === 'show' && this.heldId) pres.hf = [this.heldId, r2(this.heldScale || 1)];
+    if (this.slapAnim > 0) pres.sw = 1;
+    if (this.state === 'fight') pres.rl = 1;
+  }
+
+  /** Draw a friend's bobber + line and whatever they're holding up. */
+  renderRemote(r, pr) {
+    const g = this.game;
+    if (!r.fishFx) {
+      const bob = buildBobber(); g.scene.add(bob);
+      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      const line = new THREE.Line(lg, this.line.material); line.frustumCulled = false; g.scene.add(line);
+      r.fishFx = { bob, line, id: null };
+    }
+    const F = r.fishFx, fb = Array.isArray(pr.fb) && pr.fb.length === 3 && pr.fb.every(Number.isFinite) ? pr.fb : null;
+    F.bob.visible = F.line.visible = !!fb;
+    if (fb) {
+      F.bob.position.set(fb[0], fb[1] + Math.sin(g.visualTime * 3) * 0.015, fb[2]);
+      r.model.group.updateMatrixWorld(true);
+      r.model.rodTip.getWorldPosition(this.tip);
+      const a = F.line.geometry.attributes.position.array;
+      a[0] = this.tip.x; a[1] = this.tip.y; a[2] = this.tip.z; a[3] = fb[0]; a[4] = fb[1] + 0.1; a[5] = fb[2];
+      F.line.geometry.attributes.position.needsUpdate = true;
+    }
+    const hf = Array.isArray(pr.hf) ? pr.hf : null, f = hf && FISH.find(q => q.id === hf[0]);
+    if (f && F.id !== f.id) { const m = buildFish(f); m.scale.setScalar(Math.max(0.3, Math.min(2.2, +hf[1] || 1)) * 0.85); m.rotation.set(0, Math.PI / 2, Math.PI / 2); F.id = f.id; F.held = m; }
+    if (!f) { F.id = null; F.held = null; }
+    r.model.setHeld(F.held || null);
+  }
+
+  disposeRemote(r) { if (r.fishFx) { this.game.scene.remove(r.fishFx.bob); this.game.scene.remove(r.fishFx.line); r.fishFx = null; } }
+
   /** The rod tip in world space: project it from the viewmodel camera onto the main view. */
   rodTip(out) {
     const g = this.game, vm = g.weapons.vm;
     const cam = g.camera;
-    if (!vm.tip || g.thirdPerson) {
+    if (g.thirdPerson) { g.hunterModel.group.updateMatrixWorld(true); return g.hunterModel.rodTip.getWorldPosition(out); }
+    if (!vm.tip) {
       out.set(0.25, 0.3, -1.4).applyQuaternion(cam.quaternion).add(cam.position);
       return out;
     }

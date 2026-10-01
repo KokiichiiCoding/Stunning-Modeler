@@ -54,6 +54,45 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async coopfish() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, T = g.terrain;
+      let best = null;
+      for (let a = 0; a < 6.28 && !best; a += 0.2) for (let rr = 40; rr < 160; rr += 1) { const x = -170 + Math.cos(a) * rr, z = 150 + Math.sin(a) * rr; if (T.heightAt(x, z) > 4.4) { if (T.heightAt(x - Math.cos(a) * 10, z - Math.sin(a) * 10) < 3.5) best = { x, z, a }; break; } }
+      const ox = Math.cos(best.a), oz = Math.sin(best.a);
+      // Bob fishes at the shore; we stand behind and to the side
+      const bx = best.x, bz = best.z, by = T.heightAt(bx, bz);
+      p.spawnAt(bx - ox * 3.5 - oz * 2.5, bz - oz * 3.5 + ox * 2.5, 0);
+      p.yaw = Math.atan2(-(bx - p.pos.x), -(bz - p.pos.z)) + 0.25; p.pitch = 0.05;
+      g.coop.room = { presence: async () => {}, onPeers() {}, leave: async () => {} };
+      g.coop.myPeer = 'me'; g.coop.joinedAt = 0; g.coop.code = 'test';
+      const yaw = Math.atan2(ox, oz); // facing the water
+      window.__bob = { v: 1, n: 'Bob', c: 0x4fb4f0, h: 0, sk: 3, since: 5, p: [bx, by, bz, yaw, 0], s: 's', sp: 0, w: 'rod', ev: [], fb: [bx - ox * 14, 4, bz - oz * 14] };
+      g.coop.onPeers({ peers: [{ peer: 'me', sameTab: true, presence: null }, { peer: 'bob', presence: window.__bob }], left: [] });
+      for (let i = 0; i < 30; i++) { g.advance(1 / 60); g.coop.render(1 / 60); }
+      const bob = g.coop.peers.get('bob');
+      return { fx: !!bob.fishFx, line: bob.fishFx && bob.fishFx.line.visible, rod: bob.model.rod.visible };
+    });
+    console.log('  coopfish', JSON.stringify(r));
+    if (!r.fx || !r.line || !r.rod) errors.push('remote fishing not drawn: ' + JSON.stringify(r));
+    await step(2);
+    await shot('105_coop_fishing');
+    const h = await page.evaluate(() => {
+      const g = window.__tp.game, b = window.__bob;
+      delete b.fb; b.hf = ['trout', 1.3];
+      g.coop.onPeers({ peers: [{ peer: 'me', sameTab: true, presence: null }, { peer: 'bob', presence: b }], left: [] });
+      for (let i = 0; i < 10; i++) { g.advance(1 / 60); g.coop.render(1 / 60); }
+      const bob = g.coop.peers.get('bob');
+      return { held: !!bob.model.held, line: bob.fishFx.line.visible, armX: +bob.model.arms[1].rotation.x.toFixed(2), heldParent: bob.model.held && bob.model.held.parent === bob.model.arms[1] };
+    });
+    console.log('  holdup', JSON.stringify(h));
+    if (!h.held || h.line) errors.push('remote catch not shown: ' + JSON.stringify(h));
+    await step(2);
+    console.log('  after', JSON.stringify(await page.evaluate(() => { const g = window.__tp.game, m = g.coop.peers.get('bob').model; const v = new (m.group.position.constructor)(); m.held && m.held.getWorldPosition(v); return { armX: m.arms[1].rotation.x, armZ: m.arms[1].rotation.z, held: !!m.held, vis: m.held && m.held.visible, wp: [v.x, v.y, v.z].map(n => +n.toFixed(2)), grp: [m.group.position.x, m.group.position.y, m.group.position.z].map(n => +n.toFixed(2)), sc: m.held && m.held.scale.x }; })));
+    await shot('105_coop_catch');
+  },
   async bearfish() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 9; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
     await page.evaluate(() => window.__tp.debug.startGame({}));
