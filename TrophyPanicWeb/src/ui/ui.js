@@ -308,7 +308,7 @@ export class UI {
     }
     let state, detail, danger = false;
     const wounded = g.animals.list.find(a => a.firstHitTime >= 0 && !a.harvested && (a.alive || a.downed));
-    if (p.downed) { state = 'DOWNED'; detail = 'RANGERS EN ROUTE'; danger = true; }
+    if (p.downed) { const di = g.downedInfo; state = 'DOWNED'; detail = di && di.party ? `WAIT FOR A FRIEND ${Math.max(0, Math.ceil(di.wait - di.t))}S · E: RANGERS` : 'RANGERS EN ROUTE'; danger = true; }
     else if (threat && tLevel >= 2) { state = 'MOST DANGEROUS HUNT'; detail = `${short(threat.species)} THREAT: ${tLevel === 3 ? 'HIGH' : 'MEDIUM'}`; danger = true; }
     else if (p.tumble) { state = 'TUMBLING'; detail = 'TRY TO LAND ON SOMETHING SOFT'; }
     else if (g.period === 'night') { state = 'SURVIVE THE NIGHT'; detail = threat ? `${short(threat.species)} NEARBY` : null; }
@@ -365,7 +365,11 @@ export class UI {
     let text = null;
     const a = g.animals.nearestDowned(p.pos, 3.2);
     const quad = !p.vehicle && g.vehicles.nearest(p.pos, 2.6);
-    if (p.vehicle) text = g.time - p.vehicle.mountedAt > 6 ? null : '<kbd>E</kbd>Hop off · <kbd>Space</kbd>handbrake · <kbd>V</kbd>chase cam';
+    let downFriend = null;
+    for (const r of g.coop.peers.values()) if (r.presence && r.presence.dn && r.target && Math.hypot(r.target.x - p.pos.x, r.target.z - p.pos.z) < 2.6) downFriend = r;
+    if (downFriend) text = `<kbd>E</kbd>Help ${esc(downFriend.name)} up`;
+    else if (p.downed) text = g.downedInfo && g.downedInfo.party ? '<kbd>E</kbd>Give up and call the rangers' : null;
+    else if (p.vehicle) text = g.time - p.vehicle.mountedAt > 6 ? null : '<kbd>E</kbd>Hop off · <kbd>Space</kbd>handbrake · <kbd>V</kbd>chase cam';
     else if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
     else if (g.weapons.nearestPickup(p.pos, 2.5)) text = `<kbd>E</kbd>Pick up ${esc(g.weapons.nearestPickup(p.pos, 2.5).label)}`;
     else if (quad) text = quad.crashed ? '<kbd>E</kbd>Heave the quad back over' : '<kbd>E</kbd>Ride quad bike';

@@ -103,7 +103,7 @@ export class Player {
   step(dt, cmd) {
     const g = this.game;
     const T = g.terrain;
-    if (this.downed) return;
+    if (this.downed) { if (this.tumble) this.stepTumble(dt, {}); return; } // the body still lands
     if (this.invuln > 0) this.invuln -= dt;
 
     // --- injuries ------------------------------------------------------
@@ -316,6 +316,7 @@ export class Player {
       this.stepAcc = 0;
       if (loud > 0.02) g.sounds.emit('footstep', this.pos.x, this.pos.y, this.pos.z, loud, g.time, 'player');
       g.audio && g.audio.footstep(this.pos, this.speed, T.biomeAt(this.pos.x, this.pos.z), this.stance, this.swimming);
+      if (WATER_LEVEL - T.heightAt(this.pos.x, this.pos.z) > 0.05 && g.fx) g.fx.burst(this.pos.x, WATER_LEVEL + 0.05, this.pos.z, { count: this.speed > 4 ? 8 : 4, color: 0xd8f6ff, speed: 1.6, up: 2.2, kind: 'water', size: 0.05 });
       // The hunter leaves tracks too (useful for co-op friends looking for you).
       if (!this.swimming && this.speed > 0.8 && this.rng.chance(0.5)) {
         const f = this.forward();

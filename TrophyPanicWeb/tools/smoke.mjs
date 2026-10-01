@@ -500,6 +500,38 @@ const scripts = {
     for (let i = 0; i < 6; i++) await page.evaluate(() => { const g = window.__tp.game; window.__lineup.forEach(h => h.animate(1 / 60, { speed: 0, stance: 'stand', pitch: 0, showRifle: !!h.mood.aiming, ...h.mood })); window.__tp.debug.stepFrames(1); });
     await shot('19_lineup');
   },
+  async revive() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player;
+      // fake party: Bob stands right next to us
+      g.coop.room = { presence: async () => {}, onPeers() {}, leave: async () => {} };
+      g.coop.myPeer = 'me'; g.coop.joinedAt = 0; g.coop.code = 'test';
+      const pres = { v: 1, n: 'Bob', c: 0x4fb4f0, h: 0, sk: 3, since: 5, p: [p.pos.x + 1.5, p.pos.y, p.pos.z, 0, 0], s: 's', sp: 0, w: 'rifle_243', ev: [] };
+      g.coop.onPeers({ peers: [{ peer: 'me', sameTab: true, presence: null }, { peer: 'bob', presence: pres }], left: [] });
+      p.hurt({ blunt: 400, knock: { x: 6, y: 4, z: 0 }, source: 'maul' });
+      const downed = p.downed, party = g.downedInfo && g.downedInfo.party;
+      for (let i = 0; i < 60 * 5; i++) g.advance(1 / 60);
+      const stillWaiting = g.state === 'play' && p.downed;
+      // Bob hauls us up
+      g.coop.handleEvent(g.coop.peers.get('bob'), 'revive', { n: 'Bob' });
+      const up = !p.downed && p.hp === 35;
+      // now Bob is down and we help him
+      pres.dn = 1; pres.ev = []; pres.p = [p.pos.x + 1.2, p.pos.y, p.pos.z, 0, 0];
+      g.coop.onPeers({ peers: [{ peer: 'me', sameTab: true, presence: null }, { peer: 'bob', presence: pres }], left: [] });
+      g.coop.render(1 / 60);
+      g.interact();
+      const sent = g.coop.events.some(e => e[1] === 'revive' && e[2].to === 'bob');
+      // solo: rangers come after a short beat
+      g.coop.drop();
+      p.invuln = 0;
+      p.hurt({ blunt: 400, source: 'stomp' });
+      for (let i = 0; i < 60 * 3.2; i++) g.advance(1 / 60);
+      return { downed, party, stillWaiting, up, sent, soloMenu: g.state };
+    });
+    console.log('  revive', JSON.stringify(r));
+  },
   async slapstick() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

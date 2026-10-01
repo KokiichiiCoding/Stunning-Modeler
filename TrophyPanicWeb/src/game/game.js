@@ -239,7 +239,33 @@ export class Game {
     this.ui.showTitle();
   }
 
+  /** Downed: you flop over and your little ghost pops out. In a party you
+   *  wait for a friend to haul you up; otherwise the rangers come. */
   onPlayerDowned(source) {
+    const p = this.player;
+    if (p.vehicle) p.vehicle.exit(true);
+    this.coop.broadcastEvent('downed', { by: source });
+    this.fx.ghost(p.pos.x, p.pos.y + 0.8, p.pos.z, 0xffffff, 0.6);
+    this.audio.play('oof', p.pos);
+    const party = this.coop.inParty() && this.coop.peers.size > 0;
+    this.downedInfo = { source, t: 0, wait: party ? 40 : 2.8, party };
+    if (party) { this.ui.feed('You\'re down! Friends can pull you up (E next to you). Press E to call the rangers instead.', 'warn'); this.coop.broadcastEvent('chat', { t: 'HELP!! I\'m down!' }); }
+  }
+
+  /** Revived by a friend: wobble back up with a bit of health. */
+  revive(byName) {
+    const p = this.player;
+    if (!p.downed) return;
+    p.downed = false; p.hp = 35; p.bleed = 0; p.invuln = 3; p.getUp = 0.8;
+    this.downedInfo = null;
+    this.ui.toast(`${byName} pulled you up!`, 'big', 2.4);
+    this.audio.play('boing', p.pos);
+    this.coop.broadcastEvent('revived', {});
+  }
+
+  callRangers() {
+    const info = this.downedInfo; this.downedInfo = null;
+    const source = info ? info.source : 'misadventure';
     this.state = 'menu';
     this.menuReturn = 'play';
     this._suppressPause = true;
@@ -249,9 +275,9 @@ export class Game {
     this.profile.stats.downs++;
     this.profile.save();
     this.ui.showDowned(source, bill);
-    this.coop.broadcastEvent('downed', { by: source });
   }
   respawn() {
+    this.downedInfo = null;
     if (this.player.vehicle) this.player.vehicle.exit(true);
     this.spawnAtLodge();
     this.hour = Math.min(23.5, this.hour + 1.5);
@@ -361,6 +387,7 @@ export class Game {
     if (this.weather.fog > 0.5) this.wind.speed = Math.min(this.wind.speed, 1.6);
     this.light = this.weather.light(this.hour);
     this.evidence.rainAccum = this.weather.rainAccum;
+    if (this.downedInfo) { this.downedInfo.t += dt; if (this.downedInfo.t >= this.downedInfo.wait) this.callRangers(); }
     this.tick = (this.tick || 0) + 1;
     if (this.tick % 60 === 30) this.checkPOIs();
     if (this.weather.changed) { this.announceWeather(this.weather.changed); this.weather.changed = null; }
@@ -434,6 +461,16 @@ export class Game {
 
   interact() {
     const p = this.player;
+    if (p.downed) { if (this.downedInfo && this.downedInfo.party) this.callRangers(); return; }
+    // a friend is down right here: haul them up
+    for (const r of this.coop.peers.values()) {
+      if (r.presence && r.presence.dn && r.target && Math.hypot(r.target.x - p.pos.x, r.target.z - p.pos.z) < 2.6) {
+        this.coop.sendTo(r.peer, 'revive', { n: this.profile.name });
+        this.ui.feed(`You haul ${r.name} back onto their feet. Teamwork!`, 'good');
+        this.audio.play('boing', p.pos); this.waveT = 1;
+        return;
+      }
+    }
     if (p.vehicle) { p.vehicle.exit(); this.ui.feed('You hop off. The quad ticks as it cools.', 'info'); return; }
     // Harvest a downed animal in reach
     const a = this.animals.nearestDowned(p.pos, 3.2);
@@ -560,7 +597,10 @@ export class Game {
       return;
     }
     hm.group.rotation.order = 'XYZ';
-    if (p.tumble) {
+    if (p.downed) {
+      hm.group.rotation.set(-Math.PI / 2, p.yaw + Math.PI, 0);
+      hm.group.position.y = p.pos.y + 0.32;
+    } else if (p.tumble) {
       hm.group.rotation.set(p.tumble.rot.x, p.tumble.rot.y, p.tumble.rot.z);
     } else {
       hm.group.rotation.set(0, p.yaw + Math.PI, 0);

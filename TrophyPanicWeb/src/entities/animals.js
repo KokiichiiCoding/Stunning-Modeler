@@ -482,6 +482,19 @@ export class Animal {
       }
     }
 
+    // splashing through shallows (presentation)
+    if (this.speed > 2.2) {
+      const depth = WATER_LEVEL - g.terrain.heightAt(this.pos.x, this.pos.z);
+      if (depth > 0.05) {
+        this.splashAcc = (this.splashAcc || 0) + dt * this.speed;
+        if (this.splashAcc > 1.4) {
+          this.splashAcc = 0;
+          const k = Math.min(2.5, this.identity.bodyMassKg / 120 + 0.5);
+          g.fx.burst(this.pos.x, WATER_LEVEL + 0.1, this.pos.z, { count: Math.round(5 + k * 5), color: 0xd8f6ff, speed: 2 + k, up: 2.5 + k * 1.5, kind: 'water', size: 0.06 + k * 0.03 });
+          if (k > 1) g.audio.play('splash', this.pos);
+        }
+      }
+    }
     // voices
     if (this.alive) {
       this.voiceCd -= dt;

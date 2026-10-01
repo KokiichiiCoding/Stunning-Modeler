@@ -237,7 +237,9 @@ export class Coop {
       case 'wave': r.waveT = 2.2; break;
       case 'chat': g.social.receive(r, d.t); break;
       case 'ping': g.social.receivePing(r, d); break;
-      case 'downed': g.ui.feed(`${r.name} went down (${String(d.by || '').slice(0, 20)}). Rangers are on it.`, 'warn'); break;
+      case 'downed': g.ui.feed(`${r.name} is DOWN (${String(d.by || '').slice(0, 20)})! Run over and press E to pull them up.`, 'warn'); if (r.target) g.social.addPing(r.target.x, r.target.y, r.target.z, 'Help me up!', r.color, r.name); break;
+      case 'revive': g.revive(String(d.n || r.name).slice(0, 14)); break;
+      case 'revived': g.ui.feed(`${r.name} is back on their feet.`, 'good'); break;
       case 'harvest': g.ui.feed(`${r.name} harvested a ${SPECIES[d.sp] ? SPECIES[d.sp].displayName : 'critter'}!`, 'good'); this.removeShadowById(d.id); break;
       case 'harvestreq': {
         if (!this.isHost()) return;
@@ -507,6 +509,7 @@ export class Coop {
       }
       m.group.rotation.order = 'XYZ';
       if (pr.tb) { r.spin = (r.spin || 0) + dt * 9; m.group.rotation.set(r.spin, r.target.yaw, r.spin * 0.6); }
+      else if (pr.dn) { m.group.rotation.set(-Math.PI / 2, (r.target.yaw || 0) + Math.PI, 0); m.group.position.y = r.pos.y + 0.32; }
       else { m.group.rotation.set(0, (r.target.yaw || 0) + Math.PI, 0); }
       if (r.waveT > 0) r.waveT -= dt;
       m.animate(dt, { flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
