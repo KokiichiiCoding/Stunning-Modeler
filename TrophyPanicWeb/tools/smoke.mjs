@@ -643,6 +643,38 @@ const scripts = {
     await step(2);
     await shot('99_skunk');
   },
+  async soak() {
+    await page.evaluate(() => { const g = window.__tp.game; g.profile.gear.dog = 1; g.profile.gear.blind = 1; for (const id of ['bear_spray', 'honey', 'rifle_308', 'bow_recurve', 'shotgun_12', 'blower']) { if (!g.profile.owned.includes(id)) { g.profile.owned.push(id); g.profile.ammo[id] = 30; } } g.weapons.onInventoryChanged(); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const log = [];
+    for (let round = 0; round < 12; round++) {
+      const r = await page.evaluate((round) => {
+        const g = window.__tp.game, I = g.input, p = g.player;
+        if (g.state !== 'play') { if (g.state === 'menu') g.closeMenu(); if (g.player.downed || g.state !== 'play') g.respawn(); }
+        const keys = ['KeyW', 'KeyA', 'KeyD', 'ShiftLeft'];
+        const acts = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'KeyQ', 'KeyB', 'KeyE', 'KeyV', 'KeyX', 'KeyJ', 'KeyK', 'KeyP', 'KeyG', 'KeyC', 'KeyZ', 'KeyR', 'KeyN', 'KeyY', 'KeyF', 'Space'];
+        let errs = 0;
+        for (let i = 0; i < 60 * 25; i++) {
+          if (i % 90 === 0) { I.down.clear(); I.down.add('KeyW'); if ((i / 90 + round) % 3 === 0) I.down.add('ShiftLeft'); if ((i / 90) % 4 === 1) I.down.add('KeyA'); }
+          if (i % 37 === 0) { const k = acts[(i / 37 + round * 7) % acts.length | 0]; I.pressed.add(k); I.down.add(k); }
+          if (i % 53 === 0) { I.mouse.leftPressed = true; I.mouse.left = true; } else if (i % 53 === 5) I.mouse.left = false;
+          if (i % 120 === 60) I.mouse.right = !I.mouse.right;
+          I.mouse.dx = Math.sin(i * 0.01 + round) * 6; I.mouse.dy = Math.cos(i * 0.013) * 1.5;
+          g.advance(1 / 60);
+          if (i % 10 === 0) g.render(1 / 60);
+          I.endFrame();
+          if (g.state === 'menu') g.closeMenu();
+        }
+        if (round === 5) { const v = g.vehicles.nearest(p.pos, 1e9); p.spawnAt(v.pos.x + 1, v.pos.z, 0); g.interact(); }
+        if (round === 8) { const t = g.structures.tents[1]; p.spawnAt(t.x + Math.sin(t.rot) * 2.2, t.z + Math.cos(t.rot) * 2.2, 0); g.interact(); if (g.state === 'menu') g.restUntil(21); }
+        return { round, state: g.state, hour: +g.hour.toFixed(1), hp: +p.hp.toFixed(0), animals: g.animals.list.length, props: g.weapons.props.length, particles: g.fx.particles.length, clues: g.evidence.clues.length, weapon: g.weapons.currentId, vehicle: !!p.vehicle };
+      }, round);
+      log.push(r);
+    }
+    console.log('  soak', JSON.stringify(log.map(r => [r.round, r.state, r.hour, r.hp, r.animals, r.props, r.particles, r.weapon, r.vehicle].join('/'))));
+    await step(1);
+    await shot('99_soak');
+  },
   async honey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

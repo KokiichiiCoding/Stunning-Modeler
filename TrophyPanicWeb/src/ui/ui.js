@@ -567,6 +567,28 @@ export class UI {
       this.mapTargets.push({ poi, x, y, known });
     }
     for (const tw of g.structures.towers) { const [x, y] = toPx(tw.x, tw.z); ctx.fillStyle = '#6aa84f'; ctx.fillRect(x - 3, y - 3, 6, 6); }
+    // landmarks
+    if (g.profile.discovered.includes('falls') && g.waterfall) {
+      const [x, y] = toPx(g.waterfall.base.x, g.waterfall.base.z);
+      ctx.fillStyle = '#62c3f2'; ctx.strokeStyle = '#2a1f2e'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.rect(x - 4, y - 9, 8, 12); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.fillRect(x - 2, y - 7, 1.5, 8); ctx.fillRect(x + 1, y - 6, 1.5, 7);
+      ctx.fillStyle = '#2a1f2e'; ctx.font = '800 12px "Baloo 2", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Whispering Falls', x, y + 17);
+    }
+    // camp tents (first aid + naps): a little canvas triangle with a red cross
+    for (const t of g.structures.tents || []) {
+      const [x, y] = toPx(t.x, t.z);
+      ctx.fillStyle = '#c9b48a'; ctx.strokeStyle = '#2a1f2e'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 5); ctx.lineTo(x - 6, y + 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e8384f'; ctx.fillRect(x - 1, y - 1, 2, 5); ctx.fillRect(x - 2.5, y + 0.5, 5, 2);
+    }
+    // quad bikes where they're parked (or wherever you left them)
+    for (const v of g.vehicles.list) {
+      const [x, y] = toPx(v.pos.x, v.pos.z);
+      ctx.fillStyle = v.crashed ? '#888' : '#ff6b2c'; ctx.strokeStyle = '#2a1f2e'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 5, y - 3, 10, 6, 2) : ctx.rect(x - 5, y - 3, 10, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#2a1f2e'; ctx.beginPath(); ctx.arc(x - 4, y + 4, 2, 0, 6.28); ctx.arc(x + 4, y + 4, 2, 0, 6.28); ctx.fill();
+    }
     // party members
     for (const m of g.coop.members()) {
       const [x, y] = toPx(m.x, m.z);

@@ -502,6 +502,13 @@ export class Game {
   /** Walking into an outpost discovers it (fast travel) and counts for visit jobs. */
   checkPOIs() {
     const p = this.player.pos;
+    const wf = this.waterfall && this.waterfall.base;
+    if (wf && !this.profile.discovered.includes('falls') && Math.hypot(p.x - wf.x, p.z - wf.z) < 70) {
+      this.profile.discover('falls');
+      this.ui.toast('Discovered Whispering Falls!', 'big', 2.4);
+      this.ui.feed('Whispering Falls is on your map. Animals come here to drink.', 'good');
+      this.jobs.onEvent('visit', { poi: 'falls' });
+    }
     for (const poi of POIS) {
       if (Math.hypot(p.x - poi.x, p.z - poi.z) > poi.r + 6) continue;
       if (!this.profile.discovered.includes(poi.id)) {

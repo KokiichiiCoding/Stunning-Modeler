@@ -5,7 +5,7 @@
 import { THREE } from '../three.js';
 import { G, paint, merge, xf, wobble, toonGradient } from '../render/toon.js';
 import { Rng, hash01 } from '../core/rng.js';
-import { Biome, HALF, WORLD_SIZE, WORLD_SEED, WATER_LEVEL, POIS } from './terrainData.js';
+import { Biome, HALF, WORLD_SIZE, WORLD_SEED, WATER_LEVEL, POIS, FALLS } from './terrainData.js';
 
 // ---------------------------------------------------------------- shared material
 export const vegUniforms = { uTime: { value: 0 }, uWind: { value: new THREE.Vector2(1, 0) }, uGust: { value: 0.5 } };
@@ -251,6 +251,8 @@ export class Vegetation {
   near(x, z, r = 0) {
     const t = this.terrain;
     for (const p of POIS) if (Math.hypot(x - p.x, z - p.z) < p.r + 6 + r) return true;
+    // keep a clear view of the waterfall from downstream
+    { const fx = x - FALLS.x, fz = z - FALLS.z; const along = fx * FALLS.dx + fz * FALLS.dz, across = Math.abs(-fx * FALLS.dz + fz * FALLS.dx); if (along < 12 && along > -70 && across < 14 + Math.max(0, -along) * 0.25) return true; }
     return !t.inBounds(x, z, 8) || t.heightAt(x, z) < WATER_LEVEL + 0.25;
   }
 
