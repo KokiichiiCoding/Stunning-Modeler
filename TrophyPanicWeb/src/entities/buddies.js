@@ -39,6 +39,30 @@ export class Buddies {
     const P = g.player, T = g.terrain;
     const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
     for (const b of this.list) {
+      // bowled over: fly, flail, bounce, then scramble back up
+      if (b.tumble) {
+        const t = b.tumble;
+        t.t += dt; t.vy -= 20 * dt;
+        b.pos.x += t.vx * dt; b.pos.z += t.vz * dt; b.pos.y += t.vy * dt;
+        t.rx += t.sx * dt; t.rz += t.sz * dt;
+        const gy = T.heightAt(b.pos.x, b.pos.z);
+        if (b.pos.y < gy) { b.pos.y = gy; t.vy = Math.abs(t.vy) * 0.3; t.vx *= 0.5; t.vz *= 0.5; t.sx *= 0.5; t.sz *= 0.5; if (t.vy > 1.5) g.audio.play('bonk', b.pos); }
+        if (t.t > 2.2) b.tumble = null;
+        continue;
+      }
+      for (const a of g.animals.list) {
+        if (!a.alive || !(a.speed > 4)) continue;
+        const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, dd = Math.hypot(dx, dz);
+        if (dd < a.radius + 0.5) {
+          const k = Math.min(12, a.speed * 0.9) * Math.min(1.5, a.identity.bodyMassKg / 80);
+          b.tumble = { t: 0, vx: dx / (dd || 1) * k, vz: dz / (dd || 1) * k, vy: 4 + k * 0.3, rx: 0, rz: 0, sx: (this.rng.next() - 0.5) * 16, sz: (this.rng.next() - 0.5) * 16 };
+          g.audio.babble(b.pos, 'scared', b.voice); g.audio.play('oof', b.pos);
+          g.fx.dazed({ headWorld: () => ({ x: b.pos.x, y: b.pos.y + 0.7, z: b.pos.z }) }, 2.5);
+          if (Math.hypot(P.pos.x - b.pos.x, P.pos.z - b.pos.z) < 60) g.ui.toast(`${b.name} got bowled over by a ${a.species.displayName.split(' ').pop().toLowerCase()}!`, 'hit');
+          break;
+        }
+      }
+      if (b.tumble) continue;
       // formation: behind and to either side
       const side = b.slot === 0 ? 1 : -1;
       const back = P.vehicle ? 6 : 3 + b.slot * 1.2;
@@ -102,9 +126,9 @@ export class Buddies {
       m.setVisible(g.state !== 'title');
       m.group.rotation.order = 'XYZ';
       m.group.position.set(b.pos.x, b.pos.y, b.pos.z);
-      m.group.rotation.set(0, b.yaw, 0);
+      m.group.rotation.set(b.tumble ? b.tumble.rx : 0, b.yaw, b.tumble ? b.tumble.rz : 0);
       m.animate(dt, {
-        speed: b.speed, stance: b.scared > 0 ? 'stand' : P.stance, pitch: 0,
+        flail: !!b.tumble, speed: b.tumble ? 3 : b.speed, stance: b.scared > 0 ? 'stand' : P.stance, pitch: 0,
         point: b.pointT > 0, scared: b.scared > 0, dance: g.danceT > 0, wave: g.waveT > 0, showRifle: !(b.pointT > 0),
       });
     }
