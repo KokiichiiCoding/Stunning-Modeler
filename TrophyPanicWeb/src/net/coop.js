@@ -408,7 +408,7 @@ export class Coop {
     const near = g.animals.list.filter(a => !a.harvested && centers.some(c => Math.hypot(a.pos.x - c.x, a.pos.z - c.z) < 260));
     near.sort((a, b) => Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z) - Math.hypot(b.pos.x - g.player.pos.x, b.pos.z - g.player.pos.z));
     return near.slice(0, 26).map(a => {
-      const flags = (a.downed ? 1 : 0) | (a.creature.life === Life.Dead ? 2 : 0) | (a.death && a.death.side > 0 ? 4 : 0) | (a.creature.wounds.length ? 8 : 0) | (a.state === 'Aggressive' ? 16 : 0) | (a.creature.mobility === 'Limping' ? 32 : 0);
+      const flags = (a.downed ? 1 : 0) | (a.creature.life === Life.Dead ? 2 : 0) | (a.death && a.death.side > 0 ? 4 : 0) | (a.creature.wounds.length ? 8 : 0) | (a.state === 'Aggressive' ? 16 : 0) | (a.creature.mobility === 'Limping' ? 32 : 0) | (a.death && a.death.legsUp ? 64 : 0);
       return [SPECIES_IDS.indexOf(a.species.id), a.identity.seed, Math.round(a.pos.x * 10), Math.round(a.pos.z * 10), Math.round(a.facingYaw() * 100), Math.round(a.speed * 10), flags, Math.round(a.grazeT > 0 ? 1 : 0)];
     });
   }
@@ -449,7 +449,7 @@ export class Coop {
       a.creature.mobility = flags & 32 ? 'Limping' : 'Full';
       if ((flags & 1) && !a.downed) {
         a.downed = true; a.alive = false; a.downTime = g.time;
-        a.death = { t: 0, side: flags & 4 ? 1 : -1, spin: 0, vy: 1.5, y: 0, roll: 0 };
+        a.death = { t: 0, side: flags & 4 ? 1 : -1, spin: 0, vy: 1.5, y: 0, roll: 0, legsUp: !!(flags & 64) };
         a.rig.eyes.visible = false; a.rig.deadEyes.visible = true; a.rig.tongue.visible = true; a.rig.brows.visible = false; a.rig.snarl.visible = false;
         g.audio.play('boing', a.pos);
       }

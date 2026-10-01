@@ -590,6 +590,26 @@ const scripts = {
     });
     console.log('  spray', JSON.stringify(r));
   },
+  async legsup() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await page.evaluate(() => {
+      const g = window.__tp.game;
+      let tries = 0;
+      while (!g.animals.list.some(a => a.species.id === 'deer') && tries++ < 80) g.animals.spawnGroup(g.player.pos);
+      const info = window.__tp.debug.approach('deer', 7);
+      const a = g.animals.list.find(x => x.id === info.id);
+      a.creature.life = 'Down'; a.onIncapacitated ? a.onIncapacitated() : null;
+      if (a.death) a.death.legsUp = true;
+      for (let i = 0; i < 120; i++) a.stepDeath(1 / 60);
+      window.__tp.debug.freeze(true);
+      for (const o of g.animals.list) if (o !== a) { o.dispose(); o.harvested = true; }
+      g.animals.list = [a];
+      window.__tp.debug.aimAtAnimal(a, 'heart'); g.player.pitch -= 0.15;
+    });
+    for (let i = 0; i < 3; i++) await step(5);
+    await shot('99_legsup');
+  },
   async honey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

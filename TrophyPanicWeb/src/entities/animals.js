@@ -541,6 +541,7 @@ export class Animal {
     this.state = 'Down'; this.goal = 'None';
     const tumble = Math.min(1, this.speed / 8);
     this.death = { t: 0, side: this.rng.chance(0.5) ? 1 : -1, spin: tumble * 4, vy: 1 + tumble * 3, y: 0, roll: 0 };
+    this.death.legsUp = this.rng.chance(0.35); // classic cartoon: flat on its back, legs in the air
     this.rig.eyes.visible = false; this.rig.deadEyes.visible = true; this.rig.tongue.visible = true; this.rig.brows.visible = false; this.rig.snarl.visible = false;
     g.audio.play(this.species.id === 'turkey' ? 'gobble' : this.species.id === 'boar' ? 'squeal' : 'boing', this.pos);
     g.sounds.emit('carcass', this.pos.x, this.pos.y + 0.5, this.pos.z, 200, g.time, this.id);
@@ -555,7 +556,7 @@ export class Animal {
     const d = this.death;
     d.t += dt;
     // A comic topple: the body rolls onto its side with a small bounce.
-    d.roll = Math.min(Math.PI / 2, d.roll + dt * (3 + d.spin));
+    d.roll = Math.min(d.legsUp ? Math.PI : Math.PI / 2, d.roll + dt * (3 + d.spin));
     d.vy -= 12 * dt;
     d.y = Math.max(0, d.y + d.vy * dt);
     if (d.y === 0 && d.vy < 0) d.vy = Math.abs(d.vy) > 2 ? -d.vy * 0.3 : 0;
@@ -571,9 +572,11 @@ export class Animal {
       // lying-down height, so the body topples in place.
       const B = this.species.body;
       const c = B.leg + B.h / 2;
-      const k = this.death.roll / (Math.PI / 2);
-      const phi = this.death.side * this.death.roll;
-      const yTarget = c + (B.w * 0.5 - c) * k + this.death.y;
+      const roll = this.death.roll;
+      const k = Math.min(1, roll / (Math.PI / 2));
+      const phi = this.death.side * roll;
+      let yTarget = c + (B.w * 0.5 - c) * k + this.death.y;
+      if (roll > Math.PI / 2) yTarget = B.w * 0.5 + (B.h * 0.52 - B.w * 0.5) * ((roll - Math.PI / 2) / (Math.PI / 2)) + this.death.y;
       r.body.rotation.z = phi;
       r.body.position.set(c * Math.sin(phi), yTarget - c * Math.cos(phi), 0);
     }
@@ -585,7 +588,11 @@ export class Animal {
     const yaw = this.facingYaw();
     const sp = this.species, B = sp.body;
     if (this.death) {
-      r.legs.forEach((l, i) => { l.rotation.x = (i % 2 ? 0.5 : -0.5) * (this.death.roll / 1.57); });
+      if (this.death.legsUp) {
+        // stiff legs to the sky, with the odd comedic twitch
+        const t = this.game.visualTime, tw = (t % 4.5) < 0.35 ? Math.sin(t * 40) * 0.25 : 0;
+        r.legs.forEach((l, i) => { l.rotation.x = (i < 2 ? 0.12 : -0.12) + (i % 2 ? tw : -tw); l.rotation.z = 0; });
+      } else r.legs.forEach((l, i) => { l.rotation.x = (i % 2 ? 0.5 : -0.5) * Math.min(1, this.death.roll / 1.57); });
       r.head.rotation.set(0.3, 0, this.death.side * 0.3);
       if (r.tail) r.tail.rotation.set(0, 0, 0);
       return;
