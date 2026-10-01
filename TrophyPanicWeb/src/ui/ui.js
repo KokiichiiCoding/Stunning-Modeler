@@ -140,7 +140,7 @@ export class UI {
   showDowned(source, bill) {
     this.hideScreens();
     $('downed').hidden = false;
-    const titles = { 'maul': 'You got mauled.', 'stomp': 'You got stomped.', 'bite': 'You got nibbled. A lot.', 'pounce': 'Pounced!', 'tusk gore': 'Boar\'d to death.', 'horn toss': 'Bison\'d. Airborne, briefly.', 'a hard landing': 'Gravity wins again.', 'blood loss': 'You ran out of blood.' };
+    const titles = { 'maul': 'You got mauled.', 'stomp': 'You got stomped.', 'bite': 'You got nibbled. A lot.', 'pounce': 'Pounced!', 'tusk gore': 'Boar\'d to death.', 'horn toss': 'Bison\'d. Airborne, briefly.', 'ankle pecks': 'Defeated by a turkey. Nobody needs to know.', 'a hard landing': 'Gravity wins again.', 'blood loss': 'You ran out of blood.' };
     $('downed-title').textContent = titles[source] || 'You got got.';
     $('downed-text').textContent = 'The rangers carried you back to the lodge. They were very nice about it.';
     $('downed-bill').textContent = bill > 0 ? `Medical bill: ${money(bill)}` : 'The rangers waived the bill. They felt bad.';

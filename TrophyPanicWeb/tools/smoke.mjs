@@ -675,6 +675,22 @@ const scripts = {
     await step(1);
     await shot('99_soak');
   },
+  async turkey() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, M = g.animals;
+      let tries = 0, tom = null;
+      while (!tom && tries++ < 400) { M.spawnGroup(p.pos); tom = M.list.find(a => a.species.id === 'turkey' && a.identity.sex === 'Male'); }
+      tom.identity.temperament = 'Ornery';
+      p.spawnAt(tom.pos.x + 5, tom.pos.z, 0);
+      const hp0 = p.hp; const goals = new Set();
+      let minHp = 100;
+      for (let i = 0; i < 60 * 12; i++) { g.advance(1 / 60); goals.add(tom.goal); minHp = Math.min(minHp, p.hp); }
+      return { goals: [...goals], worstDmg: +(hp0 - minHp).toFixed(1), downed: p.downed };
+    });
+    console.log('  turkey', JSON.stringify(r));
+  },
   async honey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

@@ -293,6 +293,7 @@ export const SPECIES = {
     behavior: { grouping: 'herd', groupSize: [3, 7], fear: 25, aggression: 999, curiosity: 0.55, defensiveRadius: 0, wounded: 'flee_bed' },
     tracks: { stride: 0.35, printCm: 9 },
     klass: [1, 2], value: 95, xp: 60, danger: 0,
+    attack: { name: 'ankle pecks', blunt: 3, cut: 1, knock: 1.5, reach: 0.9, cooldown: 0.6 },
     activity: ['dawn', 'day', 'dusk'], habitat: { meadow: 3, forest: 2 },
     biped: true,
     body: { len: 0.5, h: 0.46, w: 0.4, leg: 0.36, neck: 0.3, head: 0.12, headFwd: 0.1 },

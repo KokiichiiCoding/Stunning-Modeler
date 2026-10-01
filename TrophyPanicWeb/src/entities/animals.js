@@ -282,6 +282,12 @@ export class Animal {
     // In a group only the leader (or a cornered animal) stands its ground;
     // the rest of the sounder/herd scatters.
     const mayConfront = !this.group || this.group.leader === this || hd < 6;
+    // Bold or ornery tom turkeys take it personally when you get close: ankle pecks.
+    if (sp.id === 'turkey' && this.identity.sex === 'Male' && (this.identity.temperament === 'Ornery' || this.identity.temperament === 'Bold')
+        && nearestHunter && hd < 9 && !wounded && g.time > (this.peckCd || 0)) {
+      this.peckCd = g.time + 45;
+      charge(nearestHunter); return;
+    }
     if (B.territorial && hd < B.territorial && this.alertness > 20 && nearestHunter && mayConfront) { charge(nearestHunter); return; }
     if (this.alertness >= B.aggression && hd < B.defensiveRadius && nearestHunter && mayConfront) {
       // Black bears bluff first: a charge that stops short, a huff, then a real one.
