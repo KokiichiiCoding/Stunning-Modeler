@@ -3,8 +3,16 @@
 // regions in species.js. Local space: +z forward, +y up, +x = animal's LEFT.
 
 import { THREE } from '../three.js';
+import { glowTexture } from '../world/structures.js';
 import { G, paint, merge, xf, toonMat, addOutline } from '../render/toon.js';
 
+const _shine = {};
+function shineMat(predator) {
+  const k = predator ? 'p' : 'g';
+  // constant screen size: a pair of glints still reads at 60 m in the dark
+  if (!_shine[k]) { _shine[k] = new THREE.PointsMaterial({ map: glowTexture(), size: 9, sizeAttenuation: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }); _shine[k].color.setRGB(...(predator ? [3.0, 2.2, 0.6] : [1.6, 2.6, 1.7])); }
+  return _shine[k];
+}
 function tint(hex, k) { const c = new THREE.Color(hex); c.multiplyScalar(k); return c.getHex(); }
 
 function buildEyes(look, H, dead) {
@@ -190,6 +198,14 @@ export function buildAnimalRig(sp, animal) {
   const brows = new THREE.Mesh(buildBrows(L2, H), mat);
   brows.visible = false;
   head.add(eyes); head.add(deadEyes); head.add(brows);
+  // eye-shine: two HDR glints that only show up in the dark (predators burn amber, the rest green-white)
+  const es = (L2.eye === 'big' ? 0.27 : L2.eye === 'sly' ? 0.2 : 0.19) * 1.12 * H;
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-H * 0.29, H * 0.12, H * 0.36 + es * 0.7, H * 0.29, H * 0.12, H * 0.36 + es * 0.7]), 3));
+  const shine = new THREE.Points(sg, shineMat(sp.behavior.predator || sp.id === 'fox' || sp.id === 'raccoon'));
+  shine.frustumCulled = false;
+  shine.visible = false;
+  head.add(shine);
   // Snarl: an open mouth full of cartoon teeth, shown while charging
   const sn = H * snoutLen, mz = H * 0.38 + sn * 0.92, my = -H * 0.14 - sn * 0.5;
   const snarlParts = [
@@ -267,7 +283,7 @@ export function buildAnimalRig(sp, animal) {
       for (const o of outlines) o.visible = near;
       for (const c of casters) c.castShadow = near;
     },
-    root, body, head, headMesh, eyes, deadEyes, brows, snarl, tongue, trophyMesh, tail, legs, torso,
+    root, body, head, headMesh, eyes, deadEyes, brows, snarl, shine, tongue, trophyMesh, tail, legs, torso,
     H, headPos, scale: s,
   };
 }

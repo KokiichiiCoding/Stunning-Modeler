@@ -222,6 +222,16 @@ const scripts = {
       return { n: wolves.length, minD: +minD.toFixed(1), goals: [...goals], hurt: +(hp0 - p.hp).toFixed(1) };
     });
     console.log('  wolves', JSON.stringify(w));
+    await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, f = g.campfires.mine;
+      const wolf = g.animals.list.filter(a => a.species.id === 'wolf' && a.alive).sort((a, b) => Math.hypot(a.pos.x - p.pos.x, a.pos.z - p.pos.z) - Math.hypot(b.pos.x - p.pos.x, b.pos.z - p.pos.z))[0];
+      if (wolf) { const dx = wolf.pos.x - f.x, dz = wolf.pos.z - f.z, l = Math.hypot(dx, dz); p.pos.x = f.x + dx / l * 5; p.pos.z = f.z + dz / l * 5; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z); }
+      if (wolf) { p.yaw = Math.atan2(-(wolf.pos.x - p.pos.x), -(wolf.pos.z - p.pos.z)); p.pitch = -0.05; }
+      window.__light = g.light;
+    });
+    for (let i = 0; i < 3; i++) await step(2);
+    console.log('  light', await page.evaluate(() => window.__light));
+    await shot('100_wolf_eyes');
     if (w.n && w.minD < 12) errors.push('wolves walked into the campfire: ' + JSON.stringify(w));
     // a bear smells the marshmallows
     const b = await page.evaluate(() => {

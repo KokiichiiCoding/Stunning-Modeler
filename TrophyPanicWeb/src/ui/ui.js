@@ -156,16 +156,21 @@ export class UI {
 
   // ------------------------------------------------------------------ feed & toasts
   feed(text, kind = 'info') {
+    // repeats ("wolf nearby" ×3) bump a counter instead of stacking
+    const last = this.feedItems[this.feedItems.length - 1];
+    if (last && last.text === text) { last.n = (last.n || 1) + 1; last.el.textContent = `${text} ×${last.n}`; last.t = 6; return; }
     const el = document.createElement('div');
     el.className = 'feed-item ' + kind;
     el.textContent = text;
     $('feed').appendChild(el);
-    this.feedItems.push({ el, t: 6 });
+    this.feedItems.push({ el, t: 6, text });
     while (this.feedItems.length > 6) { const f = this.feedItems.shift(); f.el.remove(); }
   }
 
   toast(text, kind = '', seconds = 2.2) {
     if (kind !== 'big' && !this.game.profile.settings.reports) return;
+    // the same shout twice in a row (three wolves charging) is one toast
+    for (const t of $('toast-stack').children) if (t.textContent === text) return;
     const el = document.createElement('div');
     el.className = 'toast ' + kind;
     el.textContent = text;

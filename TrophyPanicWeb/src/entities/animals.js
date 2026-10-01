@@ -243,7 +243,11 @@ export class Animal {
     };
     // Bear-sprayed: nothing on its mind but getting away and rubbing its face.
     if (g.time < (this.sprayedUntil || 0)) { this.alertness = 100; flee(); return; }
+    const fireShy = (B.predator || sp.id === 'fox') && !sp.id.includes('bear') && sp.id !== 'grizzly';
     const charge = (who) => {
+      // nobody fire-shy charges into the firelight
+      const hf = who || nearestHunter;
+      if (fireShy && hf && g.campfires && g.campfires.near(hf.x, hf.z, FEAR_R - 4)) { this.state = 'Stalking'; this.goal = 'Watch'; this.target = null; this.lookAt(hf.x, hf.z); return; }
       if (g.time < (this.retreatUntil || 0)) { flee(); return; }
       const h0 = who || nearestHunter;
       // Playing dead works on bears: a still, prone hunter is not a threat.
@@ -268,7 +272,7 @@ export class Animal {
 
     // ---- campfires: wolves, cougars and foxes won't step into the firelight;
     // they pace around the edge of it instead (eyes in the dark)
-    if ((B.predator || sp.id === 'fox') && !sp.id.includes('bear') && sp.id !== 'grizzly' && g.campfires) {
+    if (fireShy && g.campfires) {
       const f = g.campfires.near(this.pos.x, this.pos.z, FEAR_R);
       if (f) {
         const ang = Math.atan2(this.pos.z - f.z, this.pos.x - f.x) + 0.5;
@@ -700,6 +704,9 @@ export class Animal {
     const period = 2.6 + (this.identity.seed % 5) * 0.55;
     const blink = (vt % period) < 0.11;
     r.eyes.scale.y = blink ? 0.12 : 1;
+    // eye-shine in the dark: worth it for the campfire-at-night moment
+    const dark = this.game.period === 'night' || (this.game.light ?? 1) < 0.35;
+    r.shine.visible = dark && !blink && this.alive && !this.downed;
     r.brows.visible = this.goal === 'Charge' || this.state === 'Aggressive' || this.state === 'Stalking';
     r.snarl.visible = (this.goal === 'Charge' && !this.bluff) || (this.state === 'Aggressive' && this.species.danger >= 2) || this.lungeT > 0;
     if (this.identity.legendary) {
