@@ -32,6 +32,7 @@ artifact declaring the `room` capability to get online co-op.
 | T / H / F / G | animal call / bandage / flashlight / wave |
 | X | ping what you're looking at (the party sees it) |
 | K / P / J | dog: find it or heel / pitch or pack the ground blind / victory dance |
+| N / Y | Scent Killer (cures skunk stink) / Moss Cola (stamina, shaky aim) |
 | Enter | party chat |
 | V | first or third person (chase cam on a quad) |
 | M | map and fast travel |
@@ -41,8 +42,9 @@ artifact declaring the `room` capability to get online co-op.
 - **Open world.** A 1 km² seeded reserve (Wobblewood) with forest, meadow,
   marsh, ridges, snowcaps, a lake and a river, one lodge and four outposts.
   Wildlife streams in around every hunter; there are no levels or set hunts.
-- **Twelve species.** Deer, elk, boar, turkey, rabbit, fox, black bear,
-  grizzly, moose, bison, wolf and cougar. Each is generated from a seed with its own sex,
+- **Thirteen species.** Deer, elk, boar, turkey (ornery toms peck ankles),
+  rabbit, fox, skunk (it sprays, and you reek), black bear, grizzly, moose,
+  bison, wolf and cougar. Each is generated from a seed with its own sex,
   age, mass, trophy size, temperament, a nickname and an occasional rare
   coat.
 - **Need zones.** Every species has feeding, drinking and resting zones,
@@ -107,7 +109,9 @@ artifact declaring the `room` capability to get online co-op.
     stance, wind and weather status bar.
   - Golden-hour light, purple nights with a crescent moon, and a ring of
     snowy peaks.
-  - Lantern-lit camps and a waterfall at the river's source.
+  - Lantern-lit camps with tents (first aid, naps that skip time), arrow
+    signposts on the trails, and Whispering Falls at the river's source.
+  - A storybook post pass: bloom, warm grade and vignette.
   - Toon shading with ink outlines.
   - Wobbly vegetation with far-LOD impostors.
   - Cartoon splats: full, mild, or confetti instead.
@@ -163,4 +167,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
-- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`
