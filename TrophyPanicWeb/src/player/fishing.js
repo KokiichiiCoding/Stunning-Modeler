@@ -150,8 +150,10 @@ export class Fishing {
         break;
       case 'fight': this.fight(dt, cmd); break;
       case 'show':
-        this.showT -= dt;
-        if (this.showT <= 0 || cmd.firePressed) this.reset();
+        // admire it… or slap someone with it
+        this.showT -= dt; this.slapT = Math.max(0, (this.slapT || 0) - dt);
+        if (cmd.firePressed && this.slapT <= 0 && this.showT < 7.6) this.slap();
+        if (this.showT <= 0) this.reset();
         break;
     }
     if (this.state !== 'idle' && this.state !== 'show' && Math.hypot(b.x - p.pos.x, b.z - p.pos.z) > 60) this.reset();
@@ -245,8 +247,45 @@ export class Fishing {
     m.scale.setScalar(s);
     this.held = m; this.heldScale = s;
     g.viewScene.add(m);
-    this.state = 'show'; this.showT = 2.6;
-    this.danceAfter = !f.junk;
+    this.state = 'show'; this.showT = 8;
+  }
+
+  /** FISH SLAP. Buddies fall over, friends get knocked about, animals see stars. */
+  slap() {
+    const g = this.game, p = g.player, F = this.fish;
+    this.slapT = 0.45; this.slapAnim = 0.3; this.showT = Math.max(this.showT, 3);
+    const fw = p.forward(), l = Math.hypot(fw.x, fw.z) || 1, fx = fw.x / l, fz = fw.z / l;
+    const inFront = (x, z, r = 2.4) => { const dx = x - p.pos.x, dz = z - p.pos.z, d = Math.hypot(dx, dz); return d < r && (dx * fx + dz * fz) / (d || 1) > 0.25; };
+    const what = F ? F.f.name.split(' ').pop().toLowerCase() : 'fish';
+    let hit = null;
+    for (const b of g.buddies.list) {
+      if (b.tumble || !inFront(b.pos.x, b.pos.z)) continue;
+      b.tumble = { t: 0, vx: fx * 5, vz: fz * 5, vy: 4.5, rx: 0, rz: 0, sx: (this.rng.next() - 0.5) * 14, sz: (this.rng.next() - 0.5) * 14 };
+      b.sitting = false;
+      g.audio.babble(b.pos, 'scared', b.voice);
+      hit = hit || `${b.name} got slapped with a ${what}!`;
+    }
+    for (const r of g.coop.peers.values()) {
+      if (!r.target || !inFront(r.target.x, r.target.z)) continue;
+      g.coop.sendTo(r.peer, 'bonk', { b: 3, c: 0, kx: fx * 7, ky: 3, kz: fz * 7, what });
+      hit = hit || `You slapped ${r.name} with a ${what}!`;
+    }
+    for (const a of g.animals.list) {
+      if (!a.alive || a.downed || !inFront(a.pos.x, a.pos.z, 2.2 + (a.radius || 0.5))) continue;
+      a.daze = 2.5; a.alertness = 100; a.setThreat(p.pos.x, p.pos.z, 'player');
+      g.fx.dazed(a, 2.5);
+      g.jobs.onEvent('bonk', { sp: a.species.id, prop: 'fish' });
+      hit = hit || `You slapped a ${a.species.displayName.split(' ').pop().toLowerCase()} with a ${what}. It is reconsidering everything.`;
+    }
+    g.audio.play('throw', p.pos);
+    if (hit) {
+      const e = p.eyePos();
+      g.audio.play('splat', p.pos); g.audio.play('boing', p.pos);
+      g.fx.burst(e.x + fx * 1.2, e.y - 0.3, e.z + fz * 1.2, { count: 10, color: 0xcfeaff, speed: 3, up: 2, kind: 'confetti', size: 0.05 });
+      g.ui.toast('FISH SLAP!', 'hit', 1.2);
+      g.ui.feed(hit, 'good');
+      g.profile.stats.slaps = (g.profile.stats.slaps || 0) + 1;
+    }
   }
 
   // -------------------------------------------------------------- render
@@ -280,9 +319,16 @@ export class Fishing {
     }
     if (this.held) {
       // flop flop
-      const t = g.visualTime, k = Math.min(1, (2.6 - this.showT) * 4);
+      const t = g.visualTime, k = Math.min(1, (8 - this.showT) * 4);
       this.held.position.set(0.02, -0.12 + k * 0.08, -0.55);
       this.held.rotation.set(0.15, Math.PI / 2 + 0.3, Math.sin(t * 14) * 0.35 * (this.fish && this.fish.f.junk ? 0.2 : 1));
+      if (this.slapAnim > 0) {
+        // a big right-to-left swipe
+        this.slapAnim = Math.max(0, this.slapAnim - dt);
+        const u = 1 - this.slapAnim / 0.3, sw = Math.sin(u * Math.PI);
+        this.held.position.x = 0.35 - u * 0.7; this.held.position.z = -0.55 - sw * 0.25;
+        this.held.rotation.y += -sw * 1.2; this.held.rotation.z += sw * 0.6;
+      }
     }
     const vm = g.weapons.vm;
     vm.rodBend = this.state === 'fight' ? Math.min(1, this.tension) : this.state === 'bite' ? 0.3 : 0;

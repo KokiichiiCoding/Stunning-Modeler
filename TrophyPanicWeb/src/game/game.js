@@ -468,7 +468,7 @@ export class Game {
     const w = this.weapons;
     for (let i = 1; i <= 9; i++) if (I.wasPressed('Digit' + i)) w.selectSlot(i - 1);
     if (I.mouse.wheel) w.cycle(I.mouse.wheel);
-    if (I.wasPressed('KeyR')) w.reload();
+    if (I.wasPressed('KeyR')) { if (this.fishing.state === 'show') this.fishing.reset(); else w.reload(); }
     if (I.wasPressed('KeyB')) w.toggleBinoculars();
     if (I.wasPressed('KeyQ')) { this.fx.hunterSense(true); this.animals.senseZones(this.player.pos); }
     if (I.wasPressed('KeyE')) this.interact();

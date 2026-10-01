@@ -98,6 +98,21 @@ const scripts = {
     if (r.landed !== 'float' || r.hooked !== 'fight' || r.fishCount < 1) errors.push('fishing failed: ' + JSON.stringify(r));
     await page.evaluate(() => window.__tp.debug.renderOnce());
     await shot('102_fish_caught');
+    // FISH SLAP a buddy standing in front of you
+    const slap = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, F = g.fishing;
+      g.profile.settings.buddies = 1; g.buddies.sync();
+      const b = g.buddies.list[0], fw = p.forward(), l = Math.hypot(fw.x, fw.z);
+      b.pos.x = p.pos.x + fw.x / l * 1.4; b.pos.z = p.pos.z + fw.z / l * 1.4; b.pos.y = g.terrain.heightAt(b.pos.x, b.pos.z);
+      F.showT = 5; F.slap();
+      for (let i = 0; i < 8; i++) g.advance(1 / 60);
+      return { state: F.state, tumbling: !!b.tumble, slaps: g.profile.stats.slaps || 0 };
+    });
+    console.log('  slap', JSON.stringify(slap));
+    if (!slap.tumbling) errors.push('fish slap missed: ' + JSON.stringify(slap));
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('102_fish_slap');
+    await page.evaluate(() => { const g = window.__tp.game; g.profile.settings.buddies = 0; g.buddies.sync(); });
     // a second cast, captured mid-fight
     await page.evaluate(() => {
       const g = window.__tp.game, I = g.input, F = g.fishing;

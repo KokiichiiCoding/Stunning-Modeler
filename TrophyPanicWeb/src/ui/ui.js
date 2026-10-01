@@ -398,7 +398,7 @@ export class UI {
       const fs = g.fishing.state;
       text = fs === 'idle' ? (g.fishing.draw > 0 ? 'Let go to cast!' : '<kbd>Hold click</kbd>wind up a cast at the water')
         : fs === 'float' ? 'Wait for the bite… <kbd>Click</kbd>reel in' : fs === 'bite' ? '<kbd>CLICK!</kbd>Set the hook!'
-        : fs === 'fight' ? null : fs === 'show' ? null : null;
+        : fs === 'show' ? '<kbd>Click</kbd>FISH SLAP · <kbd>R</kbd>let it go' : null;
     }
     else if (g.campfires.canRoast()) text = '<kbd>E</kbd>Roast a marshmallow · <kbd>L</kbd>put the fire out';
     else if (g.nearestKit(p.pos)) text = p.hp < 99 || p.bleed > 0 ? '<kbd>E</kbd>Use first-aid crate' : '<kbd>E</kbd>Nap in the tent';
