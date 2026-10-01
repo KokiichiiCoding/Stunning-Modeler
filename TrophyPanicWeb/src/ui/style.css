@@ -351,3 +351,18 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 #tip-card { top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); max-width: min(380px, 40vw); transform: translate(-50%, 6px); }
 #tip-card.on { transform: translate(-50%, 0); }
 .rest-card { max-width: 440px; text-align: center; } .rest-card .btn-col { margin: 12px 0; }
+
+/* touch controls (phones/tablets only) */
+#touch { position: absolute; inset: 0; pointer-events: none; }
+.t-stick { position: absolute; left: 300px; bottom: 70px; width: 120px; height: 120px; border-radius: 50%; background: rgba(12,14,12,.35); border: 2px solid rgba(255,255,255,.25); opacity: .55; }
+.t-stick.on { opacity: 1; }
+.t-stick i { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(182,242,90,.85); }
+.t-btn { position: absolute; pointer-events: auto; width: 54px; height: 54px; border-radius: 50%; border: 0; background: var(--panel); color: var(--hudtxt); font: 400 22px var(--term); touch-action: none; -webkit-user-select: none; user-select: none; }
+.t-btn.on { background: var(--lime); color: #142008; }
+.b-fire { right: 26px; bottom: 170px; width: 84px; height: 84px; font-size: 26px; background: rgba(255,90,74,.75); }
+.b-aim { right: 124px; bottom: 186px; } .b-use { right: 124px; bottom: 252px; } .b-jump { right: 40px; bottom: 270px; }
+.b-crouch { right: 190px; bottom: 164px; } .b-prone { right: 190px; bottom: 228px; } .b-reload { right: 40px; bottom: 112px; width: 46px; height: 46px; }
+.b-binos { right: 26px; top: 120px; } .b-sense { right: 90px; top: 120px; } .b-cycle { right: 154px; top: 120px; } .b-ping { right: 218px; top: 120px; }
+.b-pause { left: 50%; top: 52px; transform: translateX(-50%); width: 44px; height: 44px; font-size: 18px; }
+body.is-touch #weapon-box { transform: scale(.8); transform-origin: right bottom; bottom: 6px; right: 6px; }
+body.is-touch #feed { max-width: 46vw; }

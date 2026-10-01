@@ -23,7 +23,7 @@ const browser = await chromium.launch({
   headless: true,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 });
-const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+const page = await browser.newPage({ viewport: { width: 960, height: 540 }, hasTouch: scriptName === 'touch' });
 await page.addInitScript(() => { window.__TP_TEST = true; });
 const errors = [];
 const logs = [];
@@ -54,6 +54,38 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async touch() {
+    // phones/tablets: stick moves, right-side drag looks, FIRE fires
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await step(30);
+    const r = await page.evaluate(async () => {
+      const g = window.__tp.game, c = g.canvas;
+      const T = (id, x, y) => new Touch({ identifier: id, target: c, clientX: x, clientY: y });
+      const fire = (type, el, list) => el.dispatchEvent(new TouchEvent(type, { changedTouches: list, touches: list, bubbles: true, cancelable: true }));
+      const p0 = { x: g.player.pos.x, z: g.player.pos.z }, yaw0 = g.player.yaw;
+      fire('touchstart', c, [T(1, 150, 400)]);
+      fire('touchmove', c, [T(1, 150, 320)]);
+      fire('touchstart', c, [T(2, 700, 300)]);
+      fire('touchmove', c, [T(2, 760, 300)]);
+      window.__tp.debug.stepFrames(60);
+      const moved = Math.hypot(g.player.pos.x - p0.x, g.player.pos.z - p0.z);
+      const turned = Math.abs(g.player.yaw - yaw0);
+      fire('touchend', c, [T(1, 150, 320)]);
+      fire('touchend', c, [T(2, 760, 300)]);
+      const stuck = ['KeyW', 'KeyA', 'KeyS', 'KeyD'].some(k => g.input.down.has(k));
+      const btn = document.querySelector('.t-btn.b-fire');
+      const ammo0 = g.player.loadout ? JSON.stringify(g.player.loadout) : '';
+      fire('touchstart', btn, [new Touch({ identifier: 3, target: btn, clientX: 900, clientY: 450 })]);
+      window.__tp.debug.stepFrames(3);
+      fire('touchend', btn, [new Touch({ identifier: 3, target: btn, clientX: 900, clientY: 450 })]);
+      window.__tp.debug.stepFrames(20);
+      return { enabled: g.touch.enabled, moved, turned, stuck, shots: g.stats ? g.stats.shots : null, body: document.body.className };
+    });
+    console.log('  touch', JSON.stringify(r));
+    if (!r.enabled || r.moved < 1 || r.turned < 0.05 || r.stuck) errors.push('touch controls failed: ' + JSON.stringify(r));
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('touch');
+  },
   async danger() {
     await page.evaluate(() => window.__tp.debug.startGame({}));
     for (const [sp, dist, hour] of [['grizzly', 22, 10], ['moose', 14, 10], ['black_bear', 18, 10], ['wolf', 45, 20.5], ['cougar', 40, 21], ['boar', 12, 10]]) {

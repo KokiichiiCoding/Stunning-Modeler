@@ -32,6 +32,7 @@ import { Dog } from '../entities/dog.js';
 import { Blinds } from '../entities/blind.js';
 import { Tips } from '../ui/tips.js';
 import { Buddies } from '../entities/buddies.js';
+import { TouchControls } from '../core/touch.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -128,6 +129,7 @@ export class Game {
     this.blinds = new Blinds(this);
     this.tips = new Tips(this);
     this.buddies = new Buddies(this);
+    this.touch = new TouchControls(this);
     this.coop = new Coop(this);
     this.social = new Social(this);
     this.jobs = new Jobs(this);
