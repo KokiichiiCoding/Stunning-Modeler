@@ -688,6 +688,22 @@ const scripts = {
     for (let i = 0; i < 3; i++) await step(3);
     await shot('99_signs');
   },
+  async fetch() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.profile.gear.dog = 1; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, w = g.weapons;
+      g.animals.populateAround = () => {}; for (const a of g.animals.list) a.dispose(); g.animals.list = [];
+      for (let i = 0; i < 30; i++) g.advance(1 / 60);
+      window.__tp.debug.selectWeapon('boot');
+      const before = g.profile.ammo.boot + w.state.boot.mag;
+      p.pitch = 0.3; g.render(1 / 60); w.throwProp(1);
+      const modes = new Set();
+      for (let i = 0; i < 60 * 20; i++) { g.advance(1 / 60); modes.add(g.dog.mode); }
+      const q = w.props[0]; return { modes: [...modes], before, after: g.profile.ammo.boot + w.state.boot.mag, propsLeft: w.props.length, prop: q && { kind: q.kind, resting: q.resting, d: +Math.hypot(q.x - g.dog.pos.x, q.z - g.dog.pos.z).toFixed(1), vy: +q.vy.toFixed(2), y: +q.y.toFixed(1) }, dogActive: g.dog.active };
+    });
+    console.log('  fetch', JSON.stringify(r));
+  },
   async turkey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

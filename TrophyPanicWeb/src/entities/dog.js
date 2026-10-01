@@ -125,6 +125,31 @@ export class Dog {
     if (dp > 90) this.spawnNear({ x: p.x - Math.sin(-P.yaw) * 3, z: p.z - Math.cos(-P.yaw) * 3 });
 
     let goal = null, run = 0;
+    // Fetch! Thrown boots and chickens that land nearby get brought back.
+    if ((this.mode === 'heel' || this.mode === 'sit') && !P.vehicle) {
+      const pr = g.weapons.props.find(q => q.resting && !q.remote && !q.carried && (q.kind === 'boot' || q.kind === 'chicken') && Math.hypot(q.x - this.pos.x, q.z - this.pos.z) < 45);
+      if (pr) { this.fetching = pr; this.mode = 'fetch'; g.audio.play('yip', this.pos); }
+    }
+    if (this.mode === 'fetch') {
+      const pr = this.fetching;
+      if (!pr || !g.weapons.props.includes(pr)) { this.mode = 'heel'; this.fetching = null; }
+      else if (!pr.carried) {
+        const d = Math.hypot(pr.x - this.pos.x, pr.z - this.pos.z);
+        if (d > 0.7) { goal = { x: pr.x, z: pr.z }; run = 6.5; }
+        else { pr.carried = true; pr.resting = true; }
+      } else {
+        // trot back with it, tail going, and drop it at your feet
+        const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+        pr.x = this.pos.x + s * 0.48; pr.y = this.pos.y + 0.55; pr.z = this.pos.z + c * 0.48;
+        if (dp > 1.6) { goal = { x: p.x, z: p.z }; run = Math.min(6.5, 1.5 + dp); }
+        else {
+          pr.carried = false; this.fetching = null; this.mode = 'heel';
+          g.weapons.pickup(pr);
+          g.ui.feed(`Biscuit brought your ${pr.kind === 'boot' ? 'boot' : 'rubber chicken'} back! Good girl.`, 'good');
+          g.audio.play('woof', this.pos);
+        }
+      }
+    }
     if (this.mode === 'heel' || this.mode === 'sit') {
       const off = P.vehicle ? 4 : 2.4;
       const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);

@@ -417,7 +417,7 @@ export class Weapons {
   nearestPickup(pos, r) {
     let best = null, bd = r;
     for (const pr of this.props) {
-      if (!pr.resting || pr.remote || pr.noPickup) continue;
+      if (!pr.resting || pr.remote || pr.noPickup || pr.carried) continue;
       const d = Math.hypot(pr.x - pos.x, pr.z - pos.z);
       if (d < bd) { bd = d; best = pr; }
     }
@@ -577,6 +577,7 @@ export class Weapons {
     this.vm.update(dt, { aiming: this.aiming, binoculars: this.binoculars, draw: this.draw, throwWind: w && w.type === 'thrown' ? this.draw : 0, hideThrown: w && w.type === 'thrown' && this.state[w.id] && this.state[w.id].mag <= 0 && !(this.game.profile.ammo[w.id] > 0) });
     for (const pr of this.props) {
       if (pr.kind === 'arrow' && pr.resting) continue;
+      if (pr.carried) { pr.mesh.position.set(pr.x, pr.y, pr.z); continue; }
       pr.mesh.position.set(pr.x, pr.y, pr.z);
       if (!pr.resting) { pr.mesh.rotation.x += pr.spin * dt; pr.mesh.rotation.z += pr.spin * 0.5 * dt; }
     }
