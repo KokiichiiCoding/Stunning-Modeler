@@ -116,6 +116,51 @@ function signpost(text) {
   return g;
 }
 
+// Lantern on a short post: frame (toon) + glass (glows at night) + a soft glow sprite.
+function lanternFrame() {
+  return merge([
+    paint(xf(G.cyl(0.05, 0.07, 1.5, 5), [0, 0.75, 0]), 0x6b4a30, { flat: true }),
+    paint(xf(G.box(0.5, 0.06, 0.06), [0.2, 1.48, 0]), 0x6b4a30),
+    paint(xf(G.cyl(0.01, 0.01, 0.12, 4), [0.4, 1.4, 0]), 0x2a2a30),
+    paint(xf(G.cyl(0.11, 0.13, 0.05, 6), [0.4, 1.33, 0]), 0x2a2a30),
+    paint(xf(G.cyl(0.13, 0.11, 0.05, 6), [0.4, 1.06, 0]), 0x2a2a30),
+    ...[0, 1, 2, 3].map(i => paint(xf(G.box(0.02, 0.22, 0.02), [0.4 + Math.cos(i * 1.57 + 0.78) * 0.1, 1.2, Math.sin(i * 1.57 + 0.78) * 0.1]), 0x2a2a30)),
+  ]);
+}
+function glowTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(255,214,140,1)'); grd.addColorStop(0.35, 'rgba(255,170,80,.45)'); grd.addColorStop(1, 'rgba(255,140,60,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// Canvas A-frame tent, like every good camp has
+function tent(color = 0xc9b48a) {
+  const w = 1.4, h = 1.5, l = 2.2;
+  const g = new THREE.BufferGeometry();
+  const v = [
+    -w, 0, -l / 2, 0, h, -l / 2, 0, h, l / 2, -w, 0, -l / 2, 0, h, l / 2, -w, 0, l / 2,
+    w, 0, -l / 2, w, 0, l / 2, 0, h, l / 2, w, 0, -l / 2, 0, h, l / 2, 0, h, -l / 2,
+    -w, 0, -l / 2, w, 0, -l / 2, 0, h, -l / 2,
+  ];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  g.computeVertexNormals();
+  return merge([
+    paint(g, color, { flat: true, bottom: 0x9c8660 }),
+    paint(xf(G.cyl(0.03, 0.03, 1.7, 4), [0, 0.85, l / 2 + 0.05]), 0x6b4a30),
+    paint(xf(G.cyl(0.03, 0.03, 1.7, 4), [0, 0.85, -l / 2 - 0.05]), 0x6b4a30),
+    paint(xf(G.box(0.02, 0.02, l + 0.4), [0, h + 0.02, 0]), 0x6b4a30),
+    paint(xf(G.box(0.7, 0.04, 0.6), [-0.6, 0.02, l / 2 + 0.4]), 0x8a5a3b), // crate-ish mat
+    paint(xf(G.box(0.5, 0.35, 0.4), [0.9, 0.18, l / 2 + 0.3]), 0x8a5a3b, { flat: true }),
+    paint(xf(G.box(0.3, 0.2, 0.05), [0.9, 0.3, l / 2 + 0.52]), 0xe8384f),       // first-aid kit
+    paint(xf(G.box(0.18, 0.05, 0.06), [0.9, 0.3, l / 2 + 0.55]), 0xffffff),
+    paint(xf(G.box(0.05, 0.18, 0.06), [0.9, 0.3, l / 2 + 0.55]), 0xffffff),
+  ]);
+}
+
 export class Structures {
   constructor(scene, terrain, vegetation) {
     this.group = new THREE.Group();
@@ -161,6 +206,53 @@ export class Structures {
       }
     }
     this.placeTowers(terrain, vegetation, mat);
+    this.placeCamps(terrain, vegetation, mat);
+  }
+
+  /** Lanterns and tents around every camp; they glow after sunset. */
+  placeCamps(terrain, veg, mat) {
+    this.lanterns = [];
+    const frames = [], spots = [];
+    const addLantern = (x, z, rot) => { spots.push({ x, z, rot, y: terrain.heightAt(x, z) }); };
+    for (const p of POIS) {
+      const face = Math.atan2(-p.x, -p.z);
+      const at = (a, d) => [p.x + Math.sin(face + a) * d, p.z + Math.cos(face + a) * d];
+      if (p.kind === 'lodge') {
+        for (const [a, d] of [[0.35, 8], [-0.35, 8], [0.25, 15], [-0.25, 15], [0.6, 11.5]]) { const [x, z] = at(a, d); addLantern(x, z, face); }
+        const [tx, tz] = at(-0.9, 15);
+        const t = new THREE.Mesh(tent(), mat); t.position.set(tx, terrain.heightAt(tx, tz), tz); t.rotation.y = face + 0.6; t.castShadow = true; this.group.add(t);
+        veg.addCollider(tx, tz, 1.3, 1.5, 'building');
+      } else {
+        for (const [a, d] of [[0.45, 4.2], [-0.5, 4.5]]) { const [x, z] = at(a, d); addLantern(x, z, face); }
+        const [tx, tz] = at(-1.2, 7);
+        const t = new THREE.Mesh(tent([0xc9b48a, 0x8fa36a, 0xb8826a][POIS.indexOf(p) % 3]), mat); t.position.set(tx, terrain.heightAt(tx, tz), tz); t.rotation.y = face - 0.4; t.castShadow = true; this.group.add(t);
+        veg.addCollider(tx, tz, 1.3, 1.5, 'building');
+      }
+    }
+    const frameGeo = lanternFrame();
+    const glassGeo = G.cyl(0.09, 0.09, 0.2, 6);
+    this.glassMat = new THREE.MeshBasicMaterial({ color: 0x6a5a40 });
+    const glowMat = new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
+    this.glowMat = glowMat;
+    for (const s of spots) {
+      const f = new THREE.Mesh(frameGeo, mat); f.position.set(s.x, s.y, s.z); f.rotation.y = s.rot; f.castShadow = true; this.group.add(f);
+      const gx = s.x + Math.cos(s.rot) * 0.4, gz = s.z - Math.sin(s.rot) * 0.4;
+      const glass = new THREE.Mesh(glassGeo, this.glassMat); glass.position.set(gx, s.y + 1.2, gz); this.group.add(glass);
+      const glow = new THREE.Sprite(glowMat); glow.position.set(gx, s.y + 1.2, gz); glow.scale.set(2.2, 2.2, 1); this.group.add(glow);
+      this.lanterns.push({ x: gx, y: s.y + 1.2, z: gz });
+    }
+    // two pooled warm lights follow the nearest lanterns (fixed light count: no shader recompiles)
+    this.lights = [0, 1].map(() => { const l = new THREE.PointLight(0xffb066, 0, 16, 1.6); this.group.add(l); return l; });
+  }
+
+  /** Night glow: lanterns light up after sunset; the two nearest cast real light. */
+  update(hour, cam) {
+    const night = hour >= 20 || hour < 5 ? 1 : hour >= 18.3 ? (hour - 18.3) / 1.7 : hour < 6.2 ? (6.2 - hour) / 1.2 : 0;
+    const k = Math.max(0, Math.min(1, night));
+    this.glassMat.color.setRGB(0.42 + 0.58 * k, 0.35 + 0.48 * k, 0.25 + 0.2 * k);
+    this.glowMat.opacity = k * 0.9;
+    const near = this.lanterns.map(l => ({ l, d: Math.hypot(l.x - cam.x, l.z - cam.z) })).sort((a, b) => a.d - b.d);
+    this.lights.forEach((L, i) => { const n = near[i]; if (!n) return; L.position.set(n.l.x, n.l.y, n.l.z); L.intensity = k * 3.2 * (n.d < 90 ? 1 : 0); });
   }
 
   addBoxCollider(veg, x, z, hw, hd, rot, h) {

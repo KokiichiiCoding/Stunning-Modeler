@@ -577,6 +577,7 @@ export class Game {
     vegUniforms.uGust.value = this.wind.gust;
     this.sky.update(this.hour, center, dt, { x: wv.x * this.wind.speed, z: wv.z * this.wind.speed }, this.weather);
     this.water.update(this.visualTime, this.sky.light);
+    this.structures.update(this.hour, this.camera.position);
 
     if (this.state !== 'title') {
       this.updateCamera(dt);

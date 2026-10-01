@@ -343,3 +343,4 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 #compass { width: min(320px, 33vw); }
 #status-panel { min-width: 250px; }
 .sp-title { font-size: 31px; }
+@media (max-width: 1150px) { #status-bar { gap: 14px; font-size: 18px; padding: 5px 12px; } #weapon-box { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); } }

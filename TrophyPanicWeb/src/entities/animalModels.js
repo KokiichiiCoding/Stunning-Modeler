@@ -187,6 +187,20 @@ export function buildAnimalRig(sp, animal) {
   const brows = new THREE.Mesh(buildBrows(L2, H), mat);
   brows.visible = false;
   head.add(eyes); head.add(deadEyes); head.add(brows);
+  // Snarl: an open mouth full of cartoon teeth, shown while charging
+  const sn = H * snoutLen, mz = H * 0.38 + sn * 0.92, my = -H * 0.14 - sn * 0.5;
+  const snarlParts = [
+    paint(xf(G.sphere(sn * 0.78, 10, 8), [0, my, mz], [0.35, 0, 0], [1, 0.78, 0.42]), 0x4a0f1e),
+    paint(xf(G.sphere(sn * 0.42, 8, 6), [0, my - sn * 0.24, mz + sn * 0.08], [0, 0, 0], [1, 0.45, 0.45]), 0xff6f91),
+  ];
+  for (let i = 0; i < 4; i++) {
+    const tx = (i - 1.5) * sn * 0.32, big = i === 0 || i === 3;
+    snarlParts.push(paint(xf(G.cone(sn * (big ? 0.11 : 0.08), sn * (big ? 0.36 : 0.22), 4), [tx, my + sn * 0.36, mz + sn * 0.16], [Math.PI, 0, 0]), 0xfffbef));
+  }
+  for (const tx of [-0.42, 0.42]) snarlParts.push(paint(xf(G.cone(sn * 0.09, sn * 0.26, 4), [tx * sn, my - sn * 0.38, mz + sn * 0.14]), 0xfffbef));
+  const snarl = new THREE.Mesh(merge(snarlParts), mat);
+  snarl.visible = false;
+  head.add(snarl);
   const tongue = new THREE.Mesh(paint(xf(G.capsule(H * 0.06, H * 0.18, 3, 6), [H * 0.08, -H * 0.3, H * (0.45 + snoutLen)], [1.2, 0, 0.3], [1, 1, 0.5]), 0xff6f91), mat);
   tongue.visible = false;
   head.add(tongue);
@@ -250,7 +264,7 @@ export function buildAnimalRig(sp, animal) {
       for (const o of outlines) o.visible = near;
       for (const c of casters) c.castShadow = near;
     },
-    root, body, head, headMesh, eyes, deadEyes, brows, tongue, trophyMesh, tail, legs, torso,
+    root, body, head, headMesh, eyes, deadEyes, brows, snarl, tongue, trophyMesh, tail, legs, torso,
     H, headPos, scale: s,
   };
 }

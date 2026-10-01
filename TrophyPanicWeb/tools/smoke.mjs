@@ -165,6 +165,7 @@ const scripts = {
     await page.evaluate(() => window.__tp.debug.startGame({}));
     if (args.includes('--hour')) await page.evaluate((h) => { window.__tp_hour = h; }, args[args.indexOf('--hour') + 1]);
     if (args.includes('--rest')) await page.evaluate(() => { window.__tp_rest = true; });
+    if (args.includes('--charge')) await page.evaluate(() => { window.__tp_charge = true; });
     const list = (args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : ['deer', 'grizzly', 'wolf', 'moose', 'turkey', 'rabbit', 'boar', 'cougar']);
     for (const sp of list) {
       const ok = await page.evaluate((sp) => {
@@ -181,6 +182,7 @@ const scripts = {
         const ang = f + 0.65;
         g.player.spawnAt(a.pos.x + Math.cos(ang) * d, a.pos.z + Math.sin(ang) * d, 0);
         a.alertness = 60; a.state = sp === 'wolf' || sp === 'grizzly' ? 'Aggressive' : 'Suspicious';
+        if (window.__tp_charge) { a.goal = 'Charge'; a.state = 'Aggressive'; }
         if (window.__tp_rest) { a.state = 'Calm'; a.goal = 'Rest'; a.speed = 0; for (const o of g.animals.list) { o.goal = 'Rest'; o.speed = 0; o.bed = 1; } }
         a.lookTarget = { x: g.player.pos.x, z: g.player.pos.z };
         window.__tp.debug.aimAtAnimal(a, 'brain');

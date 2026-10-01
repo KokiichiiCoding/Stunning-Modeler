@@ -520,7 +520,7 @@ export class Animal {
     this.state = 'Down'; this.goal = 'None';
     const tumble = Math.min(1, this.speed / 8);
     this.death = { t: 0, side: this.rng.chance(0.5) ? 1 : -1, spin: tumble * 4, vy: 1 + tumble * 3, y: 0, roll: 0 };
-    this.rig.eyes.visible = false; this.rig.deadEyes.visible = true; this.rig.tongue.visible = true; this.rig.brows.visible = false;
+    this.rig.eyes.visible = false; this.rig.deadEyes.visible = true; this.rig.tongue.visible = true; this.rig.brows.visible = false; this.rig.snarl.visible = false;
     g.audio.play(this.species.id === 'turkey' ? 'gobble' : this.species.id === 'boar' ? 'squeal' : 'boing', this.pos);
     g.sounds.emit('carcass', this.pos.x, this.pos.y + 0.5, this.pos.z, 200, g.time, this.id);
     g.scent.emit(this.pos.x, this.pos.z, 3, 'carcass', g.time);
@@ -607,6 +607,7 @@ export class Animal {
     const blink = (vt % period) < 0.11;
     r.eyes.scale.y = blink ? 0.12 : 1;
     r.brows.visible = this.goal === 'Charge' || this.state === 'Aggressive' || this.state === 'Stalking';
+    r.snarl.visible = (this.goal === 'Charge' && !this.bluff) || (this.state === 'Aggressive' && this.species.danger >= 2) || this.lungeT > 0;
     const sq = Math.sin(this.phase * 2) * amp * 0.05;
     r.torso.scale.set(1 - sq * 0.5, 1 + sq, 1 - sq * 0.5);
   }
