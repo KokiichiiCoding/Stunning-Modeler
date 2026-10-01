@@ -111,6 +111,14 @@ export class UI {
       b.onclick = () => { p.skin = i; p.save(); this.game.rebuildHunter(); this.showTitle(); };
       sk.appendChild(b);
     });
+    const bc = $('buddy-choices'); bc.innerHTML = '';
+    [['Just me', 0], ['+1 buddy', 1], ['+2 buddies', 2]].forEach(([label, n]) => {
+      const b = document.createElement('button');
+      b.className = 'chip' + ((p.settings.buddies | 0) === n ? ' on' : '');
+      b.textContent = label;
+      b.onclick = () => { p.settings.buddies = n; p.save(); this.showTitle(); };
+      bc.appendChild(b);
+    });
     const hc = $('hat-choices'); hc.innerHTML = '';
     for (const h of HATS) {
       const b = document.createElement('button');

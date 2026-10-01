@@ -31,6 +31,7 @@ import { Jobs } from './jobs.js';
 import { Dog } from '../entities/dog.js';
 import { Blinds } from '../entities/blind.js';
 import { Tips } from '../ui/tips.js';
+import { Buddies } from '../entities/buddies.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -126,6 +127,7 @@ export class Game {
     this.dog = new Dog(this);
     this.blinds = new Blinds(this);
     this.tips = new Tips(this);
+    this.buddies = new Buddies(this);
     this.coop = new Coop(this);
     this.social = new Social(this);
     this.jobs = new Jobs(this);
@@ -241,6 +243,7 @@ export class Game {
     this.coop.leave();
     this.social.clear();
     this.blinds.clear();
+    this.buddies.clear();
     if (this.player.vehicle) this.player.vehicle.exit(true);
     this.state = 'title';
     this.profile.save();
@@ -493,6 +496,7 @@ export class Game {
     this.scent.update(dt, this.wind, this.weapons.blowers, this.weather.scentWash());
     this.animals.step(dt);
     this.dog.step(dt);
+    this.buddies.step(dt);
     this.fx.step(dt);
     if (((this.time * 60) | 0) % 60 === 0) this.sounds.expire(this.time);
     if (this.waveT > 0) this.waveT -= dt;
@@ -812,6 +816,7 @@ export class Game {
     this.animals.render(dt);
     this.vehicles.render(dt);
     this.dog.render(dt);
+    this.buddies.render(dt);
     this.blinds.render(this.camera.position);
     this.fx.render(dt);
     this.weapons.render(dt);

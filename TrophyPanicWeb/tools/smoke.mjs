@@ -724,6 +724,23 @@ const scripts = {
     for (let i = 0; i < 4; i++) await page.evaluate(() => { const g = window.__tp.game; for (const a of g.animals.list) if (!a.identity.legendary) a.rig.root.visible = false; window.__tp.debug.stepFrames(3); });
     await shot('99_legend');
   },
+  async buddies() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 7.4; g.weather.set('clear', true); g.profile.settings.buddies = 2; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, I = g.input;
+      I.down.add('KeyW');
+      for (let i = 0; i < 60 * 6; i++) { g.advance(1 / 60); I.endFrame(); }
+      I.down.delete('KeyW');
+      for (let i = 0; i < 60 * 3; i++) g.advance(1 / 60);
+      const p = g.player.pos;
+      return { n: g.buddies.list.length, dists: g.buddies.list.map(b => +Math.hypot(b.pos.x - p.x, b.pos.z - p.z).toFixed(1)), seen: g.buddies.list.map(b => b.seen.size) };
+    });
+    console.log('  buddies', JSON.stringify(r));
+    await page.evaluate(() => { const g = window.__tp.game; g.thirdPerson = true; g.player.pitch = -0.25; g.player.yaw += Math.PI; });
+    for (let i = 0; i < 4; i++) await step(3);
+    await shot('99_buddies');
+  },
   async turkey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

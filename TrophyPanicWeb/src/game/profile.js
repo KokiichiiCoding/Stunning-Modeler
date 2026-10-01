@@ -26,7 +26,7 @@ const DEFAULTS = () => ({
   zones: [],
   tips: [],
   stats: { harvests: 0, shots: 0, downs: 0, bestScore: 0, distance: 0 },
-  settings: { sens: 1, volume: 0.7, fov: 72, quality: 'auto', reports: true, gore: 'full', tips: true, post: true },
+  settings: { sens: 1, volume: 0.7, fov: 72, quality: 'auto', reports: true, gore: 'full', tips: true, post: true, buddies: 2 },
 });
 
 export class Profile {
