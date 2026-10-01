@@ -43,11 +43,18 @@ artifact declaring the `room` capability to get online co-op.
 - **Open world.** A 1 km² seeded reserve (Wobblewood) with forest, meadow,
   marsh, ridges, snowcaps, a lake and a river, one lodge and four outposts.
   Wildlife streams in around every hunter; there are no levels or set hunts.
-- **Thirteen species.** Deer, elk, boar, turkey (ornery toms peck ankles),
-  rabbit, fox, skunk (it sprays, and you reek), black bear, grizzly, moose,
+- **Fourteen species.** Deer, elk, boar, turkey (ornery toms peck ankles),
+  rabbit, fox, skunk (it sprays, and you reek), raccoon (it sneaks up on
+  anyone standing still and steals cash, snacks, ammo or your hat, which it
+  then wears; bonk it to make it drop the loot), black bear, grizzly, moose,
   bison, wolf and cougar. Each is generated from a seed with its own sex,
   age, mass, trophy size, temperament, a nickname and an occasional rare
   coat.
+- **Campfires.** L lights one. Standing close heals you, wolves and cougars
+  pace outside the firelight, and E roasts a marshmallow: pull it out
+  golden for a sugar rush, or leave it until it catches fire. At night the
+  smell brings bears, who will eat the whole bag. Solo buddies sit on the
+  logs with their own sticks.
 - **Need zones.** Every species has feeding, drinking and resting zones,
   each active during a daily window. Herds commute between them. You find
   zones by spotting animals using them or by reading sign (Q) inside one,
@@ -168,4 +175,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
-- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`

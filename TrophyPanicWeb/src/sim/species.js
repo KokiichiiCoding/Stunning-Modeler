@@ -391,6 +391,32 @@ export const SPECIES = {
     ],
   },
 
+  raccoon: {
+    id: 'raccoon', displayName: 'Bandit Raccoon', blurb: 'Tiny hands. Big plans. Will go through your backpack if you stand still.',
+    maxBloodVolumeMl: 600, bodyMassKg: [5, 11],
+    trophy: { organ: 'pelt', scoreRange: [15, 85], label: 'pelt' },
+    movement: { walk: 1.0, trot: 3.0, run: 7.2, stamina: 40 },
+    senses: { visionRange: 70, fov: 240, hearing: 1.6, smell: 0.04 },
+    behavior: { grouping: 'solitary', groupSize: [1, 1], fear: 45, aggression: 999, curiosity: 0.9, defensiveRadius: 0, wounded: 'flee_bed', zigzag: true },
+    tracks: { stride: 0.4, printCm: 6 },
+    klass: [1, 2], value: 90, xp: 60, danger: 0,
+    activity: ['dusk', 'night', 'dawn'], habitat: { forest: 2, brush: 2, meadow: 1, pine: 1 },
+    body: { len: 0.55, h: 0.32, w: 0.27, leg: 0.17, neck: 0.08, head: 0.24, headFwd: 0.06 },
+    look: { coat: 0x8d8a94, belly: 0xc9c5cf, accent: 0x2d2a33, nose: 0x1e1622, muzzle: 0xf4f2f6, eye: 'big', ears: 'round', tail: 'ringed', trophy: 'pelt', mask: 0x2d2a33 },
+    regions: {
+      brain: ['brain'], trophy: ['pelt'], neck: ['neck'], heart: ['core'],
+      lungL: ['core'], lungR: ['core'], spine: ['core'], gut: ['gut'], ...QUAD_LEGS,
+    },
+    bodyParts: [
+      { id: 'pelt', tissue: 'muscle', trophyOrgan: true, pelt: true },
+      ...legs(6, 7),
+      { id: 'core', tissue: 'lung', layers: [L('fur', 1.0, 0.2), L('muscle', 1.2, 1.0), L('lung', 3.5, 0.7, { organ: true })] },
+      { id: 'neck', tissue: 'major_vessel' },
+      { id: 'gut', tissue: 'liver_gut' },
+      { id: 'brain', tissue: 'brain', layers: skull(0.15, 0.25, 1.6) },
+    ],
+  },
+
   bison: {
     id: 'bison', displayName: 'Thunderhump Bison', blurb: 'A living sofa with horns. Herds charge together if you crowd them.',
     maxBloodVolumeMl: 32000, bodyMassKg: [420, 900],

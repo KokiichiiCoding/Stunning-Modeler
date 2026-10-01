@@ -54,6 +54,60 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async raccoon() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 19.6; g.weather.set('clear', true); g.profile.settings.buddies = 0; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, M = g.animals, p = g.player, pr = g.profile;
+      p.spawnAt(-60, 200, 0);
+      for (const a of M.list) a.dispose(); M.list = []; M.groups = [];
+      let tries = 0; while (!M.list.some(a => a.species.id === 'raccoon') && tries++ < 400) { for (const a of M.list) a.dispose(); M.list = []; M.groups = []; M.spawnGroup(p.pos); }
+      const rc = M.list.find(a => a.species.id === 'raccoon');
+      for (const a of M.list) if (a !== rc) a.dispose(); M.list = [rc];
+      rc.pos.x = p.pos.x + 18; rc.pos.z = p.pos.z + 4; rc.pos.y = g.terrain.heightAt(rc.pos.x, rc.pos.z); rc.alertness = 0;
+      // empty pockets except the hat, so it goes for the hat
+      const cash0 = pr.cash; pr.cash = 0; for (const k in pr.gear) if (k !== 'blind' && k !== 'dog') pr.gear[k] = 0; for (const k in pr.ammo) pr.ammo[k] = 0;
+      const goals = new Set(); let t = 0;
+      while (!rc.loot && t < 60 * 40) { g.advance(1 / 60); goals.add(rc.goal); t++; }
+      const stolen = rc.loot ? rc.loot.kind : null;
+      for (let i = 0; i < 60 * 1.2; i++) g.advance(1 / 60);
+      pr.cash = cash0;
+      p.yaw = Math.atan2(-(rc.pos.x - p.pos.x), -(rc.pos.z - p.pos.z)); p.pitch = -0.1;
+      return { stolen, secs: +(t / 60).toFixed(1), goals: [...goals], hatOff: !!g.hatOff, fleeing: rc.goal, d: +Math.hypot(rc.pos.x - p.pos.x, rc.pos.z - p.pos.z).toFixed(1) };
+    });
+    console.log('  raccoon', JSON.stringify(r));
+    if (r.stolen !== 'hat' || !r.hatOff) errors.push('raccoon did not steal the hat: ' + JSON.stringify(r));
+    await page.evaluate(() => { const g = window.__tp.game, rc = g.animals.list[0], p = g.player; p.pos.x = rc.pos.x + 3.5; p.pos.z = rc.pos.z + 1.5; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z); p.yaw = Math.atan2(-(rc.pos.x - p.pos.x), -(rc.pos.z - p.pos.z)); p.pitch = -0.3; rc.frozen = true; g.weapons.select('camera'); });
+    for (let i = 0; i < 3; i++) await step(2);
+    await shot('101_raccoon_hat');
+    const back = await page.evaluate(() => {
+      const g = window.__tp.game, rc = g.animals.list[0], p = g.player;
+      rc.frozen = false; rc.daze = 2; // as if bonked by a boot
+      for (let i = 0; i < 60 * 2; i++) g.advance(1 / 60);
+      const prop = g.weapons.props.find(x => x.kind === 'hat');
+      if (!prop) return { dropped: false };
+      p.pos.x = prop.x; p.pos.z = prop.z; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z);
+      g.interact();
+      return { dropped: true, hatOff: !!g.hatOff };
+    });
+    console.log('  recovered', JSON.stringify(back));
+    if (!back.dropped || back.hatOff) errors.push('hat recovery failed: ' + JSON.stringify(back));
+    // second raccoon goes for the cash
+    const c = await page.evaluate(() => {
+      const g = window.__tp.game, rc = g.animals.list[0], p = g.player, pr = g.profile;
+      rc.stealCd = 0; rc.alertness = 0; rc.daze = 0; g.hatOff = true; pr.cash = 300;
+      rc.pos.x = p.pos.x + 10; rc.pos.z = p.pos.z; rc.pos.y = g.terrain.heightAt(rc.pos.x, rc.pos.z);
+      let t = 0; while (!rc.loot && t++ < 60 * 30) g.advance(1 / 60);
+      const after = pr.cash, kind = rc.loot && rc.loot.kind;
+      rc.daze = 2; for (let i = 0; i < 60 * 2; i++) g.advance(1 / 60);
+      const prop = g.weapons.props.find(x => x.kind === 'loot');
+      if (prop) { p.pos.x = prop.x; p.pos.z = prop.z; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z); g.interact(); }
+      g.hatOff = false;
+      return { kind, after, restored: pr.cash };
+    });
+    console.log('  cash', JSON.stringify(c));
+    if (c.kind !== 'cash' || c.restored !== 300) errors.push('cash recovery failed: ' + JSON.stringify(c));
+  },
   async campfire() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 21; g.weather.set('clear', true); g.profile.settings.buddies = 2; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

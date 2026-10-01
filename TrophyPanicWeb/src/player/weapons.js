@@ -376,7 +376,7 @@ export class Weapons {
       const ax = pr.x, ay = pr.y, az = pr.z;
       pr.x += pr.vx * dt; pr.y += pr.vy * dt; pr.z += pr.vz * dt;
       // hit an animal? (blunt event through the same anatomy pipeline)
-      if (!pr.hitAnimal && !pr.remote && pr.kind !== 'hat') {
+      if (!pr.hitAnimal && !pr.remote && pr.kind !== 'hat' && !pr.noHit) {
         const fake = { ammoId: pr.kind === 'boot' ? 'throwing_boot' : 'rubber_chicken', // (a honey jar bonks like a chicken)
           weaponId: pr.weaponId, klass: 0, owner: pr.owner, traveled: Math.hypot(pr.x - g.player.pos.x, pr.z - g.player.pos.z), speed: Math.hypot(pr.vx, pr.vy, pr.vz), ox: g.player.pos.x, oz: g.player.pos.z, x0: ax, y0: ay, z0: az };
         const hit = g.animals.resolveProjectile(fake, ax, ay, az, pr.x, pr.y, pr.z);
@@ -429,6 +429,7 @@ export class Weapons {
     g.scene.remove(pr.mesh);
     this.props = this.props.filter(x => x !== pr);
     if (pr.kind === 'hat') { g.restoreHat(); return; }
+    if (pr.kind === 'loot') { g.animals.returnLoot(pr.loot); return; }
     const id = pr.kind === 'arrow' ? pr.weaponId : pr.weaponId || (pr.kind === 'boot' ? 'boot' : 'chicken');
     if (g.profile.owned.includes(id)) g.profile.ammo[id] = (g.profile.ammo[id] || 0) + 1;
     g.audio.play('click');

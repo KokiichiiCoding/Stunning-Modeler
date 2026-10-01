@@ -104,6 +104,7 @@ function buildTail(look, sp) {
     case 'curl': parts.push(paint(xf(G.torus(B.h * 0.08, B.h * 0.025, 5, 10, Math.PI * 1.5), [0, y, z - 0.03], [0, Math.PI / 2, 0]), look.coat)); break;
     case 'bushy': parts.push(paint(xf(G.capsule(B.h * 0.14, B.len * 0.28, 4, 8), [0, y - B.h * 0.2, z - B.len * 0.16], [-0.9, 0, 0]), look.coat, { bottom: look.accent })); break;
     case 'long': for (let i = 0; i < 3; i++) parts.push(paint(xf(G.capsule(0.045, 0.28, 3, 6), [0, y - 0.1 - i * 0.12, z - 0.12 - i * 0.2], [-0.9 + i * 0.35, 0, 0]), i === 2 ? look.accent : look.coat)); break;
+    case 'ringed': for (let i = 0; i < 6; i++) parts.push(paint(xf(G.sphere(B.h * (0.15 - i * 0.008), 8, 6), [0, y - B.h * 0.05 - i * B.h * 0.07, z - 0.04 - i * B.len * 0.085], [0, 0, 0], [1, 1, 1.1]), i % 2 ? look.accent : look.coat)); break;
     case 'stub': parts.push(paint(xf(G.sphere(B.h * 0.09, 6, 5), [0, y, z]), look.coat)); break;
     case 'fan': for (let i = 0; i < 9; i++) {
       const a = -1.2 + i * 0.3;
@@ -175,6 +176,8 @@ export function buildAnimalRig(sp, animal) {
   // cheeks
   for (const s2 of [-1, 1]) headParts.push(paint(xf(G.sphere(H * 0.09, 8, 6), [s2 * H * 0.3, -H * 0.1, H * 0.3], [0, 0, 0], [1, 0.6, 0.4]), 0xff9aa9));
   headParts.push(...buildEars(L2, H));
+  // bandit mask: a dark band wrapped across the eyes
+  if (look.mask) headParts.push(paint(G.sphere(H * 0.515, 16, 6, 0.35, Math.PI - 0.7, 1.08, 0.5), look.mask));
   if (look.wattle) headParts.push(paint(xf(G.capsule(H * 0.12, H * 0.5, 3, 6), [0, -H * 0.45, H * 0.4]), look.wattle));
   if (look.dewlap) headParts.push(paint(xf(G.capsule(H * 0.08, H * 0.4, 3, 6), [0, -H * 0.55, H * 0.25]), tint(coat, 0.8)));
   const headMesh = new THREE.Mesh(merge(headParts), mat);

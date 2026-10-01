@@ -151,7 +151,7 @@ export function xf(geo, [x = 0, y = 0, z = 0] = [], [rx = 0, ry = 0, rz = 0] = [
 
 // Primitive shorthands (all return fresh geometries).
 export const G = {
-  sphere: (r = 1, w = 12, h = 9) => new THREE.SphereGeometry(r, w, h),
+  sphere: (r = 1, w = 12, h = 9, ...rest) => new THREE.SphereGeometry(r, w, h, ...rest),
   ico: (r = 1, d = 1) => new THREE.IcosahedronGeometry(r, d),
   box: (x = 1, y = 1, z = 1) => new THREE.BoxGeometry(x, y, z),
   cyl: (rt = 0.5, rb = 0.5, h = 1, seg = 8) => new THREE.CylinderGeometry(rt, rb, h, seg),

@@ -14,6 +14,17 @@ import { Rng, hash01 } from '../core/rng.js';
 import { buildAnimalRig, buildHitVolumes } from './animalModels.js';
 import { Biome, BIOME_NAMES, WATER_LEVEL, HALF, LAKE, POIS } from '../world/terrainData.js';
 import { FEAR_R } from './campfire.js';
+import { buildHat } from './hunter.js';
+import { G, paint, merge, xf, toonMat } from '../render/toon.js';
+
+// a little bindle sack full of somebody else's stuff
+let _lootGeo = null;
+const LOOT_GEO = () => _lootGeo || (_lootGeo = merge([
+  paint(xf(G.sphere(0.09, 8, 6), [0, 0, 0], [0, 0, 0], [1, 0.85, 1]), 0xd9c79a, { bottom: 0xb8a272 }),
+  paint(xf(G.cone(0.05, 0.08, 6), [0, 0.09, 0]), 0xd9c79a),
+  paint(xf(G.torus(0.03, 0.008, 4, 8), [0, 0.065, 0], [Math.PI / 2, 0, 0]), 0xc0392b),
+  paint(xf(G.box(0.05, 0.05, 0.005), [0, 0, 0.088]), 0xffd34a),
+]));
 
 
 const ACTIVE_RADIUS = 330;
@@ -31,7 +42,7 @@ const PERCEIVE = 0.1, DECIDE = 0.2;
 const VOICES = { deer: 'deer', elk: 'elk', boar: 'boar', black_bear: 'growl', grizzly: 'roar', moose: 'moose', wolf: 'howl', cougar: 'cougar', turkey: 'gobble', rabbit: 'rabbit' , fox: 'yip', bison: 'moose' };
 
 // Spawn weight per species (dangerous game rarer, but present).
-const SPAWN_WEIGHT = { deer: 22, elk: 11, boar: 12, turkey: 12, rabbit: 12, black_bear: 8, wolf: 7, moose: 6, cougar: 5, grizzly: 5, fox: 9, bison: 6, skunk: 6 };
+const SPAWN_WEIGHT = { deer: 22, elk: 11, boar: 12, turkey: 12, rabbit: 12, black_bear: 8, wolf: 7, moose: 6, cougar: 5, grizzly: 5, fox: 9, bison: 6, skunk: 6, raccoon: 7 };
 
 const _v = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3(), _m = new THREE.Matrix4();
 
@@ -170,6 +181,7 @@ export class Animal {
       this.smelledT = g.time;
     }
     // a bear on the trail of something sweet is single-minded about it
+    if (this.goal === 'Sneak' && g.time - this.memory.shotT > 1) this.alertness = Math.min(this.alertness, a0);
     if (sweet && this.alertness > a0) {
       this.alertness = a0 + (this.alertness - a0) * 0.3;
     }
@@ -190,6 +202,16 @@ export class Animal {
     const g = this.game, sp = this.species, B = sp.behavior, c = this.creature;
     if (c.life !== Life.Active || c.mobility === Mobility.Immobile) { this.state = 'Down'; this.goal = 'None'; this.target = null; return; }
     if (this.daze > 0) { this.goal = 'Dazed'; this.target = null; return; }
+    // Raccoons: anyone standing still is a backpack with legs.
+    if (sp.id === 'raccoon' && this.alive && c.wounds.length === 0) {
+      const P = g.player, d = Math.hypot(P.pos.x - this.pos.x, P.pos.z - this.pos.z);
+      if (this.loot) { this.alertness = Math.max(this.alertness, B.fear + 10); this.setThreat(P.pos.x, P.pos.z, 'player'); }
+      else if (d < 45 && P.speed < 1.6 && !P.vehicle && !P.downed && !P.swimming && !P.onTower && g.time > (this.stealCd || 0) && this.alertness < B.fear && !g.coop.isGuest()) {
+        if (d < 1.6) { this.mgr.raccoonSteal(this); return; }
+        this.state = 'Curious'; this.goal = 'Sneak'; this.target = { x: P.pos.x, z: P.pos.z };
+        return;
+      } else if (this.goal === 'Sneak') { this.goal = 'Watch'; this.target = null; }
+    }
     // Skunks don't run. They turn around.
     if (sp.id === 'skunk' && this.alive) {
       const h0 = view.nearest(this.pos);
@@ -415,6 +437,7 @@ export class Animal {
       case 'Stalk': intent = this.threatDist() < 25 ? m.walk * 0.9 : m.trot; break;
       case 'Circle': intent = m.trot; break;
       case 'Investigate': case 'Drink': intent = m.walk; break;
+      case 'Sneak': intent = m.walk * 1.4; break;
       case 'Follow': intent = m.walk * 1.2; break;
       case 'Travel': intent = Math.max(m.walk, m.trot * 0.75); break; // game-time is compressed: commute at a trot
       case 'Graze': case 'Wander': intent = m.walk * 0.55; break;
@@ -451,6 +474,7 @@ export class Animal {
       if (this.bluff && g.time > this.bluffUntil) { this.bluff = false; this.goal = 'Watch'; this.state = 'Defensive'; this.target = null; this.alertness = Math.max(0, this.alertness - 30); g.audio.play('growl', this.pos); }
     }
     if (this.daze > 0) this.daze -= dt;
+    if (this.loot && (!this.alive || this.downed || this.daze > 0 || c.wounds.length)) this.mgr.dropLoot(this);
 
     // movement
     let speed = 0;
@@ -874,6 +898,7 @@ export class AnimalManager {
     this.view.refresh();
     if (g.coop.isGuest()) { g.coop.stepGuestAnimals(dt); return; }
     for (const a of this.list) a.step(dt, this.view);
+    for (const a of this.list) if (a.loot && Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z) > 260) this.loseLoot(a);
     // herd communication: a fleeing herd member alarms its group
     this.alarmAcc = (this.alarmAcc || 0) + dt;
     if (this.alarmAcc > 0.2) {
@@ -923,6 +948,74 @@ export class AnimalManager {
   }
 
   /** Gunshots leave hunting pressure that fades over ~a day; animals avoid it. */
+  /** A raccoon rummages through the player's pack and makes off with something. */
+  raccoonSteal(a) {
+    const g = this.game, pr = g.profile, P = g.player, rng = a.rng;
+    const w = g.weapons.current;
+    const opts = [];
+    if (!g.hatOff) opts.push({ w: 3, v: { kind: 'hat', label: 'hat' } });
+    if (pr.cash >= 5) opts.push({ w: 3, v: { kind: 'cash', amount: Math.min(pr.cash, rng.int(12, 45)), label: 'cash' } });
+    for (const id of ['energy_drink', 'bandage', 'scent_spray']) if ((pr.gear[id] || 0) > 0) opts.push({ w: 1.2, v: { kind: 'gear', id, amount: 1, label: { energy_drink: 'Moss Cola', bandage: 'bandage', scent_spray: 'Scent Killer' }[id] } });
+    if (w && (pr.ammo[w.id] || 0) >= 2 && w.type !== 'camera') opts.push({ w: 1.5, v: { kind: 'ammo', id: w.id, amount: Math.min(pr.ammo[w.id], rng.int(2, 5)), label: 'ammo' } });
+    a.stealCd = g.time + 90;
+    if (!opts.length) { g.ui.feed('A raccoon went through your pockets and found nothing. It looks disappointed in you.', 'info'); a.alertness = 60; return; }
+    const loot = rng.weighted(opts);
+    if (loot.kind === 'hat') {
+      g.hatOff = true; g.hunterModel.hat.visible = false;
+      const lk = pr.look();
+      loot.mesh = new THREE.Mesh(buildHat(lk.hat, lk.jacket), g.hunterModel.hat.material);
+      loot.mesh.scale.setScalar(0.52);
+      loot.mesh.position.set(0, a.rig.H * 0.22, -a.rig.H * 0.02);
+    } else {
+      if (loot.kind === 'cash') pr.cash -= loot.amount;
+      if (loot.kind === 'gear') pr.gear[loot.id] -= 1;
+      if (loot.kind === 'ammo') pr.ammo[loot.id] -= loot.amount;
+      loot.mesh = new THREE.Mesh(LOOT_GEO(), toonMat());
+      loot.mesh.position.set(0, -a.rig.H * 0.2, a.rig.H * 0.78);
+    }
+    a.rig.head.add(loot.mesh);
+    a.loot = loot; a.lootT = g.time;
+    a.alertness = 100; a.setThreat(P.pos.x, P.pos.z, 'player');
+    g.audio.play('flutter', a.pos); g.audio.play('yip', a.pos);
+    const what = loot.kind === 'cash' ? `$${loot.amount}` : loot.kind === 'hat' ? 'YOUR HAT' : loot.kind === 'ammo' ? `${loot.amount} rounds` : `your ${loot.label}`;
+    g.ui.toast(`A RACCOON STOLE ${what.toUpperCase()}!`, 'big', 2.2);
+    g.ui.feed(`Bonk it with a boot or chase it down to get ${loot.kind === 'hat' ? 'your hat' : 'it'} back.`, 'warn');
+    g.say('scared');
+  }
+
+  /** Bonked, shot or tackled: the loot goes flying, ready to pick back up. */
+  dropLoot(a) {
+    const g = this.game, loot = a.loot;
+    if (!loot) return;
+    a.loot = null;
+    a.rig.head.remove(loot.mesh);
+    const m = loot.kind === 'hat' ? loot.mesh : new THREE.Mesh(LOOT_GEO(), toonMat());
+    m.scale.setScalar(1); m.rotation.set(0, 0, 0);
+    g.scene.add(m);
+    g.weapons.props.push({ kind: loot.kind === 'hat' ? 'hat' : 'loot', loot, mesh: m, x: a.pos.x, y: a.pos.y + 0.6, z: a.pos.z, vx: (a.rng.next() - 0.5) * 3, vy: 5, vz: (a.rng.next() - 0.5) * 3, spin: 10, resting: false, label: loot.kind === 'hat' ? 'your hat' : `stolen ${loot.label}`, age: 0, noHit: true });
+    g.ui.toast('The raccoon dropped the loot!', 'hit', 1.6);
+    g.jobs.onEvent('recover', {});
+  }
+
+  /** E on dropped loot: back in the pack. */
+  returnLoot(loot) {
+    const g = this.game, pr = g.profile;
+    if (loot.kind === 'cash') pr.cash += loot.amount;
+    if (loot.kind === 'gear') pr.gear[loot.id] = (pr.gear[loot.id] || 0) + 1;
+    if (loot.kind === 'ammo') pr.ammo[loot.id] = (pr.ammo[loot.id] || 0) + loot.amount;
+    g.audio.play('cash');
+    g.ui.feed(loot.kind === 'cash' ? `Got your $${loot.amount} back. Slightly sticky.` : `Got your ${loot.label} back.`, 'good');
+  }
+
+  /** The raccoon got away. */
+  loseLoot(a) {
+    const g = this.game, loot = a.loot;
+    a.loot = null;
+    if (loot.mesh) a.rig.head.remove(loot.mesh);
+    g.ui.feed(loot.kind === 'hat' ? 'The raccoon got away with your hat. It looks great on it. You dig a spare out of your pack.' : `The raccoon got away with your ${loot.kind === 'cash' ? '$' + loot.amount : loot.label}. Respect.`, 'warn');
+    if (loot.kind === 'hat') g.restoreHat();
+  }
+
   /** A skunk unloads on a hunter: green cloud, and they reek for two minutes. */
   skunkSpray(a, h) {
     const g = this.game;
@@ -997,7 +1090,7 @@ export class AnimalManager {
       if (a.harvested) continue;
       const wounded = a.creature.wounds.length > 0;
       const oldCarcass = a.downed && g.time - a.downTime > 1200;
-      if ((!keep(a) && !wounded) || oldCarcass) { a.harvested = true; a.despawned = true; a.dispose(); }
+      if ((!keep(a) && !wounded) || oldCarcass) { if (a.loot) this.loseLoot(a); a.harvested = true; a.despawned = true; a.dispose(); }
     }
     this.list = this.list.filter(a => !a.harvested || a.keepRecord);
     this.groups = this.groups.filter(gp => gp.members.some(m => !m.harvested));

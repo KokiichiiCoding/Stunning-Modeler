@@ -14,7 +14,7 @@ const short = (sp) => SPECIES[sp].displayName.split(' ').pop().toLowerCase();
 const an = (w) => (/^[aeiou]/.test(w) ? 'an ' : 'a ') + w;
 
 function speciesFor(rng, level, pool = null) {
-  const tiers = [['deer', 'turkey', 'rabbit', 'boar', 'fox', 'skunk'], ['elk', 'black_bear'], ['moose', 'wolf', 'bison'], ['grizzly', 'cougar']];
+  const tiers = [['deer', 'turkey', 'rabbit', 'boar', 'fox', 'skunk', 'raccoon'], ['elk', 'black_bear'], ['moose', 'wolf', 'bison'], ['grizzly', 'cougar']];
   const open = tiers.slice(0, Math.min(4, 1 + Math.floor(Math.max(0, level - 1) / 2))).flat();
   const list = pool ? open.filter(s => pool.includes(s)) : open;
   return rng.pick(list.length ? list : open);
@@ -32,6 +32,7 @@ const TEMPLATES = [
   { w: 1, make: () => ({ type: 'air', minAir: 1.4, title: 'Quad bike stunt', desc: 'Get 1.4 seconds of air on a quad and land it. The rangers will pretend not to see.', cash: 90, xp: 60 }) },
   { w: 1, make: (r) => { const poi = r.pick(POIS.filter(p => p.kind !== 'lodge')); return { type: 'visit', poi: poi.id, title: `Check on ${poi.name}`, desc: `Walk (or drive) to ${poi.name} and restock its supply box.`, cash: 70, xp: 40 }; } },
   { w: 0.9, make: (r) => { const sp = r.pick(['turkey', 'rabbit', 'deer']); return { type: 'bonk', sp, title: `Boop ${an(short(sp))}`, desc: `Hit ${an(short(sp))} with a thrown boot or rubber chicken. For science.`, cash: 60, xp: 50 }; } },
+  { w: 0.7, make: () => ({ type: 'recover', title: 'Raccoon justice', desc: 'Get something back from a Bandit Raccoon. Stand still near one (they love that), then bonk it when it runs.', cash: 70, xp: 60 }) },
   { w: 0.8, make: () => ({ type: 'marsh', title: 'Perfect marshmallow', desc: 'Light a campfire (L), roast a marshmallow (E) and pull it out golden. Not on fire. Golden.', cash: 50, xp: 40 }) },
   { w: 0.5, make: (r, L) => (L >= 4 ? { type: 'staredown', sp: 'cougar', title: 'Stare down a cougar', desc: 'When a cougar stalks you, face it and hold still. Do not run.', cash: 150, xp: 120 } : { type: 'playdead', sp: 'black_bear', title: 'Play dead', desc: 'Survive a bear by lying flat (Z) and holding still.', cash: 120, xp: 100 }) },
 ];
