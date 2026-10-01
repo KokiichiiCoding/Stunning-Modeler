@@ -109,6 +109,17 @@ function build(w) {
       parts.push(...mitten(0.02, -0.06, 0.05, 0.3));
       break;
     }
+    case 'spray': {
+      parts.push(
+        paint(xf(G.cyl(0.05, 0.05, 0.24, 12), [0, -0.02, -0.02]), 0xff8a2a, { bottom: 0xd9481a }),
+        paint(xf(G.cyl(0.052, 0.052, 0.05, 12), [0, -0.08, -0.02]), 0xfff4de),
+        paint(xf(G.box(0.05, 0.04, 0.06), [0, 0.12, -0.04]), 0x2a2a30),
+        paint(xf(G.cyl(0.008, 0.008, 0.04, 6), [0, 0.12, -0.08], [Math.PI / 2, 0, 0]), 0x2a2a30),
+        paint(xf(G.box(0.07, 0.05, 0.002), [0, 0.0, 0.031]), 0x1d1622),
+      );
+      parts.push(...mitten(0.0, -0.04, 0.06, 0.25));
+      break;
+    }
     case 'camera': {
       parts.push(
         paint(xf(G.box(0.2, 0.12, 0.08), [0, 0, 0]), 0x4fb4f0, { bottom: 0x2f7fb0 }),

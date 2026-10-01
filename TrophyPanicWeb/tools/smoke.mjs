@@ -555,6 +555,27 @@ const scripts = {
     for (let i = 0; i < 6; i++) await step(4);
     await shot('99_waterfall');
   },
+  async spray() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player;
+      let tries = 0;
+      while (!g.animals.list.some(a => a.species.id === 'grizzly') && tries++ < 200) g.animals.spawnGroup(p.pos);
+      const info = window.__tp.debug.approach('grizzly', 5);
+      const a = g.animals.list.find(x => x.id === info.id);
+      a.state = 'Aggressive'; a.goal = 'Charge';
+      window.__tp.debug.selectWeapon('bear_spray');
+      window.__tp.debug.renderOnce();
+      g.weapons.spray();
+      const sprayed = a.sprayedUntil > g.time, dazed = a.daze > 0;
+      let minD = 1e9; const states = new Set();
+      const p0 = { x: p.pos.x, z: p.pos.z };
+      for (let i = 0; i < 60 * 8; i++) { g.advance(1 / 60); states.add(a.state + '/' + a.goal); minD = Math.min(minD, Math.hypot(a.pos.x - p0.x, a.pos.z - p0.z)); }
+      return { sprayed, dazed, states: [...states], endDist: +Math.hypot(a.pos.x - p0.x, a.pos.z - p0.z).toFixed(1), hp: +p.hp.toFixed(1), cans: g.weapons.state.bear_spray.mag + '+' + g.profile.ammo.bear_spray };
+    });
+    console.log('  spray', JSON.stringify(r));
+  },
   async goofy() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 17.4; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

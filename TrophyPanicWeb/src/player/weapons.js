@@ -88,7 +88,7 @@ export class Weapons {
 
   reload() {
     const w = this.current, st = this.state[w.id], prof = this.game.profile;
-    if (!w || w.type === 'blower' || w.type === 'camera' || this.reloading > 0) return;
+    if (!w || w.type === 'blower' || w.type === 'camera' || w.type === 'spray' || this.reloading > 0) return;
     if (w.type === 'shotgun' && st.mag >= w.magazine) {
       // Full tube: R cycles the shell type instead.
       const order = w.ammoAlt;
@@ -148,7 +148,9 @@ export class Weapons {
     this.blowing = false;
     this.blowers.length = 0;
     if (!busy && !this.binoculars && this.reloading <= 0) {
-      if (w.type === 'camera') {
+      if (w.type === 'spray') {
+        if (cmd.firePressed && this.cooldown <= 0) this.spray();
+      } else if (w.type === 'camera') {
         if (cmd.firePressed && this.cooldown <= 0) this.snap();
       } else if (w.type === 'blower') {
         if (cmd.fire) this.blow(dt);
@@ -418,6 +420,46 @@ export class Weapons {
     if (g.profile.owned.includes(id)) g.profile.ammo[id] = (g.profile.ammo[id] || 0) + 1;
     g.audio.play('click');
     g.ui.feed(`Picked up the ${pr.label}.`, 'info');
+  }
+
+  // ------------------------------------------------------------------ bear spray
+  spray() {
+    const g = this.game, p = g.player, w = this.current, st = this.state[w.id];
+    if (st.mag <= 0) {
+      if ((g.profile.ammo[w.id] || 0) > 0) { g.profile.ammo[w.id]--; st.mag = 1; }
+      else { g.audio.play('click'); g.ui.feed('Out of bear spray. The lodge sells more.', 'warn'); this.cooldown = 0.4; return; }
+    }
+    st.mag--;
+    this.cooldown = w.fireInterval;
+    const { origin, dir } = this.aimRay();
+    g.audio.play('spray', p.pos);
+    g.sounds.emit('equipment', p.pos.x, p.pos.y + 1, p.pos.z, w.loudness, g.time, 'player');
+    // a fat orange cloud rolling out along the aim
+    for (let i = 1; i <= 6; i++) {
+      const d = i * 1.15;
+      g.fx.burst(origin.x + dir.x * d, origin.y + dir.y * d - 0.2, origin.z + dir.z * d, { count: 3, color: i % 2 ? 0xffa040 : 0xffc070, speed: 0.6 + i * 0.15, up: 0.6, kind: 'smoke', size: 0.35 + i * 0.12 });
+    }
+    let hits = 0;
+    for (const a of g.animals.list) {
+      if (!a.alive || a.downed) continue;
+      const dx = a.pos.x - p.pos.x, dz = a.pos.z - p.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > w.range + a.radius || d < 0.1 || (dx * dir.x + dz * dir.z) / d < 0.7) continue;
+      hits++;
+      a.daze = 2.2; g.fx.dazed(a, 2.2);
+      a.setThreat(p.pos.x, p.pos.z, 'player');
+      a.sprayedUntil = g.time + 30; a.retreatUntil = g.time + 60;
+      setTimeout(() => g.audio.play('sneeze', a.pos), 250 + hits * 120);
+      g.jobs.onEvent('spray', { sp: a.species.id });
+    }
+    if (hits) g.ui.toast(hits > 1 ? `${hits} faces full of pepper!` : 'Right in the snoot!', 'hit');
+    // friends in the cloud cough and stagger
+    for (const r of g.coop.peers.values()) {
+      if (!r.target) continue;
+      const dx = r.target.x - p.pos.x, dz = r.target.z - p.pos.z, d = Math.hypot(dx, dz);
+      if (d < w.range && d > 0.1 && (dx * dir.x + dz * dir.z) / d > 0.7) { g.coop.sendTo(r.peer, 'sprayed', { n: g.profile.name }); g.ui.toast(`You pepper-sprayed ${r.name}. Oops.`, 'big'); }
+    }
+    if (st.mag <= 0 && (g.profile.ammo[w.id] || 0) > 0) { g.profile.ammo[w.id]--; st.mag = 1; }
   }
 
   // ------------------------------------------------------------------ camera

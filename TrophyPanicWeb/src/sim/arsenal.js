@@ -106,6 +106,11 @@ export const WEAPONS = {
     magazine: 100, reserve: 0, fireInterval: 0.05, reloadTime: 0, spread: 0, sway: 0.3, recoil: 0.02,
     zoom: 1, loudness: 2500, price: 260, range: 9, force: 26, color: 0xe24a3b, desc: 'Pushes light things, scatters scent, annoys everything. Not a weapon. Mostly.',
   },
+  bear_spray: {
+    id: 'bear_spray', name: 'Bear Spray', short: 'Spray', type: 'spray', ammo: null, ammoLabel: 'Pepper cans', klass: 0,
+    magazine: 1, reserve: 2, fireInterval: 1.2, reloadTime: 0.6, spread: 0, sway: 0.4, recoil: 0.1,
+    zoom: 1, loudness: 300, price: 120, range: 7.5, color: 0xff8a2a, desc: 'A big orange cloud of NOPE. Anything in it sneezes, sees stars and leaves. Friends too.',
+  },
   camera: {
     id: 'camera', name: 'Snappy Camera', short: 'Cam', type: 'camera', ammo: null, ammoLabel: 'Endless film', klass: 0,
     magazine: 1, reserve: 0, fireInterval: 0.9, reloadTime: 0, spread: 0, sway: 0.6, recoil: 0,
@@ -126,4 +131,4 @@ export const GEAR = {
   dog: { id: 'dog', name: 'Biscuit (tracking dog)', price: 120, desc: 'A very good girl. Heels, growls at bears, and on K follows the blood trail to whatever you hit. Barking is loud.' },
 };
 
-export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'camera', 'boot', 'chicken', 'blower'];
+export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'bear_spray', 'camera', 'boot', 'chicken', 'blower'];

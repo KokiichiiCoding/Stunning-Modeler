@@ -81,6 +81,7 @@ export class Profile {
     if (!w) return 0;
     if (w.type === 'thrown') return 10;
     if (w.type === 'blower' || w.type === 'camera') return 0;
+    if (w.type === 'spray') return 30;
     return w.klass >= 4 ? 45 : w.klass === 3 ? 30 : w.type === 'bow' ? 35 : 18;
   }
   buyAmmo(id) {

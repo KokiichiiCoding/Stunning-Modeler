@@ -236,6 +236,14 @@ export class Coop {
       }
       case 'wave': r.waveT = 2.2; break;
       case 'dance': r.danceT = 4; break;
+      case 'sprayed': {
+        const p = g.player;
+        g.ui.toast(`${String(d.n || r.name).slice(0, 14)} got you with bear spray! *cough*`, 'big');
+        g.audio.play('sneeze', p.pos);
+        g.fx.dazed({ headWorld: () => ({ x: p.pos.x, y: p.pos.y + 0.6, z: p.pos.z }) }, 2);
+        p.startTumble((Math.random() - 0.5) * 2, 1.5, (Math.random() - 0.5) * 2);
+        break;
+      }
       case 'chat': g.social.receive(r, d.t); break;
       case 'ping': g.social.receivePing(r, d); break;
       case 'downed': g.ui.feed(`${r.name} is DOWN (${String(d.by || '').slice(0, 20)})! Run over and press E to pull them up.`, 'warn'); if (r.target) g.social.addPing(r.target.x, r.target.y, r.target.z, 'Help me up!', r.color, r.name); break;

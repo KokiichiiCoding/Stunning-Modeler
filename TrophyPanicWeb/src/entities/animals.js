@@ -197,6 +197,8 @@ export class Animal {
       this.target = this.safeTarget(this.pos.x + cx * dist, this.pos.z + cz * dist);
       if (B.zigzag) this.zig = 1;
     };
+    // Bear-sprayed: nothing on its mind but getting away and rubbing its face.
+    if (g.time < (this.sprayedUntil || 0)) { this.alertness = 100; flee(); return; }
     const charge = (who) => {
       if (g.time < (this.retreatUntil || 0)) { flee(); return; }
       const h0 = who || nearestHunter;
