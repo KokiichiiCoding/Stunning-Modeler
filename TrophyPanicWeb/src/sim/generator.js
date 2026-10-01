@@ -10,6 +10,7 @@ const RARE = ['Piebald', 'Melanistic', 'Ghost Gray'];
 
 // Cute generated names for the harvest card. Pure flavour; drawn last.
 const NAME_A = ['Sir', 'Big', 'Lil', 'Old', 'Captain', 'Professor', 'Auntie', 'Sergeant', 'Baron', 'Grandpa', 'Tiny', 'Madame'];
+const LEGEND = ['Old Thunderhoof', 'The Golden Duke', 'Grandmother Gloom', 'King Crumpet', 'Sir Mossbeard', 'The Wobblewood Ghost', 'Big Biscuit', 'Lord Sparkleton'];
 const NAME_B = ['Muffin', 'Biscuit', 'Nibbles', 'Tater', 'Pickles', 'Waffles', 'Bumble', 'Crumpet', 'Noodle', 'Pudding', 'Sprout', 'Gumdrop', 'Pretzel', 'Doodle', 'Marbles', 'Wobbles'];
 
 export function generateAnimal(species, seed) {
@@ -55,6 +56,15 @@ export function generateAnimal(species, seed) {
   // web-only flavour draws (appended after the C++ contract)
   a.nickname = `${rng.pick(NAME_A)} ${rng.pick(NAME_B)}`;
   a.scale = 0.75 + massT * 0.5;
+  // Legendary: a rare, huge, golden-trophied individual (web-only, appended draw).
+  const eligible = ['antlers', 'palms', 'horns', 'tusks'].includes(species.look.trophy) || species.id === 'grizzly';
+  // (Only web-side flavour changes: the C++-contract fields above stay untouched.)
+  const roll = rng.next();
+  a.legendary = eligible && a.sex === 'Male' && roll < 0.03;
+  if (a.legendary) {
+    a.scale = Math.min(1.6, Math.max(1.15, a.scale) * 1.3);
+    a.nickname = rng.pick(LEGEND);
+  }
   return a;
 }
 

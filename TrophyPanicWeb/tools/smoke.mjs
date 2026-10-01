@@ -647,7 +647,7 @@ const scripts = {
     await page.evaluate(() => { const g = window.__tp.game; g.profile.gear.dog = 1; g.profile.gear.blind = 1; for (const id of ['bear_spray', 'honey', 'rifle_308', 'bow_recurve', 'shotgun_12', 'blower']) { if (!g.profile.owned.includes(id)) { g.profile.owned.push(id); g.profile.ammo[id] = 30; } } g.weapons.onInventoryChanged(); });
     await page.evaluate(() => window.__tp.debug.startGame({}));
     const log = [];
-    for (let round = 0; round < 12; round++) {
+    for (let round = 0; round < 10; round++) {
       const r = await page.evaluate((round) => {
         const g = window.__tp.game, I = g.input, p = g.player;
         if (g.state !== 'play') { if (g.state === 'menu') g.closeMenu(); if (g.player.downed || g.state !== 'play') g.respawn(); }
@@ -661,7 +661,7 @@ const scripts = {
           if (i % 120 === 60) I.mouse.right = !I.mouse.right;
           I.mouse.dx = Math.sin(i * 0.01 + round) * 6; I.mouse.dy = Math.cos(i * 0.013) * 1.5;
           g.advance(1 / 60);
-          if (i % 10 === 0) g.render(1 / 60);
+          if (i % 150 === 0) g.render(1 / 60);
           I.endFrame();
           if (g.state === 'menu') g.closeMenu();
         }
@@ -703,6 +703,26 @@ const scripts = {
       const q = w.props[0]; return { modes: [...modes], before, after: g.profile.ammo.boot + w.state.boot.mag, propsLeft: w.props.length, prop: q && { kind: q.kind, resting: q.resting, d: +Math.hypot(q.x - g.dog.pos.x, q.z - g.dog.pos.z).toFixed(1), vy: +q.vy.toFixed(2), y: +q.y.toFixed(1) }, dogActive: g.dog.active };
     });
     console.log('  fetch', JSON.stringify(r));
+  },
+  async legend() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 17.6; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, M = g.animals;
+      let tries = 0, L = null;
+      while (!L && tries++ < 3000) { M.spawnGroup(g.player.pos); L = M.list.find(a => a.identity.legendary); if (!L && M.list.length > 300) { for (const a of M.list) a.dispose(); M.list = []; M.groups = []; } }
+      if (!L) return { none: true, tries };
+      for (const a of M.list) if (a !== L) { a.rig.root.visible = false; a.frozen = true; }
+      window.__tp.debug.freeze(true);
+      const k = L.identity.scale, len = L.species.body.len * k;
+      const f = L.facing + 0.7, d = 3 + len * 1.6;
+      g.player.spawnAt(L.pos.x + Math.cos(f) * d, L.pos.z + Math.sin(f) * d, 0);
+      window.__tp.debug.aimAtAnimal(L, 'brain'); g.player.pitch -= 0.05; g.weapons.select('camera');
+      return { sp: L.species.id, name: L.identity.nickname, scale: +k.toFixed(2), rumor: !!M.rumor, tries };
+    });
+    console.log('  legend', JSON.stringify(r));
+    for (let i = 0; i < 4; i++) await page.evaluate(() => { const g = window.__tp.game; for (const a of g.animals.list) if (!a.identity.legendary) a.rig.root.visible = false; window.__tp.debug.stepFrames(3); });
+    await shot('99_legend');
   },
   async turkey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; });

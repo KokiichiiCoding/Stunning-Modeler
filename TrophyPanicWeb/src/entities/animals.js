@@ -653,6 +653,10 @@ export class Animal {
     r.eyes.scale.y = blink ? 0.12 : 1;
     r.brows.visible = this.goal === 'Charge' || this.state === 'Aggressive' || this.state === 'Stalking';
     r.snarl.visible = (this.goal === 'Charge' && !this.bluff) || (this.state === 'Aggressive' && this.species.danger >= 2) || this.lungeT > 0;
+    if (this.identity.legendary) {
+      this.sparkT = (this.sparkT || 0) - dt;
+      if (this.sparkT <= 0) { this.sparkT = 0.25; const hp = this.rig.headPos; const k = this.identity.scale; this.game.fx.burst(this.pos.x, this.pos.y + (hp.y + 0.5) * k, this.pos.z, { count: 1, color: 0xffe066, speed: 0.6, up: 0.6, kind: 'ember', size: 0.07 }); }
+    }
     const sq = Math.sin(this.phase * 2) * amp * 0.05;
     r.torso.scale.set(1 - sq * 0.5, 1 + sq, 1 - sq * 0.5);
   }
@@ -830,6 +834,13 @@ export class AnimalManager {
     // Herd leader: the biggest individual.
     group.leader = group.members.reduce((a, b) => (b.identity.bodyMassKg > a.identity.bodyMassKg ? b : a));
     this.groups.push(group);
+    const legend = group.members.find(m => m.identity.legendary);
+    if (legend && !g.coop.isGuest()) {
+      // rangers only know roughly where: a fuzzy circle on the map
+      this.rumor = { x: legend.pos.x + rng.range(-60, 60), z: legend.pos.z + rng.range(-60, 60), r: 110, name: legend.identity.nickname, sp: sp.displayName, t: g.time, id: legend.id };
+      g.ui.feed(`RANGER RADIO: a legendary ${sp.displayName.split(' ').pop().toLowerCase()} — "${legend.identity.nickname}" — has been spotted. Check your map!`, 'good');
+      g.audio.play('levelup');
+    }
     return true;
   }
 
@@ -1234,15 +1245,16 @@ export class AnimalManager {
     lines.push(`Blood lost: ${((1 - c.bloodVolumeMl / c.maxBloodVolumeMl) * 100).toFixed(0)}% of ${(c.maxBloodVolumeMl / 1000).toFixed(1)} L.`);
     if (recoveryDistance > 1) lines.push(`Tracked ${recoveryDistance.toFixed(0)} m from where it was hit.`);
     if (a.identity.rareTrait) lines.push(`Rare ${a.identity.rareTraitName} coat!`);
+    if (a.identity.legendary) lines.unshift(`LEGENDARY! You bagged ${a.identity.nickname}. The rangers will be talking about this for years.`);
     const wounds = c.wounds.map(w => {
       const part = findPart(c, w.bodyPartId);
       const nice = w.bodyPartId.replace(/_/g, ' ').replace('primary thorax', 'lung').replace('core pump cavity', 'heart').replace('gait column', 'leg').replace('wobble rump', 'gut');
       return `${nice}${w.exitWound ? ' — entry + exit' : ''} · ${w.bleedRateMlPerSec.toFixed(1)} ml/s${part && part.maxBoneIntegrity > 0 && part.boneIntegrity <= 0 ? ' · bone broken' : ''}`;
     });
 
-    const valueMult = Math.pow(score.overall / 100, 1.2) * (0.7 + a.identity.biologicalQuality / 200) * (a.identity.rareTrait ? 2 : 1);
+    const valueMult = Math.pow(score.overall / 100, 1.2) * (0.7 + a.identity.biologicalQuality / 200) * (a.identity.rareTrait ? 2 : 1) * (a.identity.legendary ? 4 : 1);
     const cash = Math.round(sp.value * Math.max(0.1, valueMult));
-    const xp = Math.round(sp.xp * (0.5 + score.overall / 100));
+    const xp = Math.round(sp.xp * (0.5 + score.overall / 100) * (a.identity.legendary ? 3 : 1));
     return { species: sp, animal: a.identity, score, shotWhy, integrityWhy, recoveryWhy, lines, wounds, cash, xp, owner, pos: { x: a.pos.x, z: a.pos.z } };
   }
 
@@ -1268,6 +1280,7 @@ export class AnimalManager {
     g.openMenu('harvest');
     g.ui.showHarvest(h);
     g.say('yay');
+    if (a.identity.legendary) { g.ui.toast(`LEGENDARY HARVEST: ${a.identity.nickname}!`, 'big', 4); g.audio.play('levelup'); this.rumor = null; }
   }
 
   removeAnimal(a) {

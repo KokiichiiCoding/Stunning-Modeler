@@ -390,7 +390,7 @@ export class UI {
   showHarvest(h) {
     this.hideScreens();
     $('harvest').hidden = false;
-    $('hv-species').textContent = h.species.displayName + (h.animal.rareTrait ? ` · RARE ${h.animal.rareTraitName}` : '');
+    $('hv-species').textContent = (h.animal.legendary ? '★ LEGENDARY · ' : '') + h.species.displayName + (h.animal.rareTrait ? ` · RARE ${h.animal.rareTraitName}` : '');
     $('hv-name').textContent = h.animal.nickname;
     $('hv-sub').textContent = `${h.animal.sex} · ${h.animal.ageClass} · ${h.animal.bodyMassKg.toFixed(0)} kg · ${h.animal.temperament}`;
     const tierClass = h.score.tier.split(' ')[0];
@@ -567,6 +567,15 @@ export class UI {
       this.mapTargets.push({ poi, x, y, known });
     }
     for (const tw of g.structures.towers) { const [x, y] = toPx(tw.x, tw.z); ctx.fillStyle = '#6aa84f'; ctx.fillRect(x - 3, y - 3, 6, 6); }
+    // legendary rumour: a fuzzy golden circle
+    const rm = g.animals.rumor;
+    if (rm && g.animals.list.some(a => a.id === rm.id && !a.harvested)) {
+      const [x, y] = toPx(rm.x, rm.z); const rr = rm.r / WORLD_SIZE * S;
+      ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = '#d9a400'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(255,210,74,.18)';
+      ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.28); ctx.fill(); ctx.stroke(); ctx.restore();
+      ctx.fillStyle = '#2a1f2e'; ctx.font = '800 12px "Baloo 2", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`Legend: ${rm.name}?`, x, y - rr - 4);
+    }
     // landmarks
     if (g.profile.discovered.includes('falls') && g.waterfall) {
       const [x, y] = toPx(g.waterfall.base.x, g.waterfall.base.z);
