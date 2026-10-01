@@ -81,7 +81,7 @@ export class Player {
     this.lastHurtBy = source;
     if (knock) {
       const k = Math.hypot(knock.x, knock.z);
-      if (k > 5.5 || blunt > 25) { this.startTumble(knock.x, Math.max(knock.y || 0, 3 + k * 0.25), knock.z); this.invuln = 2.2; }
+      if (k > 5.5 || blunt > 25) { this.startTumble(knock.x, Math.max(knock.y || 0, 3 + k * 0.25), knock.z); this.invuln = 2.2; this.game.knockHat && this.game.knockHat(knock); }
       else { this.vel.x += knock.x * 0.5; this.vel.z += knock.z * 0.5; this.invuln = 0.6; }
     }
     if (this.hp <= 0) { this.hp = 0; this.downed = true; this.game.onPlayerDowned(source); }

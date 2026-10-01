@@ -555,6 +555,26 @@ const scripts = {
     for (let i = 0; i < 6; i++) await step(4);
     await shot('99_waterfall');
   },
+  async goofy() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 17.4; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player;
+      p.hurt({ blunt: 30, knock: { x: 7, y: 5, z: 2 }, source: 'maul' });
+      const off = g.hatOff, flying = g.weapons.props.some(x => x.kind === 'hat');
+      for (let i = 0; i < 60 * 4; i++) g.advance(1 / 60);
+      const hat = g.weapons.props.find(x => x.kind === 'hat');
+      const rest = hat && hat.resting;
+      p.tumble = null; p.spawnAt(hat.x + 0.5, hat.z, 0);
+      const near = g.weapons.nearestPickup(p.pos, 2.5);
+      g.interact();
+      return { off, flying, rest, near: near && near.label, back: !g.hatOff && g.hunterModel.hat.visible };
+    });
+    console.log('  goofy', JSON.stringify(r));
+    await page.evaluate(() => { const g = window.__tp.game; g.input.pressed.add('KeyJ'); });
+    for (let i = 0; i < 5; i++) await step(4);
+    await shot('99_dance');
+  },
   async slapstick() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

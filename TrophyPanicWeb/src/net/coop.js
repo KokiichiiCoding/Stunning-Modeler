@@ -235,6 +235,7 @@ export class Coop {
         break;
       }
       case 'wave': r.waveT = 2.2; break;
+      case 'dance': r.danceT = 4; break;
       case 'chat': g.social.receive(r, d.t); break;
       case 'ping': g.social.receivePing(r, d); break;
       case 'downed': g.ui.feed(`${r.name} is DOWN (${String(d.by || '').slice(0, 20)})! Run over and press E to pull them up.`, 'warn'); if (r.target) g.social.addPing(r.target.x, r.target.y, r.target.z, 'Help me up!', r.color, r.name); break;
@@ -374,7 +375,7 @@ export class Coop {
     const pres = {
       v: 1, n: g.profile.name.slice(0, 14), c: g.profile.look().jacket, h: Math.max(0, HATS.indexOf(g.profile.hat)), sk: g.profile.skin | 0, since: this.joinedAt,
       p: [r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.pitch)], s: p.stance[0], sp: r2(p.speed),
-      tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0,
+      tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0, ho: g.hatOff ? 1 : 0,
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,
     };
     const bm = g.blinds && g.blinds.mine;
@@ -512,7 +513,9 @@ export class Coop {
       else if (pr.dn) { m.group.rotation.set(-Math.PI / 2, (r.target.yaw || 0) + Math.PI, 0); m.group.position.y = r.pos.y + 0.32; }
       else { m.group.rotation.set(0, (r.target.yaw || 0) + Math.PI, 0); }
       if (r.waveT > 0) r.waveT -= dt;
-      m.animate(dt, { flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
+      if (r.danceT > 0) r.danceT -= dt;
+      if (r.model.hat) r.model.hat.visible = !pr.ho;
+      m.animate(dt, { dance: r.danceT > 0, flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
       r.tag.position.set(r.pos.x, r.pos.y + 2.05, r.pos.z);
     }
   }

@@ -344,3 +344,9 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 #status-panel { min-width: 250px; }
 .sp-title { font-size: 31px; }
 @media (max-width: 1150px) { #status-bar { gap: 14px; font-size: 18px; padding: 5px 12px; } #weapon-box { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); } }
+#tip-card { left: 50%; right: auto; bottom: auto; top: calc(50px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -6px); max-width: min(420px, 46vw); }
+#tip-card.on { transform: translate(-50%, 0); }
+#toast-stack { top: 30%; }
+.feed-item:nth-last-child(n+5) { display: none; }
+#tip-card { top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); max-width: min(380px, 40vw); transform: translate(-50%, 6px); }
+#tip-card.on { transform: translate(-50%, 0); }

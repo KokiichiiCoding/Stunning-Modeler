@@ -29,7 +29,7 @@ function darken(hex, k = 0.72) {
 
 // Head-relative hat pieces. The head is a big ball (r = HR) centred at 0.
 const HR = 0.37;
-function buildHat(kind, color) {
+export function buildHat(kind, color) {
   const parts = [];
   const hy = HR * 0.5;
   const F = { flat: true };
@@ -198,7 +198,7 @@ export function buildHunter({ jacket = 0x5f6e34, hat = 'beanie', skin = 0 } = {}
   body.add(rifle);
 
   const api = {
-    group: root, body, head, eyes, deadEyes, brows, arms, legs, rifle, pack,
+    group: root, body, head, eyes, deadEyes, brows, arms, legs, rifle, pack, hat: hatMesh,
     phase: 0,
     /** Pose the rig. state: { speed, stance, pitch, dead, wave, aiming } */
     animate(dt, st) {
@@ -235,6 +235,17 @@ export function buildHunter({ jacket = 0x5f6e34, hat = 'beanie', skin = 0 } = {}
         legs[0].rotation.x = Math.sin(f + 1) * 1.4; legs[1].rotation.x = Math.sin(f + 3) * 1.4;
         head.rotation.z = Math.sin(f * 0.7) * 0.4;
       } else head.rotation.z = 0;
+      if (st.dance && !st.dead) {
+        // the victory jig: bounce, sway, windmill one arm, kick the legs
+        this.danceClock = (this.danceClock || 0) + dt;
+        const t = this.danceClock * 7;
+        body.position.y = Math.abs(Math.sin(t)) * 0.14;
+        body.rotation.z = Math.sin(t) * 0.22; body.rotation.x = 0;
+        arms[0].rotation.x = -2.5 + Math.sin(t) * 0.5; arms[0].rotation.z = 0.5;
+        arms[1].rotation.x = -1.2 + Math.sin(t * 2) * 1.6; arms[1].rotation.z = -0.4;
+        legs[0].rotation.x = Math.max(0, Math.sin(t)) * 0.9; legs[1].rotation.x = Math.max(0, -Math.sin(t)) * 0.9;
+        head.rotation.z = Math.sin(t * 0.5) * 0.3;
+      }
       if (st.seated) {
         // astride the quad: knees up, hands on the bars, leaning into turns
         legs[0].rotation.x = legs[1].rotation.x = -1.35;

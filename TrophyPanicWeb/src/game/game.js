@@ -12,7 +12,7 @@ import { Structures } from '../world/structures.js';
 import { Wind, ScentField, SoundLog, Evidence, SCENT_CARCASS, visualDetection } from '../sim/worldsim.js';
 import { Input } from '../core/input.js';
 import { Player } from '../player/player.js';
-import { buildHunter, JACKETS, SKINS } from '../entities/hunter.js';
+import { buildHunter, buildHat, JACKETS, SKINS } from '../entities/hunter.js';
 import { setHandColors } from '../player/viewmodel.js';
 import { AnimalManager } from '../entities/animals.js';
 import { Weapons } from '../player/weapons.js';
@@ -282,6 +282,7 @@ export class Game {
   }
   respawn() {
     this.downedInfo = null;
+    if (this.hatOff) this.restoreHat();
     if (this.player.vehicle) this.player.vehicle.exit(true);
     this.spawnAtLodge();
     this.hour = Math.min(23.5, this.hour + 1.5);
@@ -309,6 +310,29 @@ export class Game {
     this.scene.add(this.hunterModel.group);
     this.applyHandColors();
     if (this.weapons) this.weapons.vm.rebuildHands();
+  }
+
+  /** A big hit sends your hat flying. Go and get it. */
+  knockHat(knock) {
+    if (this.hatOff) return;
+    this.hatOff = true;
+    const p = this.player, lk = this.profile.look();
+    this.hunterModel.hat.visible = false;
+    const mesh = new THREE.Mesh(buildHat(lk.hat, lk.jacket), this.hunterModel.hat.material);
+    mesh.castShadow = true;
+    this.scene.add(mesh);
+    const k = Math.hypot(knock.x, knock.z) || 1;
+    this.weapons.props.push({ kind: 'hat', mesh, x: p.pos.x, y: p.pos.y + 1.4, z: p.pos.z, vx: knock.x / k * 5 + (this.weapons.rng.next() - 0.5) * 2, vy: 7, vz: knock.z / k * 5 + (this.weapons.rng.next() - 0.5) * 2, spin: 14, resting: false, label: 'your hat', age: 0 });
+    this.ui.toast('Your hat went flying!', 'hit', 1.8);
+  }
+
+  restoreHat() {
+    this.hatOff = false;
+    if (this.hunterModel.hat) this.hunterModel.hat.visible = true;
+    for (const pr of this.weapons.props.filter(x => x.kind === 'hat')) this.scene.remove(pr.mesh);
+    this.weapons.props = this.weapons.props.filter(x => x.kind !== 'hat');
+    this.ui.feed('Hat back on. Dignity restored.', 'good');
+    this.audio.play('boing', this.player.pos);
   }
 
   applyHandColors() {
@@ -397,6 +421,7 @@ export class Game {
     if (I.wasPressed('KeyX')) this.social.ping();
     if (I.wasPressed('KeyK')) this.dog.command();
     if (I.wasPressed('KeyP')) this.blinds.toggle();
+    if (I.wasPressed('KeyJ') && !this.player.vehicle && !this.player.tumble) { this.danceT = 4; this.coop.broadcastEvent('dance', {}); this.audio.play('levelup', this.player.pos); }
     if (I.wasPressed('Enter') || I.wasPressed('NumpadEnter')) this.social.open();
     if (I.wasPressed('Escape')) this.pause();
   }
@@ -424,6 +449,7 @@ export class Game {
     this.fx.step(dt);
     if (((this.time * 60) | 0) % 60 === 0) this.sounds.expire(this.time);
     if (this.waveT > 0) this.waveT -= dt;
+    if (this.danceT > 0) { this.danceT -= dt; if (this.player.speed > 0.8) this.danceT = 0; }
   }
 
   /** Walking into an outpost discovers it (fast travel) and counts for visit jobs. */
@@ -563,7 +589,7 @@ export class Game {
     cam.fov += (targetFov - cam.fov) * Math.min(1, dt * 14);
     cam.updateProjectionMatrix();
 
-    const third = this.thirdPerson || p.tumble || p.downed;
+    const third = this.thirdPerson || p.tumble || p.downed || this.danceT > 0;
     this.hunterModel.setVisible(!!third);
     if (p.vehicle && this.thirdPerson) {
       // chase cam: sits behind the quad, swings with it, mouse can look around
@@ -633,7 +659,7 @@ export class Game {
     } else {
       hm.group.rotation.set(0, p.yaw + Math.PI, 0);
     }
-    hm.animate(dt, { flail: !!p.tumble, speed: p.tumble ? 3 : p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming, showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' });
+    hm.animate(dt, { dance: this.danceT > 0, flail: !!p.tumble, speed: p.tumble ? 3 : p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming, showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' });
   }
 
   render(dt) {
@@ -676,7 +702,7 @@ export class Game {
     r.clear();
     r.render(this.scene, this.camera);
     if (this.pendingPhoto) this.capturePhoto();
-    if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && !this.player.vehicle && this.weapons.viewmodelVisible()) {
+    if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && !this.player.vehicle && !this.player.downed && !(this.danceT > 0) && this.weapons.viewmodelVisible()) {
       r.clearDepth();
       r.render(this.viewScene, this.viewCamera);
     }
