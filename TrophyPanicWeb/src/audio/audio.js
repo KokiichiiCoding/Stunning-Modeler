@@ -252,6 +252,22 @@ export class Audio {
     }
   }
 
+  /** Zipline whine: a bandpassed hiss that climbs with speed. */
+  setZip(level) {
+    if (!this.ctx) return;
+    if (!this.zipNode && level > 0.01) {
+      const c = this.ctx;
+      const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 6; bp.frequency.value = 600;
+      const g = c.createGain(); g.gain.value = 0;
+      src.connect(bp); bp.connect(g); g.connect(this.master); src.start(0, 0.5);
+      this.zipNode = { g, bp };
+    }
+    if (!this.zipNode) return;
+    this.zipNode.g.gain.setTargetAtTime(level * 0.3, this.ctx.currentTime, 0.1);
+    this.zipNode.bp.frequency.setTargetAtTime(500 + level * 2600, this.ctx.currentTime, 0.1);
+  }
+
   /** Rain hiss (two filtered noise layers) scaled by rain intensity. */
   setRain(level) {
     if (!this.ctx) return;

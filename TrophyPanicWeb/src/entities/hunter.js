@@ -243,6 +243,12 @@ export function buildHunter({ jacket = 0x5f6e34, hat = 'beanie', skin = 0 } = {}
         arms[0].rotation.x = -s * sw * 0.8; arms[1].rotation.x = s * sw * 0.8;
         arms[0].rotation.z = 0.15; arms[1].rotation.z = -0.15;
       }
+      if (st.hang) {
+        // dangling from the zipline: both hands on the bar, legs kicking
+        arms[0].rotation.set(-2.95, 0, 0.15); arms[1].rotation.set(-2.95, 0, -0.15);
+        legs[0].rotation.x = Math.sin(this.phase * 4) * 0.5; legs[1].rotation.x = -Math.sin(this.phase * 4) * 0.5;
+        body.rotation.x = 0; body.position.y = 0;
+      }
       rod.visible = !!st.rod && !st.dead;
       if (st.rod && !st.dead && !st.holdUp) { arms[1].rotation.x = -0.9 - (st.reel || 0) * 0.3 + Math.sin(this.phase * 12) * (st.reel || 0) * 0.08; arms[1].rotation.z = -0.1; }
       if (st.holdUp && !st.dead) {

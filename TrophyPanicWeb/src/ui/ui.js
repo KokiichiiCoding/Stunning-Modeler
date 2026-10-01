@@ -327,6 +327,7 @@ export class UI {
     if (p.downed) { const di = g.downedInfo; state = 'DOWNED'; detail = di && di.party ? `WAIT FOR A FRIEND ${Math.max(0, Math.ceil(di.wait - di.t))}S · E: RANGERS` : 'RANGERS EN ROUTE'; danger = true; }
     else if (threat && tLevel >= 2) { state = 'MOST DANGEROUS HUNT'; detail = `${short(threat.species)} THREAT: ${tLevel === 3 ? 'HIGH' : 'MEDIUM'}`; danger = true; }
     else if (p.tumble) { state = 'TUMBLING'; detail = 'TRY TO LAND ON SOMETHING SOFT'; }
+    else if (p.zip) { state = 'ZIPLINING'; detail = `${Math.round(p.zip.v * 3.6)} KM/H · NO BRAKES`; }
     else if (g.fishing.state === 'fight') { state = 'FISH ON!'; detail = g.fishing.tension > 0.75 ? 'LINE IS ABOUT TO SNAP. LET GO!' : `REEL IT IN · ${Math.max(0, g.fishing.dist - 1.6).toFixed(0)}M`; danger = g.fishing.tension > 0.75; }
     else if (g.fishing.state === 'float' || g.fishing.state === 'bite') { state = 'FISHING'; detail = g.fishing.state === 'bite' ? 'BITE! CLICK!' : 'WATCH THE BOBBER'; }
     else if (g.campfires.roast) { state = 'ROASTING'; detail = g.campfires.roast.burning ? 'IT IS ON FIRE. PULL IT OUT!' : 'WAIT FOR GOLDEN…'; }
@@ -395,6 +396,8 @@ export class UI {
     else if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
     else if (g.weapons.nearestPickup(p.pos, 2.5)) text = `<kbd>E</kbd>Pick up ${esc(g.weapons.nearestPickup(p.pos, 2.5).label)}`;
     else if (g.campfires.roast) text = null;
+    else if (p.zip) text = p.zip.v > 12 ? 'AAAAAAAAA · <kbd>E</kbd>let go' : '<kbd>E</kbd> / <kbd>Space</kbd>let go (not recommended)';
+    else if (!p.vehicle && g.ziplines.nearStart(p.pos)) text = '<kbd>E</kbd>Ride the zipline';
     else if (g.weapons.current && g.weapons.current.type === 'rod' && !p.swimming) {
       const fs = g.fishing.state;
       text = fs === 'idle' ? (g.fishing.draw > 0 ? 'Let go to cast!' : '<kbd>Hold click</kbd>wind up a cast at the water')
@@ -603,6 +606,10 @@ export class UI {
       this.mapTargets.push({ poi, x, y, known });
     }
     for (const tw of g.structures.towers) { const [x, y] = toPx(tw.x, tw.z); ctx.fillStyle = '#6aa84f'; ctx.fillRect(x - 3, y - 3, 6, 6); }
+    // ziplines: orange dashed runs with a dot at the top
+    ctx.save(); ctx.strokeStyle = '#ff6b2c'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]);
+    for (const l of g.ziplines.lines) { const [ax, ay] = toPx(l.a.x, l.a.z), [bx, by] = toPx(l.b.x, l.b.z); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.fillStyle = '#ff6b2c'; ctx.fillRect(ax - 3, ay - 3, 6, 6); }
+    ctx.restore();
     // legendary rumour: a fuzzy golden circle
     const rm = g.animals.rumor;
     if (rm && g.animals.list.some(a => a.id === rm.id && !a.harvested)) {

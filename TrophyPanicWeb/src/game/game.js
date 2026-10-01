@@ -36,6 +36,7 @@ import { TouchControls } from '../core/touch.js';
 import { Campfires } from '../entities/campfire.js';
 import { Fishing } from '../player/fishing.js';
 import { Cryptid } from '../entities/cryptid.js';
+import { Ziplines } from '../world/zipline.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -107,6 +108,7 @@ export class Game {
     ui.loading(0.7, 'Building the lodge…');
     await nextFrame();
     this.structures = new Structures(this.scene, this.terrain, this.vegetation);
+    this.ziplines = new Ziplines(this);
 
     this.wind = new Wind(this.sessionSeed ^ 0x77, 0.8, 3.2);
     this.weather = new Weather(this.sessionSeed ^ 0xa11, this.hour);
@@ -453,6 +455,11 @@ export class Game {
     };
     cmd.holdBreath = cmd.aiming && cmd.sprint;
     if (cmd.aiming) cmd.sprint = false;
+    if (p.zip) {
+      cmd.zipLetGo = I.wasPressed('Space');
+      cmd.moveX = cmd.moveZ = 0; cmd.jump = cmd.crouch = cmd.prone = false;
+      cmd.aiming = cmd.fire = cmd.firePressed = false;
+    }
     if (p.vehicle) {
       cmd.throttle = cmd.moveZ; cmd.steer = cmd.moveX;
       cmd.handbrake = I.isDown('Space');
@@ -663,12 +670,15 @@ export class Game {
     }
     if (p.vehicle) { p.vehicle.exit(); this.ui.feed('You hop off. The quad ticks as it cools.', 'info'); return; }
     if (this.campfires.roast) { this.campfires.eat(); return; }
+    if (p.zip) { this.ziplines.release(p, false); return; }
     // Harvest a downed animal in reach
     const a = this.animals.nearestDowned(p.pos, 3.2);
     if (a) { this.animals.harvest(a); return; }
     const item = this.weapons.nearestPickup(p.pos, 2.5);
     if (item) { this.weapons.pickup(item); return; }
     if (this.campfires.startRoast()) return;
+    const zl = !p.tumble && !p.swimming && this.ziplines.nearStart(p.pos);
+    if (zl) { this.ziplines.mount(p, zl); return; }
     // the first-aid crate by a camp tent patches you up
     const kit = this.nearestKit(p.pos);
     if (kit && (p.hp < 99 || p.bleed > 0)) {
@@ -821,6 +831,12 @@ export class Game {
       return;
     }
     hm.group.rotation.order = 'XYZ';
+    if (p.zip) {
+      const L = p.zip.L;
+      hm.group.rotation.set(Math.min(0.35, p.zip.v * 0.02), L.yaw, Math.sin(this.time * 2.2) * 0.1);
+      hm.animate(dt, { hang: true, speed: 0, stance: 'stand', pitch: p.pitch, showRifle: false, scared: p.zip.v > 14 });
+      return;
+    }
     if (p.downed) {
       hm.group.rotation.set(-Math.PI / 2, p.yaw + Math.PI, 0);
       hm.group.position.y = p.pos.y + 0.32;
@@ -867,6 +883,7 @@ export class Game {
     this.cryptid.render(dt);
     this.blinds.render(this.camera.position);
     this.campfires.render(dt);
+    this.ziplines.render(dt);
     this.fx.render(dt);
     this.weapons.render(dt);
     this.fishing.render(dt);
@@ -880,7 +897,7 @@ export class Game {
     const post = this.post.enabled;
     if (post) this.post.begin(); else { r.setRenderTarget(null); r.clear(); }
     r.render(this.scene, this.camera);
-    if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && !this.player.vehicle && !this.player.downed && !(this.danceT > 0) && this.weapons.viewmodelVisible()) {
+    if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && !this.player.vehicle && !this.player.zip && !this.player.downed && !(this.danceT > 0) && this.weapons.viewmodelVisible()) {
       r.clearDepth();
       r.render(this.viewScene, this.viewCamera);
     }

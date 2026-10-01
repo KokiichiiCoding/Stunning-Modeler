@@ -141,6 +141,7 @@ export class Player {
 
     if (this.tumble) { this.stepTumble(dt, cmd); this.emitSigns(dt); return; }
     if (this.vehicle) { this.ride(dt); return; }
+    if (this.zip) { g.ziplines.ride(this, dt, cmd, !!cmd.zipLetGo); return; }
     if (this.getUp > 0) { this.getUp -= dt; }
 
     // --- stance --------------------------------------------------------

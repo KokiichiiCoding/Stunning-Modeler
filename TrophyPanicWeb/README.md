@@ -63,6 +63,9 @@ artifact declaring the `room` capability to get online co-op.
   very hairy hiker. It strolls across distant clearings; get close (or
   shine a flashlight on it) and it waves, then sprints off flailing,
   leaving giant footprints. A photo of it pays $500. Bullets don't help.
+- **Ziplines.** A seeded search strings a few steep cables across the
+  reserve (orange dashes on the map). E on the deck clips you on; there
+  are no brakes, and the end of the line flings you into a tumble.
 - **Campfires.** L lights one. Standing close heals you, wolves and cougars
   pace outside the firelight, and E roasts a marshmallow: pull it out
   golden for a sugar rush, or leave it until it catches fire. At night the
@@ -188,4 +191,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
-- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`, `hiker`, `bearfish`, `coopfish`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`, `hiker`, `bearfish`, `coopfish`, `zipline`

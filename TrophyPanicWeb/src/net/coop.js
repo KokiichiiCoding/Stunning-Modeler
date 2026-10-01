@@ -389,6 +389,7 @@ export class Coop {
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,
     };
     if (g.fishing) g.fishing.presence(pres);
+    if (p.zip) pres.zp = 1;
     const cf = g.campfires && g.campfires.presence();
     if (cf) pres.cf = cf;
     const bm = g.blinds && g.blinds.mine;
@@ -534,7 +535,7 @@ export class Coop {
       if (r.model.hat) r.model.hat.visible = !pr.ho;
       const rod = pr.w === 'rod';
       m.animate(dt, { point: r.pointT > 0, dance: r.danceT > 0, flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim,
-        showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' && !rod, rod: rod && !pr.hf, holdUp: !!pr.hf, slap: !!pr.sw, reel: pr.rl ? 1 : 0 });
+        hang: !!pr.zp, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' && !rod && !pr.zp, rod: rod && !pr.hf, holdUp: !!pr.hf, slap: !!pr.sw, reel: pr.rl ? 1 : 0 });
       g.fishing.renderRemote(r, pr);
       r.tag.position.set(r.pos.x, r.pos.y + 2.05, r.pos.z);
     }

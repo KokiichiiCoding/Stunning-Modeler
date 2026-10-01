@@ -54,6 +54,50 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async zipline() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 16.5; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const info = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, Z = g.ziplines;
+      const lines = Z.lines.map(l => ({ len: +l.len.toFixed(0), drop: +(l.a.y - l.b.y).toFixed(1), a: [+l.a.x.toFixed(0), +l.a.z.toFixed(0)] }));
+      if (!Z.lines.length) return { lines };
+      const L = Z.lines[0];
+      // look at the line from the deck first
+      p.spawnAt(L.mount.x - L.dir.x * 1.5, L.mount.z - L.dir.z * 1.5, 0);
+      p.yaw = Math.atan2(-L.dir.x, -L.dir.z); p.pitch = -0.08;
+      for (let i = 0; i < 5; i++) g.advance(1 / 60);
+      window.__L = L;
+      return { lines, near: !!Z.nearStart(p.pos) };
+    });
+    console.log('  lines', JSON.stringify(info));
+    if (!info.lines.length) { errors.push('no ziplines placed'); return; }
+    await step(2);
+    await shot('106_zip_deck');
+    const ride = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, L = window.__L;
+      g.interact();
+      const on = !!p.zip;
+      let maxV = 0, n = 0;
+      while (p.zip && n++ < 60 * 40) { g.advance(1 / 60); if (p.zip) maxV = Math.max(maxV, p.zip.v); if (n === 60 * 3) window.__mid = true; }
+      const tumble = !!p.tumble;
+      for (let i = 0; i < 60 * 4; i++) g.advance(1 / 60);
+      return { on, secs: +(n / 60).toFixed(1), maxV: +maxV.toFixed(1), tumble, endD: +Math.hypot(p.pos.x - L.b.x, p.pos.z - L.b.z).toFixed(1), hp: Math.round(p.hp) };
+    });
+    console.log('  ride', JSON.stringify(ride));
+    if (!ride.on || ride.secs < 2 || ride.endD > 60) errors.push('zipline ride failed: ' + JSON.stringify(ride));
+    // mid-ride picture: get back on and freeze a few seconds in
+    await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, L = window.__L;
+      p.tumble = null; p.spawnAt(L.mount.x, L.mount.z, 0); g.interact();
+      for (let i = 0; i < 60 * 2.5; i++) g.advance(1 / 60);
+      p.yaw = Math.atan2(-L.dir.x, -L.dir.z); p.pitch = -0.35;
+    });
+    await step(1);
+    await shot('106_zip_ride');
+    await page.evaluate(() => { const g = window.__tp.game; g.thirdPerson = true; });
+    await step(2);
+    await shot('106_zip_third');
+  },
   async coopfish() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
     await page.evaluate(() => window.__tp.debug.startGame({}));
