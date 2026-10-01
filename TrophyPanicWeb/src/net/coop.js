@@ -130,7 +130,7 @@ export class Coop {
       if (!r) {
         r = { peer: p.peer, lastSeq: -1, name: String(pr.n || 'Hunter').slice(0, 14), color: pr.c | 0 || 0xff6b2c };
         const hat = HATS[pr.h | 0] || 'beanie';
-        r.model = buildHunter({ jacket: r.color, hat });
+        r.model = buildHunter({ jacket: r.color, hat, skin: Math.max(0, Math.min(5, pr.sk | 0)) });
         g.scene.add(r.model.group);
         r.tag = nameTag(r.name, r.color);
         g.scene.add(r.tag);
@@ -370,7 +370,7 @@ export class Coop {
     const g = this.game, p = g.player;
     const r2 = (v) => Math.round(v * 100) / 100;
     const pres = {
-      v: 1, n: g.profile.name.slice(0, 14), c: g.profile.look().jacket, h: Math.max(0, HATS.indexOf(g.profile.hat)), since: this.joinedAt,
+      v: 1, n: g.profile.name.slice(0, 14), c: g.profile.look().jacket, h: Math.max(0, HATS.indexOf(g.profile.hat)), sk: g.profile.skin | 0, since: this.joinedAt,
       p: [r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.pitch)], s: p.stance[0], sp: r2(p.speed),
       tb: p.tumble ? 1 : 0, dn: p.downed ? 1 : 0, bl: r2(p.bleed), tw: p.onTower ? 1 : 0, wv: g.waveT > 0 ? 1 : 0,
       w: g.weapons.currentId, aim: g.weapons.aiming ? 1 : 0, ev: this.events,

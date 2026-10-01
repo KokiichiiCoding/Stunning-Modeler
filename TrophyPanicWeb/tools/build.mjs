@@ -35,7 +35,7 @@ const markup = readFileSync(join(root, 'src', 'ui', 'markup.html'), 'utf8');
 const content = `<title>Trophy Panic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;800&family=VT323&display=swap">
 <style>
 ${css}
 </style>

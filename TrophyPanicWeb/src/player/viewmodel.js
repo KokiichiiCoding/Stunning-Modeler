@@ -188,8 +188,10 @@ export class Viewmodel {
   update(dt, st) {
     const g = this.game;
     // light the viewmodel like the world
-    this.hemi.color.copy(g.sky.hemi.color); this.hemi.groundColor.copy(g.sky.hemi.groundColor); this.hemi.intensity = g.sky.hemi.intensity * 1.1;
-    this.sun.color.copy(g.sky.sun.color); this.sun.intensity = g.sky.sun.intensity * 0.9;
+    // (with a floor, so your own gun never turns into a black silhouette at night; the flashlight adds warm fill)
+    this.hemi.color.copy(g.sky.hemi.color); this.hemi.groundColor.copy(g.sky.hemi.groundColor);
+    this.hemi.intensity = Math.max(0.75, g.sky.hemi.intensity * 1.1) + (g.fx.flashOn ? 0.5 : 0);
+    this.sun.color.copy(g.sky.sun.color); this.sun.intensity = Math.max(0.45, g.sky.sun.intensity * 0.9);
 
     this.aim += ((st.aiming ? 1 : 0) - this.aim) * Math.min(1, dt * 12);
     this.kick = Math.max(0, this.kick - dt * 6);

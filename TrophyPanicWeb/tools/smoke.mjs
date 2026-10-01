@@ -163,6 +163,7 @@ const scripts = {
   async portraits() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));
+    if (args.includes('--hour')) await page.evaluate((h) => { window.__tp_hour = h; }, args[args.indexOf('--hour') + 1]);
     if (args.includes('--rest')) await page.evaluate(() => { window.__tp_rest = true; });
     const list = (args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : ['deer', 'grizzly', 'wolf', 'moose', 'turkey', 'rabbit', 'boar', 'cougar']);
     for (const sp of list) {
@@ -470,6 +471,32 @@ const scripts = {
     console.log('  bonk', JSON.stringify(bonk));
     await step(2);
     await shot('63_atv_bonk');
+  },
+  async lineup() {
+    const hr = args.includes('--hour') ? Number(args[args.indexOf('--hour') + 1]) : 17.6;
+    await page.evaluate((hr) => { const g = window.__tp.game; g.hour = hr; g.weather.set('clear', true); }, hr);
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player;
+      g.animals.populateAround = () => {}; for (const a of g.animals.list) a.dispose(); g.animals.list = [];
+      const mk = window.__tp.buildHunter;
+      const f = p.forward(); const l = Math.hypot(f.x, f.z); const fx = f.x / l, fz = f.z / l;
+      const rx = -fz, rz = fx;
+      const looks = [{ jacket: 0x5f6e34, skin: 0 }, { jacket: 0x5f6e34, skin: 3 }, { jacket: 0x5f6e34, skin: 4, hat: 'beanie' }, { jacket: 0xff6b2c, skin: 5, hat: 'trapper' }, { jacket: 0x4fb4f0, skin: 2, hat: 'bucket' }];
+      window.__lineup = looks.map((lk, i) => {
+        const h = mk(lk); g.scene.add(h.group);
+        const off = (i - 2) * 1.1, d = 3.2 + Math.abs(i - 2) * 0.3;
+        const x = p.pos.x + fx * d + rx * off, z = p.pos.z + fz * d + rz * off;
+        h.group.position.set(x, g.terrain.heightAt(x, z), z);
+        h.group.rotation.y = Math.atan2(-fx, -fz) + (i - 2) * 0.25;
+        h.mood = [{}, { aiming: true }, { flail: false, scared: true }, { wave: true }, {}][i];
+        return h;
+      });
+      p.pitch = -0.12;
+      g.weapons.select('camera');
+    });
+    for (let i = 0; i < 6; i++) await page.evaluate(() => { const g = window.__tp.game; window.__lineup.forEach(h => h.animate(1 / 60, { speed: 0, stance: 'stand', pitch: 0, showRifle: !!h.mood.aiming, ...h.mood })); window.__tp.debug.stepFrames(1); });
+    await shot('19_lineup');
   },
   async slapstick() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });

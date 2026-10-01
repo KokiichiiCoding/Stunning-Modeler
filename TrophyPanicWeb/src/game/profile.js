@@ -9,7 +9,7 @@ const KEY = 'trophyPanic.profile.v1';
 
 const DEFAULTS = () => ({
   name: 'Pip',
-  jacket: 'blaze',
+  jacket: 'olive',
   hat: 'beanie',
   skin: 0,
   cash: 300,

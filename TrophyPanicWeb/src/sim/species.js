@@ -337,6 +337,62 @@ export const SPECIES = {
       { id: 'brain', tissue: 'brain', layers: skull(0.1, 0.2, 1.2) },
     ],
   },
+
+  fox: {
+    id: 'fox', displayName: 'Ember Fox', blurb: 'Nosy, fast and fluffy. Cannot resist a squeaky chicken.',
+    maxBloodVolumeMl: 520, bodyMassKg: [3.5, 8],
+    trophy: { organ: 'pelt', scoreRange: [20, 88], label: 'pelt' },
+    movement: { walk: 1.2, trot: 3.6, run: 12.5, stamina: 45 },
+    senses: { visionRange: 110, fov: 260, hearing: 1.9, smell: 0.035 },
+    behavior: { grouping: 'solitary', groupSize: [1, 1], fear: 32, aggression: 999, curiosity: 0.95, defensiveRadius: 0, wounded: 'flee_bed', zigzag: true },
+    tracks: { stride: 0.65, printCm: 5 },
+    klass: [1, 2], value: 150, xp: 95, danger: 0,
+    activity: ['dawn', 'dusk', 'night'], habitat: { forest: 2, meadow: 2, brush: 3, pine: 1 },
+    body: { len: 0.62, h: 0.28, w: 0.2, leg: 0.3, neck: 0.16, head: 0.23, headFwd: 0.1 },
+    look: { coat: 0xe8752a, belly: 0xfff4e6, accent: 0xfff4e6, nose: 0x1e1622, muzzle: 0xfff4e6, eye: 'sly', ears: 'pointy', tail: 'bushy', trophy: 'pelt' },
+    regions: {
+      brain: ['brain'], trophy: ['pelt'], neck: ['neck'], heart: ['core'],
+      lungL: ['core'], lungR: ['core'], spine: ['core'], gut: ['gut'], ...QUAD_LEGS,
+    },
+    bodyParts: [
+      { id: 'pelt', tissue: 'muscle', trophyOrgan: true, pelt: true },
+      ...legs(7, 8),
+      { id: 'core', tissue: 'lung', layers: [L('fur', 0.8, 0.2), L('muscle', 1.2, 1.0), L('lung', 4, 0.7, { organ: true })] },
+      { id: 'neck', tissue: 'major_vessel' },
+      { id: 'gut', tissue: 'liver_gut' },
+      { id: 'brain', tissue: 'brain', layers: skull(0.15, 0.3, 1.8) },
+    ],
+  },
+
+  bison: {
+    id: 'bison', displayName: 'Thunderhump Bison', blurb: 'A living sofa with horns. Herds charge together if you crowd them.',
+    maxBloodVolumeMl: 32000, bodyMassKg: [420, 900],
+    trophy: { organ: 'horns', scoreRange: [40, 95], label: 'horns' },
+    movement: { walk: 1.2, trot: 4.2, run: 13.5, stamina: 90 },
+    senses: { visionRange: 100, fov: 300, hearing: 1.2, smell: 0.06 },
+    behavior: { grouping: 'herd', groupSize: [4, 7], fear: 60, aggression: 55, curiosity: 0.2, defensiveRadius: 22, wounded: 'defensive', territorial: 20 },
+    tracks: { stride: 1.9, printCm: 15 },
+    klass: [3, 4], value: 1100, xp: 520, danger: 4,
+    attack: { name: 'horn toss', blunt: 42, cut: 10, knock: 20, reach: 2.6, cooldown: 1.8 },
+    activity: ['dawn', 'day', 'dusk'], habitat: { meadow: 4, brush: 2 },
+    body: { len: 2.4, h: 1.2, w: 0.95, leg: 0.95, neck: 0.2, head: 0.62, headFwd: 0.3, hump: 0.38 },
+    look: { coat: 0x5a3b26, belly: 0x6e4a30, accent: 0x2e1f15, nose: 0x241812, muzzle: 0x3a281c, eye: 'big', ears: 'round', tail: 'long', trophy: 'horns', mane: 0x3a2618, dewlap: true },
+    regions: {
+      brain: ['brain'], trophy: ['horns'], neck: ['neck'], heart: ['core_pump_cavity'],
+      lungL: ['primary_thorax_left'], lungR: ['primary_thorax_right'], spine: ['spine_thoracic'], gut: ['gut'], ...QUAD_LEGS,
+    },
+    bodyParts: [
+      { id: 'horns', tissue: 'dense_bone', boneIntegrity: 45, trophyOrgan: true },
+      ...legs(90, 90),
+      { id: 'primary_thorax_left', tissue: 'lung', layers: thorax(1.0, 2.5, 7.0, 1.8, 24) },
+      { id: 'primary_thorax_right', tissue: 'lung', layers: thorax(1.0, 2.5, 7.0, 1.8, 24) },
+      { id: 'core_pump_cavity', tissue: 'heart', layers: thorax(1.0, 1.5, 8.0, 2.2, 13, 'heart') },
+      { id: 'neck', tissue: 'major_vessel' },
+      { id: 'spine_thoracic', tissue: 'dense_bone', boneIntegrity: 70 },
+      { id: 'gut', tissue: 'liver_gut' },
+      { id: 'brain', tissue: 'brain', layers: skull(1.2, 2.6, 8) },
+    ],
+  },
 };
 
 export const SPECIES_IDS = Object.keys(SPECIES);

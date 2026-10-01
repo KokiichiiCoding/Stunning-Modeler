@@ -83,6 +83,18 @@ function buildAntlers(look, H, size01, palms) {
   return parts;
 }
 
+function buildHorns(H, size01) {
+  const parts = [];
+  const k = 0.7 + size01 * 0.6;
+  for (const s of [-1, 1]) {
+    // out sideways, then hooking up and in: three shrinking segments
+    parts.push(paint(xf(G.cyl(H * 0.07 * k, H * 0.09 * k, H * 0.26 * k, 6), [s * H * 0.42, H * 0.22, H * 0.02], [0, 0, s * 1.35]), 0x3a2f28));
+    parts.push(paint(xf(G.cyl(H * 0.05 * k, H * 0.07 * k, H * 0.2 * k, 6), [s * H * (0.42 + 0.22 * k), H * (0.3 + 0.06 * k), H * 0.02], [0, 0, s * 0.45]), 0x4a3d33));
+    parts.push(paint(xf(G.cone(H * 0.05 * k, H * 0.16 * k, 6), [s * H * (0.5 + 0.24 * k), H * (0.42 + 0.14 * k), H * 0.02], [0, 0, s * -0.35]), 0xe9dcc2));
+  }
+  return parts;
+}
+
 function buildTail(look, sp) {
   const B = sp.body;
   const parts = [];
@@ -183,6 +195,7 @@ export function buildAnimalRig(sp, animal) {
   let trophyMesh = null;
   const trophyParts = [];
   if ((look.trophy === 'antlers' || look.trophy === 'palms') && animal.trophySize01 > 0.02) trophyParts.push(...buildAntlers(L2, H, animal.trophySize01, look.trophy === 'palms'));
+  if (look.trophy === 'horns') trophyParts.push(...buildHorns(H, animal.trophySize01));
   if (look.trophy === 'tusks' && animal.trophySize01 > 0.02) {
     const tk = 0.6 + animal.trophySize01 * 0.8;
     for (const s2 of [-1, 1]) trophyParts.push(paint(xf(G.cone(H * 0.05 * tk, H * 0.3 * tk, 5), [s2 * H * 0.18, -H * 0.1, H * 0.72], [-0.6, 0, s2 * 0.5]), 0xfff8ea));
@@ -256,6 +269,7 @@ export function buildHitVolumes(sp, animal) {
     v.push({ region: 'trophy', c: [0, headPos[1] + H * 0.42 + 0.3 * k, headPos[2] - 0.05], r: 0.34 * k });
   }
   if (sp.look.trophy === 'tusks' && animal.trophySize01 > 0.02) v.push({ region: 'trophy', c: [0, headPos[1] - H * 0.1, headPos[2] + H * 0.72], r: H * 0.18 });
+  if (sp.look.trophy === 'horns') for (const s of [-1, 1]) v.push({ region: 'trophy', c: [s * H * 0.62, headPos[1] + H * 0.35, headPos[2]], r: H * 0.17 });
   if (sp.look.trophy === 'fan') v.push({ region: 'trophy', c: [0, B.leg + B.h * 0.95, -B.len * 0.55], r: B.h * 0.35 });
   // neck
   if (B.neck > 0.1) {

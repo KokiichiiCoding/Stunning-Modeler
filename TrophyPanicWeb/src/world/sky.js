@@ -7,16 +7,17 @@ import { Rng } from '../core/rng.js';
 
 const KEYS = [
   // hour, sky top, horizon, sun colour, sun intensity, hemi intensity, hemi sky, hemi ground
-  [0.0, 0x0c1638, 0x23305e, 0x8fa8ff, 0.22, 0.42, 0x3a4c8a, 0x1b2230],
-  [4.8, 0x14204a, 0x3a3f72, 0x8fa8ff, 0.2, 0.42, 0x3a4c8a, 0x1b2230],
-  [5.8, 0x3b4f98, 0xf2a08c, 0xffb38a, 0.55, 0.6, 0x9aa6d8, 0x4a4038],
-  [7.0, 0x69b8f5, 0xffd6a6, 0xffd9a8, 1.15, 0.75, 0xbfe0ff, 0x6a6a4a],
-  [9.5, 0x55b3fa, 0xd6f1ff, 0xfff4e0, 1.45, 0.82, 0xcfeaff, 0x6f7a4c],
-  [15.5, 0x58b1f5, 0xdff2ff, 0xfff1dc, 1.4, 0.8, 0xcfeaff, 0x6f7a4c],
-  [18.0, 0x5d98e0, 0xffd4a0, 0xffc28a, 1.05, 0.72, 0xe8d8ff, 0x6a5a48],
-  [19.2, 0x4a5fb0, 0xff8f78, 0xff8a66, 0.6, 0.6, 0xd0a8e0, 0x4a3a40],
-  [20.4, 0x1d2a66, 0x5d4c8c, 0x9aa8ff, 0.28, 0.46, 0x5a5a9a, 0x252538],
-  [24.0, 0x0c1638, 0x23305e, 0x8fa8ff, 0.22, 0.42, 0x3a4c8a, 0x1b2230],
+  // (golden hours lean warm; nights lean storybook purple)
+  [0.0, 0x161436, 0x3c2f66, 0x9f9cff, 0.26, 0.5, 0x5a4c9a, 0x221c30],
+  [4.8, 0x1c1a48, 0x4a3a78, 0x9f9cff, 0.24, 0.5, 0x5a4c9a, 0x221c30],
+  [5.8, 0x4b4fa0, 0xf6a07c, 0xffb07a, 0.6, 0.62, 0xa49ad8, 0x4a4038],
+  [7.0, 0x6fb6ee, 0xffd6a0, 0xffd096, 1.2, 0.78, 0xffe2b8, 0x6a6a4a],
+  [9.5, 0x55b0f6, 0xe4f1fb, 0xfff0d8, 1.45, 0.82, 0xd8ecff, 0x6f7a4c],
+  [15.5, 0x58b1f5, 0xe8f0f6, 0xfff0d8, 1.4, 0.8, 0xd8ecff, 0x6f7a4c],
+  [17.6, 0x6a9be0, 0xffcf8f, 0xffbe7a, 1.15, 0.75, 0xffe0b0, 0x6a5a48],
+  [19.2, 0x4a4ea8, 0xff8a6a, 0xff7a55, 0.62, 0.6, 0xd0a0d8, 0x4a3a40],
+  [20.4, 0x2a2468, 0x6a4a8c, 0xa79cff, 0.3, 0.5, 0x6a5aa8, 0x2a2238],
+  [24.0, 0x161436, 0x3c2f66, 0x9f9cff, 0.26, 0.5, 0x5a4c9a, 0x221c30],
 ];
 
 function sampleKeys(hour) {
@@ -47,6 +48,8 @@ export class Sky {
       uSunColor: { value: new THREE.Color() },
       uNight: { value: 0 },
       uFog: { value: 0 },
+      uMoonDir: { value: new THREE.Vector3(0, -1, 0) },
+      uMoon: { value: 0 },
       uFogColor: { value: new THREE.Color() },
     };
     const domeGeo = new THREE.SphereGeometry(1800, 32, 16);
@@ -54,15 +57,23 @@ export class Sky {
       side: THREE.BackSide, depthWrite: false, fog: false, uniforms: this.uniforms,
       vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }`,
       fragmentShader: `
-        uniform vec3 uTop, uHorizon, uSunDir, uSunColor, uFogColor; uniform float uNight, uFog; varying vec3 vDir;
+        uniform vec3 uTop, uHorizon, uSunDir, uSunColor, uFogColor, uMoonDir; uniform float uNight, uFog, uMoon; varying vec3 vDir;
         float hash(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453); }
         void main(){
           float h = clamp(vDir.y, -0.2, 1.0);
           vec3 col = mix(uHorizon, uTop, pow(max(h, 0.0), 0.55));
           if (h < 0.0) col = mix(uHorizon, uHorizon * 0.8, clamp(-h * 4.0, 0.0, 1.0));
           float sd = dot(normalize(vDir), normalize(uSunDir));
-          col += uSunColor * smoothstep(0.9965, 0.9985, sd) * 1.2;          // crisp toon sun disc
-          col += uSunColor * pow(max(sd, 0.0), 24.0) * 0.25;                // soft glow
+          col += uSunColor * smoothstep(0.9930, 0.9950, sd) * 1.3;          // big storybook sun disc
+          col += uSunColor * pow(max(sd, 0.0), 60.0) * 0.45;                // halo
+          col += uSunColor * pow(max(sd, 0.0), 6.0) * 0.18;                 // warm haze around it
+          // crescent moon: a disc minus a slightly offset disc
+          vec3 md = normalize(uMoonDir);
+          float mdisc = smoothstep(0.9982, 0.9988, dot(normalize(vDir), md));
+          vec3 off = normalize(md + normalize(cross(md, vec3(0.0, 1.0, 0.0))) * 0.022 + vec3(0.0, 0.012, 0.0));
+          float mcut = smoothstep(0.9982, 0.9988, dot(normalize(vDir), off));
+          col = mix(col, vec3(1.0, 0.96, 0.82), clamp(mdisc - mcut, 0.0, 1.0) * uMoon);
+          col += vec3(0.6, 0.6, 0.9) * pow(max(dot(normalize(vDir), md), 0.0), 300.0) * 0.25 * uMoon;
           // stars
           vec3 cell = floor(vDir * 180.0);
           float s = step(0.9975, hash(cell)) * uNight * smoothstep(0.05, 0.4, h);
@@ -92,8 +103,42 @@ export class Sky {
 
     scene.fog = new THREE.Fog(0xd6f1ff, 90, 520);
     this.buildClouds();
+    this.buildMountains();
     this.light = 1;
     this.period = 'day';
+  }
+
+  /** A far ring of big faceted, snow-capped peaks: the postcard backdrop. */
+  buildMountains() {
+    const rng = new Rng(4242);
+    const parts = [];
+    const rock = [0x6f7d96, 0x7c88a0, 0x667089], snow = 0xf4f6ff;
+    for (let i = 0; i < 46; i++) {
+      const a = (i / 46) * Math.PI * 2 + rng.range(-0.05, 0.05);
+      const r = rng.range(1250, 1650);
+      const h = rng.range(260, 620) * (0.7 + 0.5 * Math.abs(Math.sin(a * 2.3)));
+      const w = h * rng.range(0.9, 1.4);
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      const g = new THREE.ConeGeometry(w, h, 6 + (i % 3), 3);
+      // jitter vertices for a hand-carved look (hashed by position so seam copies move together)
+      const pos = g.attributes.position;
+      for (let v = 0; v < pos.count; v++) {
+        const y = pos.getY(v);
+        if (y > h / 2 - 1) continue;
+        const hx = Math.sin(Math.round(pos.getX(v)) * 12.9898 + Math.round(y) * 78.233 + Math.round(pos.getZ(v)) * 37.719 + i) * 43758.5453;
+        const j = hx - Math.floor(hx);
+        pos.setX(v, pos.getX(v) * (0.84 + j * 0.3)); pos.setZ(v, pos.getZ(v) * (0.84 + j * 0.3)); pos.setY(v, y + (j - 0.5) * h * 0.1);
+      }
+      parts.push(paint(xf(g, [x, h / 2 - 60, z], [0, rng.range(0, 6.28), 0]), rock[i % 3], { flat: true, bottom: 0x4c5670 }));
+      // snow cap: a smaller cone hugging the summit
+      parts.push(paint(xf(G.cone(w * 0.36, h * 0.34, 6 + (i % 3), 1), [x, h - 60 - h * 0.17 + 2, z], [0, rng.range(0, 6.28), 0]), snow, { flat: true, bottom: 0xd9e2f2 }));
+    }
+    this.mtnMat = toonMat({ flat: true }).clone();
+    this.mtnMat.fog = false;
+    this.mountains = new THREE.Mesh(merge(parts), this.mtnMat);
+    this.mountains.frustumCulled = false;
+    this.mountains.renderOrder = -5;
+    this.scene.add(this.mountains);
   }
 
   buildClouds() {
@@ -144,6 +189,8 @@ export class Sky {
     this.uniforms.uSunColor.value.copy(isDay ? k.sun : new THREE.Color(0xcfd8ff));
     const night = hour < 5.5 || hour > 20.2 ? 1 : hour < 6.5 ? 1 - (hour - 5.5) : hour > 19.2 ? (hour - 19.2) : 0;
     this.uniforms.uNight.value = Math.min(1, Math.max(0, night));
+    this.uniforms.uMoonDir.value.set(-Math.cos(ang) * 0.9, Math.max(0.28, -Math.sin(ang) * 0.6 + 0.35), -0.45).normalize();
+    this.uniforms.uMoon.value = Math.min(1, Math.max(0, night)) * (1 - (weather ? weather.cloud : 0) * 0.8);
 
     this.sun.color.copy(k.sun);
     this.sun.intensity = k.sunI;
@@ -164,6 +211,8 @@ export class Sky {
     this.dome.position.set(center.x, 0, center.z);
     this.light = Math.min(1, 0.35 + k.sunI * 0.5);
     this.cloudMat.color.copy(k.horizon).lerp(new THREE.Color(0xffffff), 0.55 - rain * 0.2);
+    // aerial perspective: distant peaks take on the horizon colour (and vanish into fog)
+    this.mtnMat.color.set(0xffffff).lerp(k.horizon, 0.38 + fog * 0.55 + rain * 0.3);
     this.clouds.count = Math.round(18 + cloud * 42);
     this.period = periodFor(hour);
 

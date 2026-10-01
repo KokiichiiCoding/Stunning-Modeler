@@ -14,7 +14,7 @@ const short = (sp) => SPECIES[sp].displayName.split(' ').pop().toLowerCase();
 const an = (w) => (/^[aeiou]/.test(w) ? 'an ' : 'a ') + w;
 
 function speciesFor(rng, level, pool = null) {
-  const tiers = [['deer', 'turkey', 'rabbit', 'boar'], ['elk', 'black_bear'], ['moose', 'wolf'], ['grizzly', 'cougar']];
+  const tiers = [['deer', 'turkey', 'rabbit', 'boar', 'fox'], ['elk', 'black_bear'], ['moose', 'wolf', 'bison'], ['grizzly', 'cougar']];
   const open = tiers.slice(0, Math.min(4, 1 + Math.floor(Math.max(0, level - 1) / 2))).flat();
   const list = pool ? open.filter(s => pool.includes(s)) : open;
   return rng.pick(list.length ? list : open);
@@ -27,7 +27,7 @@ const TEMPLATES = [
   { w: 1, make: () => ({ type: 'harvest', minDist: 150, title: 'Long-range harvest', desc: 'Harvest anything with a first shot from 150 m or more. Check the wind.', cash: 160, xp: 100 }) },
   { w: 1, make: () => ({ type: 'harvest', minRecovery: 80, title: 'Blood trailer', desc: 'Recover an animal that ran 80 m or more after the hit. Hunter sense (Q) helps.', cash: 140, xp: 90 }) },
   { w: 3, make: (r, L) => { const sp = speciesFor(r, L + 2); return { type: 'photo', sp, minStars: 3, title: `Photograph ${an(short(sp))}`, desc: 'Three stars or better: fill the frame, centre it, broadside is best.', cash: Math.round(SPECIES[sp].value * 0.25 + 50), xp: 50 }; } },
-  { w: 1.2, make: (r, L) => { const sp = r.pick(L >= 5 ? ['grizzly', 'cougar', 'wolf', 'moose', 'black_bear'] : ['black_bear', 'boar', 'moose']); return { type: 'photo', sp, maxDist: 35, title: `Close-up: ${short(sp)}`, desc: `Photograph ${an(short(sp))} from within 35 m. Then leave. Quickly.`, cash: Math.round(SPECIES[sp].value * 0.4 + 120), xp: 120 }; } },
+  { w: 1.2, make: (r, L) => { const sp = r.pick(L >= 5 ? ['grizzly', 'cougar', 'wolf', 'moose', 'black_bear', 'bison'] : ['black_bear', 'boar', 'moose', 'bison']); return { type: 'photo', sp, maxDist: 35, title: `Close-up: ${short(sp)}`, desc: `Photograph ${an(short(sp))} from within 35 m. Then leave. Quickly.`, cash: Math.round(SPECIES[sp].value * 0.4 + 120), xp: 120 }; } },
   { w: 1, make: () => ({ type: 'air', minAir: 1.4, title: 'Quad bike stunt', desc: 'Get 1.4 seconds of air on a quad and land it. The rangers will pretend not to see.', cash: 90, xp: 60 }) },
   { w: 1, make: (r) => { const poi = r.pick(POIS.filter(p => p.kind !== 'lodge')); return { type: 'visit', poi: poi.id, title: `Check on ${poi.name}`, desc: `Walk (or drive) to ${poi.name} and restock its supply box.`, cash: 70, xp: 40 }; } },
   { w: 0.9, make: (r) => { const sp = r.pick(['turkey', 'rabbit', 'deer']); return { type: 'bonk', sp, title: `Boop ${an(short(sp))}`, desc: `Hit ${an(short(sp))} with a thrown boot or rubber chicken. For science.`, cash: 60, xp: 50 }; } },

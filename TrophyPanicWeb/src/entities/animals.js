@@ -26,10 +26,10 @@ export function inWindow(hour, z) {
 }
 const PERCEIVE = 0.1, DECIDE = 0.2;
 
-const VOICES = { deer: 'deer', elk: 'elk', boar: 'boar', black_bear: 'growl', grizzly: 'roar', moose: 'moose', wolf: 'howl', cougar: 'cougar', turkey: 'gobble', rabbit: 'rabbit' };
+const VOICES = { deer: 'deer', elk: 'elk', boar: 'boar', black_bear: 'growl', grizzly: 'roar', moose: 'moose', wolf: 'howl', cougar: 'cougar', turkey: 'gobble', rabbit: 'rabbit' , fox: 'yip', bison: 'moose' };
 
 // Spawn weight per species (dangerous game rarer, but present).
-const SPAWN_WEIGHT = { deer: 22, elk: 11, boar: 12, turkey: 12, rabbit: 12, black_bear: 8, wolf: 7, moose: 6, cougar: 5, grizzly: 5 };
+const SPAWN_WEIGHT = { deer: 22, elk: 11, boar: 12, turkey: 12, rabbit: 12, black_bear: 8, wolf: 7, moose: 6, cougar: 5, grizzly: 5, fox: 9, bison: 6 };
 
 const _v = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3(), _m = new THREE.Matrix4();
 
@@ -488,7 +488,7 @@ export class Animal {
       if (this.voiceCd <= 0) {
         this.voiceCd = this.rng.range(20, 70);
         const dPlayer = Math.hypot(g.player.pos.x - this.pos.x, g.player.pos.z - this.pos.z);
-        const vocal = this.species.id === 'elk' ? g.period !== 'day' : this.species.id === 'wolf' ? g.period === 'night' || g.period === 'dusk' : this.species.id === 'turkey' || this.species.id === 'deer';
+        const vocal = this.species.id === 'elk' ? g.period !== 'day' : this.species.id === 'wolf' ? g.period === 'night' || g.period === 'dusk' : this.species.id === 'turkey' || this.species.id === 'deer' || (this.species.id === 'fox' && g.period === 'night');
         if (vocal && dPlayer < 450 && (!this.group || this.group.leader === this)) {
           g.audio.play(VOICES[this.species.id], this.pos);
           g.sounds.emit('animal', this.pos.x, this.pos.y + 1, this.pos.z, 300, g.time, this.id);
@@ -1096,7 +1096,7 @@ export class AnimalManager {
 
   onCall(kind, pos) {
     const g = this.game;
-    const responders = { deer: ['deer'], elk: ['elk'], turkey: ['turkey'], predator: ['wolf', 'cougar', 'black_bear', 'grizzly'] }[kind] || [];
+    const responders = { deer: ['deer'], elk: ['elk'], turkey: ['turkey'], predator: ['wolf', 'cougar', 'black_bear', 'grizzly', 'fox'] }[kind] || [];
     for (const a of this.list) {
       if (!a.alive || !responders.includes(a.species.id)) continue;
       const d = Math.hypot(a.pos.x - pos.x, a.pos.z - pos.z);

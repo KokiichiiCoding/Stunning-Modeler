@@ -2,7 +2,7 @@
 
 import { WEAPONS, GEAR, AMMO } from '../sim/arsenal.js';
 import { SPECIES } from '../sim/species.js';
-import { JACKETS, HATS } from '../entities/hunter.js';
+import { JACKETS, HATS, SKINS } from '../entities/hunter.js';
 import { POIS, GRID, HALF, WORLD_SIZE, TRAIL_POLYS, LAKE } from '../world/terrainData.js';
 import { BIOME_COLORS } from '../world/terrainMesh.js';
 import { WEATHER_ICON, WEATHER_LABEL } from '../sim/weather.js';
@@ -101,6 +101,15 @@ export class UI {
       b.onclick = () => { p.jacket = j.id; p.save(); this.game.rebuildHunter(); this.showTitle(); };
       sw.appendChild(b);
     }
+    const sk = $('skin-swatches'); sk.innerHTML = '';
+    SKINS.forEach((k, i) => {
+      const b = document.createElement('button');
+      b.className = 'swatch' + ((p.skin | 0) === i ? ' on' : '');
+      b.style.background = hex(k.hex);
+      b.title = k.name; b.setAttribute('aria-label', 'Skin ' + k.name);
+      b.onclick = () => { p.skin = i; p.save(); this.game.rebuildHunter(); this.showTitle(); };
+      sk.appendChild(b);
+    });
     const hc = $('hat-choices'); hc.innerHTML = '';
     for (const h of HATS) {
       const b = document.createElement('button');
@@ -130,7 +139,7 @@ export class UI {
   showDowned(source, bill) {
     this.hideScreens();
     $('downed').hidden = false;
-    const titles = { 'maul': 'You got mauled.', 'stomp': 'You got stomped.', 'bite': 'You got nibbled. A lot.', 'pounce': 'Pounced!', 'tusk gore': 'Boar\'d to death.', 'a hard landing': 'Gravity wins again.', 'blood loss': 'You ran out of blood.' };
+    const titles = { 'maul': 'You got mauled.', 'stomp': 'You got stomped.', 'bite': 'You got nibbled. A lot.', 'pounce': 'Pounced!', 'tusk gore': 'Boar\'d to death.', 'horn toss': 'Bison\'d. Airborne, briefly.', 'a hard landing': 'Gravity wins again.', 'blood loss': 'You ran out of blood.' };
     $('downed-title').textContent = titles[source] || 'You got got.';
     $('downed-text').textContent = 'The rangers carried you back to the lodge. They were very nice about it.';
     $('downed-bill').textContent = bill > 0 ? `Medical bill: ${money(bill)}` : 'The rangers waived the bill. They felt bad.';
@@ -269,6 +278,7 @@ export class UI {
     }
 
     // prompt & clue card
+    this.updateStatus(dt);
     this.updatePrompt();
     const clue = g.fx.focusClue;
     const card = $('clue-card');
@@ -277,6 +287,60 @@ export class UI {
       this.hid('clue-card', false);
       if (this.clueT <= 0 || this._clue !== clue) { this.clueT = 0.5; this._clue = clue; const html = this.clueText(clue); if (this._c['clue.html'] !== html) { this._c['clue.html'] = html; card.innerHTML = html; } }
     } else this.hid('clue-card', true);
+  }
+
+  /** The terminal status panel: what kind of moment is this? */
+  updateStatus(dt) {
+    this.statusT = (this.statusT || 0) - dt;
+    if (this.statusT > 0) return;
+    this.statusT = 0.25;
+    const g = this.game, p = g.player;
+    const short = (sp) => sp.displayName.split(' ').pop().toUpperCase();
+    const dir8 = (dx, dz) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round((((Math.atan2(dx, -dz) * 180 / Math.PI) % 360) + 360) % 360 / 45) % 8];
+    // biggest threat nearby
+    let threat = null, tLevel = 0;
+    for (const a of g.animals.list) {
+      if (!a.alive || a.downed || !(a.species.danger >= 2)) continue;
+      const d = Math.hypot(a.pos.x - p.pos.x, a.pos.z - p.pos.z);
+      if (d > 90) continue;
+      const lvl = a.goal === 'Charge' || a.state === 'Aggressive' ? 3 : d < 35 || a.state === 'Stalking' ? 2 : 1;
+      if (lvl > tLevel) { tLevel = lvl; threat = a; }
+    }
+    let state, detail, danger = false;
+    const wounded = g.animals.list.find(a => a.firstHitTime >= 0 && !a.harvested && (a.alive || a.downed));
+    if (p.downed) { state = 'DOWNED'; detail = 'RANGERS EN ROUTE'; danger = true; }
+    else if (threat && tLevel >= 2) { state = 'MOST DANGEROUS HUNT'; detail = `${short(threat.species)} THREAT: ${tLevel === 3 ? 'HIGH' : 'MEDIUM'}`; danger = true; }
+    else if (p.tumble) { state = 'TUMBLING'; detail = 'TRY TO LAND ON SOMETHING SOFT'; }
+    else if (g.period === 'night') { state = 'SURVIVE THE NIGHT'; detail = threat ? `${short(threat.species)} NEARBY` : null; }
+    else if (wounded && !wounded.downed) { state = 'TRACKING'; detail = `WOUNDED ${short(wounded.species)} · FOLLOW THE BLOOD`; }
+    else if (wounded && wounded.downed) { state = 'RECOVERY'; detail = `${short(wounded.species)} DOWN ${dir8(wounded.pos.x - p.pos.x, wounded.pos.z - p.pos.z)} ${Math.round(Math.hypot(wounded.pos.x - p.pos.x, wounded.pos.z - p.pos.z))}M`; }
+    else if (p.vehicle) state = 'RIDING';
+    else if (p.inBlind) state = 'WAITING IN BLIND';
+    else if (p.stance !== 'stand' || g.weapons.aiming) state = 'STALKING';
+    else state = 'TRAVELING';
+    if (!detail) {
+      const job = g.profile.jobs && g.profile.jobs.active[0];
+      const last = g.profile.trophies[0];
+      const sight = g.animals.sightings[g.animals.sightings.length - 1];
+      if (threat) detail = `${short(threat.species)} NEARBY`;
+      else if (job) detail = 'JOB: ' + job.title.toUpperCase();
+      else if (last && last.tier !== 'Field Dressed Only') detail = `CLEAN HARVEST: ${last.speciesName.toUpperCase()} ${last.tier.toUpperCase()}`;
+      else if (sight) detail = `SIGHTED: ${sight.label.toUpperCase()} ${dir8(sight.x - p.pos.x, sight.z - p.pos.z)} ${Math.round(Math.hypot(sight.x - p.pos.x, sight.z - p.pos.z))}M`;
+      else detail = 'FIND SIGN. READ THE WIND.';
+    }
+    this.txt('sp-state', state); this.txt('sp-detail', detail);
+    const el = $('sp-state'); if (this._c.spDanger !== danger) { this._c.spDanger = danger; el.classList.toggle('danger', danger); $('sp-detail').classList.toggle('danger', danger); }
+    const h = Math.floor(g.hour), m = Math.floor((g.hour - h) * 60);
+    this.txt('sp-clock', `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    // bottom bar
+    const stance = p.vehicle ? 'RIDING' : p.tumble ? 'TUMBLING' : p.swimming ? 'SWIMMING' : p.inBlind ? 'HIDDEN' : danger && p.stance === 'stand' ? 'DEFENSIVE' : { stand: 'STANDING', crouch: 'CROUCHING', prone: 'CRAWLING' }[p.stance];
+    this.txt('sb-stance', stance);
+    const wv = g.wind.vec();
+    const from = ((Math.atan2(wv.x, -wv.z) * 180 / Math.PI + 180) % 360 + 360) % 360;
+    this.txt('sb-wind', String(Math.round(from) % 360).padStart(3, '0'));
+    this.txt('sb-wspd', `${Math.round(g.wind.speed)} M/S`);
+    this.txt('sb-weather', `${(g.period || 'day').toUpperCase()} · ${WEATHER_LABEL[g.weather.kind].toUpperCase()}`);
+    this.hid('sb-warn', !danger);
   }
 
   clueText(c) {

@@ -12,6 +12,12 @@
   <!-- HUD ------------------------------------------------------------ -->
   <div id="hud" hidden>
     <div id="blind-frame" hidden></div>
+    <div id="status-panel">
+      <div class="sp-title">TROPHY PANIC</div>
+      <div class="sp-row"><span id="sp-state">TRAVELING</span><span id="sp-clock">06:30</span></div>
+      <div id="sp-detail">FIND SOMETHING TO HUNT</div>
+    </div>
+    <div id="status-bar"><span>STANCE <b id="sb-stance">STANDING</b></span><span>WIND <b id="sb-wind">000</b> <b id="sb-wspd">0 M/S</b></span><span id="sb-weather">CLEAR</span><span id="sb-warn" hidden>⚠</span></div>
     <div id="compass"><div id="compass-strip"></div><div id="compass-needle"></div><div id="wind-chip"><i id="wind-arrow">➤</i><span id="wind-speed">3 m/s</span></div></div>
     <div id="clock"><span id="clock-time">06:30</span><span id="clock-period">Dawn</span></div>
     <div id="feed"></div>
@@ -60,9 +66,11 @@
           <input id="hunter-name" maxlength="14" value="Pip">
           <label class="fld">Jacket</label>
           <div id="jacket-swatches" class="swatches"></div>
+          <label class="fld">Skin</label>
+          <div id="skin-swatches" class="swatches"></div>
           <label class="fld">Hat</label>
           <div id="hat-choices" class="chips"></div>
-          <div id="hunter-preview-note">Blaze orange is traditional. Pink is also traditional now.</div>
+          <div id="hunter-preview-note">Olive is traditional. Blaze orange is safer. Green skin is a lifestyle.</div>
         </div>
         <div class="card play-card">
           <button id="btn-play" class="btn big">Head into the reserve</button>

@@ -1,10 +1,12 @@
 // Boot: build the world behind a loading card, then hand control to Game.
 import { Game } from './game/game.js';
+import { buildHunter } from './entities/hunter.js';
 
 function start(saved = {}) {
   const canvas = document.getElementById('game');
   const game = new Game(canvas, saved);
   window.__tp = game.debugApi();
+  if (window.__TP_TEST) window.__tp.buildHunter = buildHunter;
   game.boot().catch((e) => {
     console.error(e);
     const msg = document.getElementById('load-msg');

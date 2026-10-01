@@ -278,3 +278,68 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 #tip-card { position: absolute; left: 14px; bottom: 150px; max-width: min(300px, 34vw); background: #e8f7d8; border: 3px solid var(--ink); border-radius: 14px; padding: 7px 12px 8px; box-shadow: 0 3px 0 var(--ink); font: 700 13px/1.3 var(--body); opacity: 0; transform: translateY(8px); transition: opacity .3s, transform .3s; pointer-events: none; }
 #tip-card.on { opacity: 1; transform: none; }
 #tip-card b { display: block; font: 800 12px var(--display); text-transform: uppercase; letter-spacing: .05em; color: #2f8a24; }
+
+/* ======================================================================
+   Field-terminal HUD (concept art direction): dark translucent panels,
+   a chunky pixel monospace, lime title, amber clock, red danger lines.
+   ====================================================================== */
+:root { --term: "VT323", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; --panel: rgba(12, 14, 12, .82); --lime: #b6f25a; --amber: #f2c45c; --cyan: #74e2e8; --alarm: #ff5a4a; --hudtxt: #f1eee4; }
+#hud { font-family: var(--term); color: var(--hudtxt); }
+#hud .hud-panel, #status-panel, #status-bar, #vitals, #weapon-box, #cash-chip, #party-chip, #jobs-chip, #compass, .wind-ui, #prompt, #clue-card, .feed-item, .toast, #tip-card {
+  background: var(--panel); border: 0; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.25); color: var(--hudtxt); font-family: var(--term); }
+#status-panel { position: absolute; left: 14px; top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px 14px 7px; min-width: 300px; letter-spacing: .04em; }
+.sp-title { color: var(--lime); font-size: 34px; line-height: 1; text-shadow: 0 0 8px rgba(182,242,90,.25); }
+.sp-row { display: flex; justify-content: space-between; gap: 24px; font-size: 22px; line-height: 1.05; margin-top: 2px; }
+#sp-clock { color: var(--amber); font-variant-numeric: tabular-nums; }
+#sp-state.danger { color: var(--alarm); }
+#sp-detail { font-size: 18px; color: var(--cyan); line-height: 1.1; }
+#sp-detail.danger { color: var(--alarm); }
+#status-bar { position: absolute; left: 14px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 22px; align-items: center; padding: 6px 16px; font-size: 21px; letter-spacing: .05em; white-space: nowrap; }
+#status-bar b { font-weight: 400; }
+#sb-warn { color: #fff; background: var(--alarm); clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 24px; height: 21px; display: inline-flex; align-items: flex-end; justify-content: center; font-size: 15px; line-height: 1; animation: blinkwarn .8s steps(2) infinite; }
+@keyframes blinkwarn { 50% { opacity: .35; } }
+#clock { display: none; }
+#feed { top: calc(122px + env(safe-area-inset-top, 0px)); gap: 4px; }
+.feed-item { font-size: 19px; line-height: 1.1; padding: 4px 10px; border-left: 4px solid var(--hudtxt); font-weight: 400; animation: pop .2s ease-out; }
+.feed-item.warn { background: var(--panel); border-left-color: var(--alarm); color: #ffd0c8; }
+.feed-item.good { background: var(--panel); border-left-color: var(--lime); color: #e6ffc8; }
+.feed-item.info { background: var(--panel); border-left-color: var(--cyan); }
+.feed-item.chat { background: var(--panel); border-left-color: var(--amber); color: #fff2cf; }
+#compass { height: 30px; }
+#compass-strip { font-size: 20px; line-height: 30px; font-weight: 400; color: var(--hudtxt); }
+#compass-needle { background: var(--lime); }
+.wind-ui { display: none; }
+#vitals { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); padding: 7px 12px; width: 230px; }
+.bar { border: 0; height: 10px; border-radius: 2px; background: rgba(255,255,255,.12); }
+.bar i { background: #ff5a6a; } .bar.stam i { background: var(--amber); }
+.vit-ico { color: var(--hudtxt); font-size: 18px; }
+.meter { color: rgba(241,238,228,.7); font-size: 15px; font-weight: 400; letter-spacing: .06em; }
+.mbar { border: 0; height: 6px; border-radius: 2px; background: rgba(255,255,255,.12); }
+.mbar i { background: var(--cyan); } #vis-bar { background: #ff9ad0; }
+#stance-chip { display: none; }
+#weapon-box { padding: 7px 14px; }
+#weapon-name { font-size: 22px; font-weight: 400; color: var(--lime); letter-spacing: .03em; }
+#ammo-line { font-size: 40px; font-weight: 400; }
+#ammo-line .sep, #ammo-res { color: rgba(241,238,228,.6); }
+#ammo-type { color: var(--amber); font-size: 18px; }
+.slot { font-family: var(--term); font-size: 16px; font-weight: 400; border: 0; border-radius: 3px; background: rgba(255,255,255,.1); color: var(--hudtxt); padding: 0 6px; }
+.slot.on { background: var(--lime); color: #142008; }
+#cash-chip { top: calc(12px + env(safe-area-inset-top, 0px)); font-weight: 400; padding: 4px 12px; }
+#cash-chip b { font-weight: 400; font-size: 26px; color: var(--amber); } #level { font-size: 18px; color: var(--lime); }
+#party-chip, #jobs-chip { font-size: 17px; font-weight: 400; top: calc(60px + env(safe-area-inset-top, 0px)); }
+#jobs-chip b { font-family: var(--term); font-size: 16px; font-weight: 400; color: var(--lime); letter-spacing: .08em; }
+#party-chip .dot { border: 0; }
+#prompt { font-size: 22px; font-weight: 400; padding: 5px 14px; }
+#hud kbd { font-family: var(--term); font-weight: 400; background: var(--lime); color: #142008; border: 0; border-radius: 3px; box-shadow: none; padding: 0 7px; }
+#clue-card { font-size: 19px; font-weight: 400; }
+#clue-card b { font-family: var(--term); font-weight: 400; color: var(--amber); }
+.toast { font-size: 24px; font-weight: 400; padding: 4px 16px; letter-spacing: .03em; }
+.toast.hit { background: var(--panel); color: #ffd3dc; } .toast.miss { background: var(--panel); color: #cfd8dc; }
+.toast.big { background: var(--panel); color: var(--amber); font-size: 34px; text-shadow: 0 0 10px rgba(242,196,92,.3); }
+#tip-card { font: 400 19px/1.15 var(--term); border-left: 4px solid var(--lime); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+#tip-card b { font: 400 17px var(--term); color: var(--lime); letter-spacing: .1em; }
+#range-read, #bino-read, #vf-read { font-family: var(--term); font-weight: 400; font-size: 24px; }
+@media (max-width: 700px) { #status-panel { min-width: 0; } .sp-title { font-size: 26px; } #status-bar { gap: 12px; font-size: 17px; } }
+#compass { width: min(320px, 33vw); }
+#status-panel { min-width: 250px; }
+.sp-title { font-size: 31px; }
