@@ -142,7 +142,7 @@ export class Weapons {
     const tired = 1 + (1 - p.stamina / 100) * 1.6 + (p.hp < 50 ? 0.8 : 0);
     const breath = cmd.holdBreath && p.stamina > 5 ? 0.25 : 1;
     const moving = Math.min(1, p.speed / 2);
-    const amp = 0.0045 * (w.sway || 1) * stanceK * tired * breath * (1 + moving * 2) * (this.binoculars ? 0.7 : 1);
+    const amp = 0.0045 * (w.sway || 1) * stanceK * tired * breath * (1 + moving * 2) * (this.binoculars ? 0.7 : 1) * (p.jitter > 0 ? 2.2 : 1); // Moss Cola shakes
     this.sway.x = (Math.sin(this.swayT * 0.9) + Math.sin(this.swayT * 2.3 + 1) * 0.4) * amp;
     this.sway.y = (Math.cos(this.swayT * 1.3) * 0.8 + Math.sin(this.swayT * 3.1) * 0.3) * amp * 0.8;
 

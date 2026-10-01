@@ -364,6 +364,32 @@ export const SPECIES = {
     ],
   },
 
+  skunk: {
+    id: 'skunk', displayName: 'Stinkbutt Skunk', blurb: 'Waddles. Does not run. Does not need to.',
+    maxBloodVolumeMl: 320, bodyMassKg: [2.5, 6],
+    trophy: { organ: 'pelt', scoreRange: [15, 80], label: 'pelt' },
+    movement: { walk: 0.8, trot: 2.0, run: 4.5, stamina: 30 },
+    senses: { visionRange: 40, fov: 200, hearing: 1.0, smell: 0.05 },
+    behavior: { grouping: 'solitary', groupSize: [1, 1], fear: 90, aggression: 999, curiosity: 0.5, defensiveRadius: 0, wounded: 'flee_bed' },
+    tracks: { stride: 0.35, printCm: 4 },
+    klass: [1, 2], value: 60, xp: 50, danger: 1,
+    activity: ['dusk', 'night', 'dawn'], habitat: { forest: 2, brush: 2, meadow: 1 },
+    body: { len: 0.5, h: 0.3, w: 0.26, leg: 0.12, neck: 0.06, head: 0.2, headFwd: 0.05 },
+    look: { coat: 0x232027, belly: 0x2e2a33, accent: 0xffffff, nose: 0xff9aa2, muzzle: 0xf4f4f4, eye: 'big', ears: 'round', tail: 'bushy', trophy: 'pelt', bristle: 0xffffff },
+    regions: {
+      brain: ['brain'], trophy: ['pelt'], neck: ['neck'], heart: ['core'],
+      lungL: ['core'], lungR: ['core'], spine: ['core'], gut: ['gut'], ...QUAD_LEGS,
+    },
+    bodyParts: [
+      { id: 'pelt', tissue: 'muscle', trophyOrgan: true, pelt: true },
+      ...legs(5, 6),
+      { id: 'core', tissue: 'lung', layers: [L('fur', 1.0, 0.2), L('muscle', 1.0, 1.0), L('lung', 3.5, 0.7, { organ: true })] },
+      { id: 'neck', tissue: 'major_vessel' },
+      { id: 'gut', tissue: 'liver_gut' },
+      { id: 'brain', tissue: 'brain', layers: skull(0.15, 0.25, 1.5) },
+    ],
+  },
+
   bison: {
     id: 'bison', displayName: 'Thunderhump Bison', blurb: 'A living sofa with horns. Herds charge together if you crowd them.',
     maxBloodVolumeMl: 32000, bodyMassKg: [420, 900],

@@ -323,7 +323,8 @@ export class UI {
       const job = g.profile.jobs && g.profile.jobs.active[0];
       const last = g.profile.trophies[0];
       const sight = g.animals.sightings[g.animals.sightings.length - 1];
-      if (threat) detail = `${short(threat.species)} NEARBY`;
+      if (p.stinky > 0) detail = `YOU STINK (${Math.ceil(p.stinky)}S). STAY DOWNWIND.`;
+      else if (threat) detail = `${short(threat.species)} NEARBY`;
       else if (job) detail = 'JOB: ' + job.title.toUpperCase();
       else if (last && last.tier !== 'Field Dressed Only') detail = `CLEAN HARVEST: ${last.speciesName.toUpperCase()} ${last.tier.toUpperCase()}`;
       else if (sight) detail = `SIGHTED: ${sight.label.toUpperCase()} ${dir8(sight.x - p.pos.x, sight.z - p.pos.z)} ${Math.round(Math.hypot(sight.x - p.pos.x, sight.z - p.pos.z))}M`;

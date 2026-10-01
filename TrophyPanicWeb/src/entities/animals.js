@@ -29,7 +29,7 @@ const PERCEIVE = 0.1, DECIDE = 0.2;
 const VOICES = { deer: 'deer', elk: 'elk', boar: 'boar', black_bear: 'growl', grizzly: 'roar', moose: 'moose', wolf: 'howl', cougar: 'cougar', turkey: 'gobble', rabbit: 'rabbit' , fox: 'yip', bison: 'moose' };
 
 // Spawn weight per species (dangerous game rarer, but present).
-const SPAWN_WEIGHT = { deer: 22, elk: 11, boar: 12, turkey: 12, rabbit: 12, black_bear: 8, wolf: 7, moose: 6, cougar: 5, grizzly: 5, fox: 9, bison: 6 };
+const SPAWN_WEIGHT = { deer: 22, elk: 11, boar: 12, turkey: 12, rabbit: 12, black_bear: 8, wolf: 7, moose: 6, cougar: 5, grizzly: 5, fox: 9, bison: 6, skunk: 6 };
 
 const _v = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3(), _m = new THREE.Matrix4();
 
@@ -179,6 +179,17 @@ export class Animal {
     const g = this.game, sp = this.species, B = sp.behavior, c = this.creature;
     if (c.life !== Life.Active || c.mobility === Mobility.Immobile) { this.state = 'Down'; this.goal = 'None'; this.target = null; return; }
     if (this.daze > 0) { this.goal = 'Dazed'; this.target = null; return; }
+    // Skunks don't run. They turn around.
+    if (sp.id === 'skunk' && this.alive) {
+      const h0 = view.nearest(this.pos);
+      if (h0 && Math.hypot(h0.x - this.pos.x, h0.z - this.pos.z) < 5 && g.time > (this.sprayCd || 0)) {
+        this.sprayCd = g.time + 25;
+        this.state = 'Defensive'; this.goal = 'Watch'; this.target = null;
+        this.setFacingYaw(Math.atan2(this.pos.x - h0.x, this.pos.z - h0.z));
+        this.mgr.skunkSpray(this, h0);
+        return;
+      }
+    }
 
     const wounded = c.wounds.length > 0;
     const td = this.threatDist();
@@ -870,6 +881,16 @@ export class AnimalManager {
   }
 
   /** Gunshots leave hunting pressure that fades over ~a day; animals avoid it. */
+  /** A skunk unloads on a hunter: green cloud, and they reek for two minutes. */
+  skunkSpray(a, h) {
+    const g = this.game;
+    g.audio.play('spray', a.pos);
+    for (let i = 0; i < 8; i++) g.fx.burst(a.pos.x + (h.x - a.pos.x) * i / 8, a.pos.y + 0.4, a.pos.z + (h.z - a.pos.z) * i / 8, { count: 2, color: i % 2 ? 0x9fd24a : 0xc6e86a, speed: 0.7, up: 0.8, kind: 'smoke', size: 0.4 + i * 0.05 });
+    g.scent.emit(a.pos.x, a.pos.z, 6, 'skunk', g.time);
+    if (h.id === 'player') g.player.skunked();
+    else g.coop.sendTo(h.id, 'skunked', {});
+  }
+
   /** Honey on the ground: a scent beacon that pulses for a minute. */
   addLure(x, z) {
     this.lures.push({ x, z, until: this.game.time + 70, pulse: 0 });

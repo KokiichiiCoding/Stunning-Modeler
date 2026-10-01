@@ -88,6 +88,15 @@ export class Player {
     if (this.hp <= 0) { this.hp = 0; this.downed = true; this.game.onPlayerDowned(source); }
   }
 
+  /** Sprayed by a skunk: everything downwind can smell you for two minutes. */
+  skunked() {
+    const g = this.game;
+    this.scentMult = 6; this.scentTimer = 120; this.stinky = 120;
+    g.ui.toast('SKUNKED!', 'big', 2.2);
+    g.ui.feed('You smell incredible. Every animal downwind agrees. (Rain or scent killer helps.)', 'warn');
+    g.audio.play('sneeze', this.pos); g.say && g.say('scared');
+  }
+
   startTumble(vx, vy, vz) {
     if (this.tumble) { this.tumble.vel.x += vx; this.tumble.vel.y += vy; this.tumble.vel.z += vz; return; }
     this.stance = 'stand';
@@ -122,6 +131,13 @@ export class Player {
       if (this.bandaging <= 0) { this.bleed = 0; g.ui.feed('Bandaged. Mostly.', 'good'); }
     }
     if (this.scentTimer > 0) { this.scentTimer -= dt; if (this.scentTimer <= 0) this.scentMult = 1; }
+    if (this.jitter > 0) this.jitter -= dt;
+    if (this.stinky > 0) {
+      this.stinky -= dt * (1 + (g.weather ? g.weather.rain * 3 : 0)); // rain washes it off faster
+      if (this.stinky <= 0 || this.scentMult < 1) { this.stinky = 0; if (this.scentMult > 1) { this.scentMult = 1; this.scentTimer = 0; } }
+      this.stinkAcc = (this.stinkAcc || 0) + dt;
+      if (this.stinkAcc > 0.6 && g.fx) { this.stinkAcc = 0; g.fx.burst(this.pos.x, this.pos.y + 1.2, this.pos.z, { count: 1, color: 0xa8d85a, speed: 0.5, up: 0.6, kind: 'smoke', size: 0.3 }); }
+    }
 
     if (this.tumble) { this.stepTumble(dt, cmd); this.emitSigns(dt); return; }
     if (this.vehicle) { this.ride(dt); return; }

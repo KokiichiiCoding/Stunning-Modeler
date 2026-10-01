@@ -466,6 +466,8 @@ export class Game {
     if (I.wasPressed('KeyX')) this.social.ping();
     if (I.wasPressed('KeyK')) this.dog.command();
     if (I.wasPressed('KeyP')) this.blinds.toggle();
+    if (I.wasPressed('KeyN')) this.useScentKiller();
+    if (I.wasPressed('KeyY')) this.drinkCola();
     if (I.wasPressed('KeyJ') && !this.player.vehicle && !this.player.tumble) { this.danceT = 4; this.coop.broadcastEvent('dance', {}); this.audio.play('levelup', this.player.pos); this.say('yay'); }
     if (I.wasPressed('Enter') || I.wasPressed('NumpadEnter')) this.social.open();
     if (I.wasPressed('Escape')) this.pause();
@@ -647,6 +649,24 @@ export class Game {
     this.animals.onCall(call, p);
     this.audio.play('call_' + call, p);
     this.ui.feed(`You used the ${this.profile.callName(call)}.`, 'info');
+  }
+
+  useScentKiller() {
+    const p = this.player;
+    if (!this.profile.useGear('scent_spray')) { this.ui.feed('No Scent Killer left. The lodge sells it.', 'warn'); return; }
+    const wasStinky = p.stinky > 0;
+    p.stinky = 0; p.scentMult = 0.3; p.scentTimer = 300;
+    this.audio.play('spray', p.pos);
+    this.fx.burst(p.pos.x, p.pos.y + 1, p.pos.z, { count: 10, color: 0xe8f4ff, speed: 1.5, up: 1, kind: 'smoke', size: 0.3 });
+    this.ui.feed(wasStinky ? 'Scent Killer vs skunk: Scent Killer wins. Barely.' : 'Spritz. You smell of nothing for five minutes.', 'good');
+  }
+
+  drinkCola() {
+    const p = this.player;
+    if (!this.profile.useGear('energy_drink')) { this.ui.feed('No Moss Cola left.', 'warn'); return; }
+    p.stamina = 100; p.jitter = 20;
+    this.audio.play('cash', p.pos); this.say('yay');
+    this.ui.feed('Glug. Full stamina! Your hands are… a little shaky.', 'good');
   }
 
   bandage() {

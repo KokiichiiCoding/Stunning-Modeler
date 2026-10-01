@@ -14,7 +14,7 @@ const short = (sp) => SPECIES[sp].displayName.split(' ').pop().toLowerCase();
 const an = (w) => (/^[aeiou]/.test(w) ? 'an ' : 'a ') + w;
 
 function speciesFor(rng, level, pool = null) {
-  const tiers = [['deer', 'turkey', 'rabbit', 'boar', 'fox'], ['elk', 'black_bear'], ['moose', 'wolf', 'bison'], ['grizzly', 'cougar']];
+  const tiers = [['deer', 'turkey', 'rabbit', 'boar', 'fox', 'skunk'], ['elk', 'black_bear'], ['moose', 'wolf', 'bison'], ['grizzly', 'cougar']];
   const open = tiers.slice(0, Math.min(4, 1 + Math.floor(Math.max(0, level - 1) / 2))).flat();
   const list = pool ? open.filter(s => pool.includes(s)) : open;
   return rng.pick(list.length ? list : open);

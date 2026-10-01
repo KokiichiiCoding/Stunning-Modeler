@@ -624,6 +624,25 @@ const scripts = {
     const r2 = await page.evaluate(() => { const g = window.__tp.game; const t0 = g.time; g.restUntil(5.3); return { hour: +g.hour.toFixed(2), period: g.period, state: g.state, advanced: Math.round(g.time - t0), animals: g.animals.list.length }; });
     console.log('  rest', JSON.stringify(r), JSON.stringify(r2));
   },
+  async skunk() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 20; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, M = g.animals;
+      let tries = 0;
+      while (!M.list.some(a => a.species.id === 'skunk') && tries++ < 300) M.spawnGroup(p.pos);
+      const sk = M.list.find(a => a.species.id === 'skunk');
+      if (!sk) return { none: true };
+      p.spawnAt(sk.pos.x + 3, sk.pos.z + 1, 0);
+      for (let i = 0; i < 60; i++) g.advance(1 / 60);
+      const stinky = p.stinky > 0, mult = p.scentMult;
+      g.useScentKiller();
+      return { stinky, mult, after: p.scentMult, stinkyAfter: p.stinky };
+    });
+    console.log('  skunk', JSON.stringify(r));
+    await step(2);
+    await shot('99_skunk');
+  },
   async honey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));
