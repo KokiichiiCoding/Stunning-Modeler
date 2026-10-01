@@ -610,6 +610,20 @@ const scripts = {
     for (let i = 0; i < 3; i++) await step(5);
     await shot('99_legsup');
   },
+  async rest() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 14; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, tent = g.structures.tents[0];
+      p.spawnAt(tent.x + Math.sin(tent.rot) * 2.2, tent.z + Math.cos(tent.rot) * 2.2, 0);
+      g.interact();
+      return { menu: g.state, open: !document.getElementById('rest').hidden };
+    });
+    await step(1);
+    await shot('99_rest');
+    const r2 = await page.evaluate(() => { const g = window.__tp.game; const t0 = g.time; g.restUntil(5.3); return { hour: +g.hour.toFixed(2), period: g.period, state: g.state, advanced: Math.round(g.time - t0), animals: g.animals.list.length }; });
+    console.log('  rest', JSON.stringify(r), JSON.stringify(r2));
+  },
   async honey() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

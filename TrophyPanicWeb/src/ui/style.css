@@ -350,3 +350,4 @@ kbd { font-family: var(--display); font-weight: 800; background: #fff; border: 2
 .feed-item:nth-last-child(n+5) { display: none; }
 #tip-card { top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); max-width: min(380px, 40vw); transform: translate(-50%, 6px); }
 #tip-card.on { transform: translate(-50%, 0); }
+.rest-card { max-width: 440px; text-align: center; } .rest-card .btn-col { margin: 12px 0; }

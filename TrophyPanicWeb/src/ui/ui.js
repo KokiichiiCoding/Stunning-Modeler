@@ -9,7 +9,7 @@ import { WEATHER_ICON, WEATHER_LABEL } from '../sim/weather.js';
 import { inWindow } from '../entities/animals.js';
 
 const $ = (id) => document.getElementById(id);
-const SCREENS = ['title', 'pause', 'controls', 'settings', 'harvest', 'shop', 'trophies', 'map', 'downed'];
+const SCREENS = ['title', 'pause', 'controls', 'settings', 'harvest', 'shop', 'trophies', 'map', 'downed', 'rest'];
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function money(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
@@ -56,6 +56,7 @@ export class UI {
     });
     $('game').addEventListener('click', () => { if (g.state === 'play' && !g.input.locked) g.input.requestLock(); });
     $('map-canvas').addEventListener('click', (e) => this.mapClick(e));
+    document.querySelectorAll('[data-rest]').forEach(b => { b.onclick = () => g.restUntil(Number(b.dataset.rest)); });
 
     const bindSetting = (id, key, parse = Number) => {
       const el = $(id);
@@ -372,7 +373,7 @@ export class UI {
     else if (p.vehicle) text = g.time - p.vehicle.mountedAt > 6 ? null : '<kbd>E</kbd>Hop off · <kbd>Space</kbd>handbrake · <kbd>V</kbd>chase cam';
     else if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
     else if (g.weapons.nearestPickup(p.pos, 2.5)) text = `<kbd>E</kbd>Pick up ${esc(g.weapons.nearestPickup(p.pos, 2.5).label)}`;
-    else if (g.nearestKit(p.pos) && (p.hp < 99 || p.bleed > 0)) text = '<kbd>E</kbd>Use first-aid crate';
+    else if (g.nearestKit(p.pos)) text = p.hp < 99 || p.bleed > 0 ? '<kbd>E</kbd>Use first-aid crate' : '<kbd>E</kbd>Nap in the tent';
     else if (quad) text = quad.crashed ? '<kbd>E</kbd>Heave the quad back over' : '<kbd>E</kbd>Ride quad bike';
     else {
       for (const tw of g.structures.towers) if (Math.hypot(p.pos.x - tw.x, p.pos.z - (tw.z + 1.5)) < 2.2 && !p.onTower) text = '<kbd>E</kbd>Climb tower';

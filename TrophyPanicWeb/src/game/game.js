@@ -337,6 +337,30 @@ export class Game {
     this.audio.play('boing', this.player.pos);
   }
 
+  /** Sleep the clock forward to a time of day (host/solo only). */
+  restUntil(target) {
+    if (this.coop.isGuest()) { this.ui.feed('Only the party host can sleep the clock forward. Ask them nicely.', 'warn'); this.closeMenu(); return; }
+    const skip = ((target - this.hour) % 24 + 24) % 24 || 24;
+    const secs = skip / 24 * this.daySeconds;
+    // the world keeps turning while you snore: weather, pressure fading, need-zone commutes
+    for (let t = 0; t < secs; t += 20) { this.hour = (this.hour + 20 * 24 / this.daySeconds) % 24; this.weather.step(20, this.hour); }
+    this.hour = target % 24;
+    this.time += secs;
+    this.period = periodFor(this.hour);
+    this.light = this.weather.light(this.hour);
+    if (this.animals.pressure) for (const pz of this.animals.pressure) pz.v *= Math.pow(0.5, secs / (this.daySeconds * 0.35));
+    // calm animals wander off; new ones turn up for the new hour
+    for (const a of this.animals.list) if (!a.creature.wounds.length && !a.downed) { a.dispose(); a.harvested = true; a.despawned = true; }
+    this.animals.list = this.animals.list.filter(a => !a.harvested);
+    this.animals.groups = this.animals.groups.filter(gp => gp.members.some(m => !m.harvested));
+    this.animals.populateAround(this.player.pos, true);
+    const p = this.player; p.hp = 100; p.bleed = 0; p.stamina = 100;
+    this.closeMenu();
+    const h = Math.floor(this.hour), m = Math.round((this.hour - h) * 60);
+    this.ui.toast(`Zzz… awake at ${String(h).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`, 'big', 2.4);
+    this.say('happy');
+  }
+
   nearestKit(pos) {
     for (const k of this.structures.tents) {
       // the crate sits at the tent's front-right
@@ -592,6 +616,7 @@ export class Game {
       this.ui.feed('First-aid crate: plasters, a lolly, good as new.', 'good');
       return;
     }
+    if (kit) { this.openMenu('rest'); return; }
     const quad = !p.tumble && this.vehicles.nearest(p.pos, 2.6);
     if (quad) { this.weapons.aiming = false; if (this.weapons.binoculars) this.weapons.toggleBinoculars(); quad.enter(p); return; }
     for (const tw of this.structures.towers) {
