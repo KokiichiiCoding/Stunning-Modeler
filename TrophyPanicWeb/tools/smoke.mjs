@@ -54,6 +54,32 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async lightning() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 15; g.weather.set('rain', true); g.profile.settings.buddies = 1; g.profile.settings.tips = false; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, S = g.storms;
+      g.weather.rain = 1;
+      p.spawnAt(-60, 200, 0);
+      for (let i = 0; i < 30; i++) g.advance(1 / 60);
+      const t = S.pickTarget();
+      if (!t) return { target: null };
+      // stand right next to the doomed tree and look at it
+      p.pos.x = t.x + 3.5; p.pos.z = t.z; p.pos.y = g.terrain.heightAt(p.pos.x, p.pos.z);
+      p.yaw = Math.atan2(-(t.x - p.pos.x), -(t.z - p.pos.z)); p.pitch = 0.35;
+      S.strike(t.x, t.y, t.z, 'tree');
+      g.advance(1 / 60);
+      return { target: t.what, tumble: !!p.tumble, hatOff: !!g.hatOff, soot: p.soot > 0, hp: Math.round(p.hp) };
+    });
+    console.log('  lightning', JSON.stringify(r));
+    if (!r.target || !r.tumble || !r.soot) errors.push('lightning failed: ' + JSON.stringify(r));
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('107_lightning');
+    // natural strikes happen on their own in a downpour
+    const n = await page.evaluate(() => { const g = window.__tp.game, S = g.storms; let c = 0; const o = S.strike.bind(S); S.strike = (...a) => { c++; return o(...a); }; for (let i = 0; i < 60 * 120; i++) { g.weather.rain = 1; g.advance(1 / 60); } return c; });
+    console.log('  strikes in 2 min', n);
+    if (n < 1) errors.push('no natural lightning strikes');
+  },
   async zipline() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 16.5; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

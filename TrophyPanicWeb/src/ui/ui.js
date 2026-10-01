@@ -489,7 +489,7 @@ export class UI {
     const s = p.stats;
     const log = [
       ['Clean harvests', s.harvests || 0], ['Fish caught', s.fish || 0], ['Perfect marshmallows', s.smores || 0], ['Marshmallows cremated', s.charcoal || 0],
-      ['Fish slaps delivered', s.slaps || 0], ['Loot rescued from raccoons', s.recovered || 0], ['Ranger jobs done', s.jobs || 0], ['Hairy Hiker photos', s.hiker || 0],
+      ['Fish slaps delivered', s.slaps || 0], ['Loot rescued from raccoons', s.recovered || 0], ['Ranger jobs done', s.jobs || 0], ['Hairy Hiker photos', s.hiker || 0], ['Struck by lightning', s.zapped || 0],
     ];
     $('ranger-log').innerHTML = log.map(([k, v]) => `<div class="rec${v ? '' : ' none'}"><span>${k}</span><b>${v}</b></div>`).join('');
     const list = $('trophy-list');

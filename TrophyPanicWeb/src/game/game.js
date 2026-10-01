@@ -37,6 +37,7 @@ import { Campfires } from '../entities/campfire.js';
 import { Fishing } from '../player/fishing.js';
 import { Cryptid } from '../entities/cryptid.js';
 import { Ziplines } from '../world/zipline.js';
+import { Storms } from '../world/storms.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -121,6 +122,7 @@ export class Game {
     await nextFrame();
     this.fx = new FX(this);
     this.weatherFx = new WeatherFX(this);
+    this.storms = new Storms(this);
     this.waterfall = new Waterfall(this);
     this.player = new Player(this);
     this.hunterModel = buildHunter(this.profile.look());
@@ -522,6 +524,7 @@ export class Game {
     this.dog.step(dt);
     this.buddies.step(dt);
     this.cryptid.step(dt);
+    this.storms.step(dt);
     this.fx.step(dt);
     if (((this.time * 60) | 0) % 60 === 0) this.sounds.expire(this.time);
     if (this.waveT > 0) this.waveT -= dt;
@@ -884,6 +887,7 @@ export class Game {
     this.blinds.render(this.camera.position);
     this.campfires.render(dt);
     this.ziplines.render(dt);
+    this.storms.render(dt);
     this.fx.render(dt);
     this.weapons.render(dt);
     this.fishing.render(dt);
