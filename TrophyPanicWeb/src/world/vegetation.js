@@ -95,7 +95,7 @@ function bush(seed, color = 0x5fae45, berries = false) {
 function rock(seed) {
   const g = wobble(G.dodeca(1, 1), 0.22, seed);
   xf(g, [0, 0.35, 0], [0, 0, 0], [1.2, 0.75, 1.0]);
-  return paint(g, 0xb9aea6, { bottom: 0x8d8390, jitter: 0.08, seed, flat: true });
+  return paint(g, 0x7d8296, { bottom: 0x4f5466, jitter: 0.08, seed, flat: true }); // dark faceted slate
 }
 
 function grassTuft(seed) {
@@ -186,7 +186,7 @@ function loTemplate(type) {
     case 'pine': add(trunkGeo(), 0x6a4430, [0, 1.1, 0], [1, 2.2, 1]); add(new THREE.ConeGeometry(2.3, 5.6, 6, 1, true), 0x3f8a64, [0, 4.4, 0], [1, 1, 1]); break;
     case 'birch': add(trunkGeo(), 0xeeeae2, [0, 2.1, 0], [0.8, 4.2, 0.8]); add(new THREE.IcosahedronGeometry(1.5, 0), 0xcfcf55, [0, 4.8, 0], [1, 0.9, 1]); break;
     case 'bush': add(new THREE.IcosahedronGeometry(1.0, 0), 0x5aa545, [0, 0.7, 0], [1.3, 0.8, 1.3]); break;
-    case 'rock': add(new THREE.OctahedronGeometry(0.9, 0), 0xaea39c, [0, 0.35, 0], [1.2, 0.7, 1]); break;
+    case 'rock': add(new THREE.OctahedronGeometry(0.9, 0), 0x7d8296, [0, 0.35, 0], [1.2, 0.7, 1]); break;
     default: return null;
   }
   // flatten to one indexed geometry with vertex colours

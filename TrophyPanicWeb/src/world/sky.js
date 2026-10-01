@@ -212,7 +212,7 @@ export class Sky {
     this.light = Math.min(1, 0.35 + k.sunI * 0.5);
     this.cloudMat.color.copy(k.horizon).lerp(new THREE.Color(0xffffff), 0.55 - rain * 0.2);
     // aerial perspective: distant peaks take on the horizon colour (and vanish into fog)
-    this.mtnMat.color.set(0xffffff).lerp(k.horizon, 0.38 + fog * 0.55 + rain * 0.3);
+    this.mtnMat.color.set(0xffffff).lerp(k.horizon.clone().lerp(k.top, 0.55), 0.3 + fog * 0.6 + rain * 0.3);
     this.clouds.count = Math.round(18 + cloud * 42);
     this.period = periodFor(hour);
 

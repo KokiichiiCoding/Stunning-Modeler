@@ -12,7 +12,8 @@ import { Structures } from '../world/structures.js';
 import { Wind, ScentField, SoundLog, Evidence, SCENT_CARCASS, visualDetection } from '../sim/worldsim.js';
 import { Input } from '../core/input.js';
 import { Player } from '../player/player.js';
-import { buildHunter, JACKETS } from '../entities/hunter.js';
+import { buildHunter, JACKETS, SKINS } from '../entities/hunter.js';
+import { setHandColors } from '../player/viewmodel.js';
 import { AnimalManager } from '../entities/animals.js';
 import { Weapons } from '../player/weapons.js';
 import { FX } from '../render/fx.js';
@@ -115,6 +116,7 @@ export class Game {
     this.scene.add(this.hunterModel.group);
     this.hunterModel.setVisible(false);
     this.animals = new AnimalManager(this);
+    this.applyHandColors();
     this.weapons = new Weapons(this);
     this.vehicles = new Vehicles(this);
     this.dog = new Dog(this);
@@ -303,6 +305,26 @@ export class Game {
     this.hunterModel = buildHunter(this.profile.look());
     this.hunterModel.setVisible(false);
     this.scene.add(this.hunterModel.group);
+    this.applyHandColors();
+    if (this.weapons) this.weapons.vm.rebuildHands();
+  }
+
+  applyHandColors() {
+    const lk = this.profile.look();
+    setHandColors(SKINS[(lk.skin | 0) % SKINS.length].hex, lk.jacket);
+  }
+
+  /** Title screen: your trekker stands in the shot, waving at you. */
+  posePreview(dt) {
+    const cam = this.camera, hm = this.hunterModel;
+    const f = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion); f.y = 0; f.normalize();
+    const r = new THREE.Vector3(-f.z, 0, f.x);
+    const x = cam.position.x + f.x * 4.2 + r.x * 1.3, z = cam.position.z + f.z * 4.2 + r.z * 1.3;
+    hm.setVisible(true);
+    hm.group.rotation.order = 'XYZ';
+    hm.group.position.set(x, this.terrain.heightAt(x, z), z);
+    hm.group.rotation.set(0, Math.atan2(-f.x, -f.z) - 0.35, 0);
+    hm.animate(dt, { speed: 0, stance: 'stand', pitch: -0.2, wave: (this.visualTime % 6) < 2.4, showRifle: false });
   }
 
   /** Advance the fixed-step simulation by real time dt. */
@@ -516,12 +538,16 @@ export class Game {
   // ---------------------------------------------------------------- camera & render
   titleCam(dt) {
     const lodge = POIS[0];
-    this.titleAngle = (this.titleAngle || 0) + dt * 0.04;
-    const x = lodge.x - 40 + Math.cos(this.titleAngle) * 60;
-    const z = lodge.z - 40 + Math.sin(this.titleAngle) * 60;
-    const y = this.terrain.heightAt(x, z) + 14;
+    // a low, cinematic shot from the lodge across the reserve toward the peaks,
+    // panning slowly; your trekker stands in the foreground
+    this.titleAngle = (this.titleAngle || 0) + dt * 0.05;
+    const sp = lodge.spawn || { x: lodge.x, z: lodge.z, yaw: 0 };
+    const base = Math.atan2(-sp.x, -sp.z) + Math.sin(this.titleAngle) * 0.35;
+    const x = sp.x + Math.sin(base) * 5, z = sp.z + Math.cos(base) * 5;
+    const y = this.terrain.heightAt(x, z) + 2.3;
     this.camera.position.set(x, y, z);
-    this.camera.lookAt(lodge.x - 70, this.terrain.heightAt(lodge.x - 70, lodge.z - 70) + 6, lodge.z - 70);
+    const tx = x + Math.sin(base) * 160, tz = z + Math.cos(base) * 160;
+    this.camera.lookAt(tx, Math.max(y + 4, this.terrain.heightAt(tx, tz) + 12), tz);
     this.hour = this.hour < 7 ? 7.5 : this.hour;
   }
 
@@ -622,7 +648,7 @@ export class Game {
     if (this.state !== 'title') {
       this.updateCamera(dt);
       this.updateHunterModel(dt);
-    }
+    } else this.posePreview(dt);
     this.weatherFx.update(dt, center); // after the camera moved: rain is camera-relative
     this._cullT = (this._cullT || 0) - dt;
     const cp = this.camera.position;

@@ -4,7 +4,10 @@
 import { THREE } from '../three.js';
 import { G, paint, merge, xf, toonMat } from '../render/toon.js';
 
-const MITTEN = 0x3fb4a8, CUFF = 0xf4f4e8;
+// Hands match your hunter: bare skin (any colour) and your jacket sleeve.
+let MITTEN = 0xf2c4a0, SLEEVE = 0x5f6e34;
+const CUFF = 0x4a3a28;
+export function setHandColors(skin, jacket) { MITTEN = skin; SLEEVE = jacket; }
 const WOOD = 0x8a5a36, DARKWOOD = 0x5c3a22, STEEL = 0x3b3f4a, BRASS = 0xd9b04a;
 
 function mitten(x, y, z, rx = 0, ry = 0, rz = 0) {
@@ -12,7 +15,7 @@ function mitten(x, y, z, rx = 0, ry = 0, rz = 0) {
     paint(xf(G.sphere(0.055, 10, 8), [x, y, z], [rx, ry, rz], [1, 0.85, 1.2]), MITTEN),
     paint(xf(G.sphere(0.024, 6, 5), [x + 0.045, y + 0.02, z - 0.02], [rx, ry, rz]), MITTEN),
     paint(xf(G.cyl(0.045, 0.05, 0.05, 10), [x, y - 0.01, z + 0.07], [Math.PI / 2 + rx, ry, rz]), CUFF),
-    paint(xf(G.cyl(0.05, 0.05, 0.2, 8), [x, y - 0.02, z + 0.19], [Math.PI / 2 + rx, ry, rz]), 0xff6b2c),
+    paint(xf(G.cyl(0.05, 0.05, 0.2, 8), [x, y - 0.02, z + 0.19], [Math.PI / 2 + rx, ry, rz]), SLEEVE),
   ];
 }
 
@@ -174,6 +177,14 @@ export class Viewmodel {
       this.meshes[w.id] = m;
     }
     return this.meshes[w.id];
+  }
+
+  /** Rebuild every held mesh (after the hunter's look changes). */
+  rebuildHands() {
+    for (const id in this.meshes) { this.root.remove(this.meshes[id]); this.meshes[id].geometry.dispose(); }
+    this.meshes = {};
+    this.root.remove(this.binos); this.binos = new THREE.Mesh(binocularsGeo(), toonMat()); this.binos.visible = false; this.root.add(this.binos);
+    const w = this.current; this.current = null; if (w) this.setWeapon(w);
   }
 
   setWeapon(w) {

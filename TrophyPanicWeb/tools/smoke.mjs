@@ -572,6 +572,7 @@ const scripts = {
     await shot('99_tip');
   },
   async basic() {
+    await step(2);
     await shot('00_title');
     if (args.includes('--low')) await page.evaluate(() => { const g = window.__tp.game; g.profile.settings.quality = 'low'; g.applySettings(); });
     if (args.includes('--noanimals')) await page.evaluate(() => { window.__tp.game.animals.populateAround = () => {}; });
