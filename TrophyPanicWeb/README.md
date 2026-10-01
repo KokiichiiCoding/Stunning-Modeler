@@ -1,7 +1,8 @@
 # Trophy Panic (browser build)
 
 An open-world hunting game in the spirit of a serious hunting sim, played by
-small, colourful and physically clumsy hunters. The simulation is careful:
+chibi trekkers with huge heads, pom-pom beanies, bedrolls and any skin colour
+you like. The simulation is careful:
 real ballistics, layered anatomy and blood trails. The presentation is
 cartoon: big-eyed critters, confetti mode and slapstick tumbles.
 
@@ -30,6 +31,7 @@ artifact declaring the `room` capability to get online co-op.
 | E | harvest, pick up, climb a tower, ride a quad, use a supply box |
 | T / H / F / G | animal call / bandage / flashlight / wave |
 | X | ping what you're looking at (the party sees it) |
+| K / P / J | dog: find it or heel / pitch or pack the ground blind / victory dance |
 | Enter | party chat |
 | V | first or third person (chase cam on a quad) |
 | M | map and fast travel |
@@ -39,8 +41,8 @@ artifact declaring the `room` capability to get online co-op.
 - **Open world.** A 1 km² seeded reserve (Wobblewood) with forest, meadow,
   marsh, ridges, snowcaps, a lake and a river, one lodge and four outposts.
   Wildlife streams in around every hunter; there are no levels or set hunts.
-- **Ten species.** Deer, elk, boar, turkey, rabbit, black bear, grizzly,
-  moose, wolf and cougar. Each is generated from a seed with its own sex,
+- **Twelve species.** Deer, elk, boar, turkey, rabbit, fox, black bear,
+  grizzly, moose, bison, wolf and cougar. Each is generated from a seed with its own sex,
   age, mass, trophy size, temperament, a nickname and an occasional rare
   coat.
 - **Need zones.** Every species has feeding, drinking and resting zones,
@@ -94,7 +96,18 @@ artifact declaring the `room` capability to get online co-op.
     anatomy.
   - Shared harvests, pings, chat with speech bubbles, friendly fire
     (mostly boots), leaf-blowing your friends, and seeing them ride quads.
+- **Friendslop extras.**
+  - Downed friends wait 40 s to be hauled up (E) before the rangers come.
+  - Big hits knock your hat off; go and pick it up.
+  - Victory dance (J), with friends watching.
+  - Bear spray: sprayed bears sneeze and flee; sprayed friends cough.
+  - Every harvest snaps a trophy photo of you posing with the animal.
 - **Presentation.**
+  - A field-terminal HUD in VT323 with a mission-state panel and a
+    stance, wind and weather status bar.
+  - Golden-hour light, purple nights with a crescent moon, and a ring of
+    snowy peaks.
+  - Lantern-lit camps and a waterfall at the river's source.
   - Toon shading with ink outlines.
   - Wobbly vegetation with far-LOD impostors.
   - Cartoon splats: full, mild, or confetti instead.
@@ -150,3 +163,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`
