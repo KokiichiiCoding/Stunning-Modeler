@@ -468,6 +468,45 @@ export class Game {
     this._lastPoi = null;
   }
 
+  /** Queue a trophy photo: next frame poses you beside the animal, snaps it into the album. */
+  trophySelfie(a, h, done) {
+    if (this.selfie) this.selfie.done();
+    this.selfie = { a, h, done };
+  }
+
+  doSelfie() {
+    const sf = this.selfie; this.selfie = null;
+    const a = sf.a, hm = this.hunterModel, T = this.terrain;
+    try {
+      const yaw = a.facingYaw();
+      // camera off the animal's flank, hunter crouched behind its shoulder, everyone facing the lens
+      const sx = Math.cos(yaw), sz = -Math.sin(yaw);
+      const len = a.species.body.len * a.identity.scale;
+      const cx = a.pos.x + sx * (2.2 + len * 1.0), cz = a.pos.z + sz * (2.2 + len * 1.0);
+      const cam = this.selfieCam || (this.selfieCam = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 600));
+      cam.position.set(cx, Math.max(T.heightAt(cx, cz) + 1.1, a.pos.y + 1.0), cz);
+      const hx = a.pos.x - sx * 0.9 + Math.sin(yaw) * len * 0.35, hz = a.pos.z - sz * 0.9 + Math.cos(yaw) * len * 0.35;
+      hm.setVisible(true);
+      hm.group.rotation.order = 'XYZ';
+      hm.group.position.set(hx, T.heightAt(hx, hz), hz);
+      hm.group.rotation.set(0, Math.atan2(cx - hx, cz - hz), 0);
+      hm.animate(0.3, { speed: 0, stance: 'stand', pitch: 0, wave: true, showRifle: false });
+      cam.lookAt(a.pos.x, a.pos.y + 0.6, a.pos.z);
+      a.syncRig && a.syncRig();
+      const r = this.renderer;
+      r.info.reset(); r.clear();
+      r.render(this.scene, cam);
+      const c = document.createElement('canvas'); c.width = 256; c.height = 144;
+      const src = r.domElement, sw = src.width, sh = src.height, ar = 16 / 9;
+      const cw = Math.min(sw, sh * ar), ch = cw / ar;
+      c.getContext('2d').drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, 256, 144);
+      const img = c.toDataURL('image/jpeg', 0.75);
+      const tierStars = { Platinum: 5, Gold: 4, Silver: 3, Bronze: 2 }[sf.h.score.tier] || 1;
+      this.profile.addPhoto({ img, sp: sf.h.species.id, name: sf.h.species.displayName, nickname: sf.h.animal.nickname, stars: tierStars, action: `${sf.h.score.tier} trophy`, dist: 0, trophy: true, date: `Day ${Math.floor(this.time / this.daySeconds) + 1}` });
+    } catch (e) { console.warn('trophy photo failed', e); }
+    sf.done();
+  }
+
   /** Called right after the main scene render when a photo was taken this frame. */
   capturePhoto() {
     const ph = this.pendingPhoto;
@@ -697,6 +736,7 @@ export class Game {
     if (this.state !== 'title') this.social.render(dt);
     if (this.state === 'play' || this.state === 'paused') this.ui.updateHUD(dt);
 
+    if (this.selfie) this.doSelfie();
     const r = this.renderer;
     r.info.reset();
     r.clear();

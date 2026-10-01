@@ -128,6 +128,16 @@ const scripts = {
     await page.evaluate(() => window.__tp.debug.selectWeapon('rifle_308'));
     await page.evaluate((id) => window.__tp.debug.aimAtAnimal(id, 'lung'), info.id);
     await page.evaluate(() => window.__tp.debug.fire());
+    // if a bush ate the bullet, try another deer (world variety makes a single scripted shot flaky)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await step(3);
+      const hit = await page.evaluate(() => window.__tp.game.animals.list.some(a => a.firstHitTime >= 0));
+      if (hit) break;
+      const again = await page.evaluate(() => { const g = window.__tp.game; const t = g.animals.list.filter(a => a.species.id === 'deer' && !(a.triedShot)); t.forEach(a => { if (Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z) < 70) a.triedShot = true; }); g.player.spawnAt(g.player.pos.x + 30, g.player.pos.z - 20, 0); return window.__tp.debug.approach('deer', 55); });
+      console.log('  retry', JSON.stringify(again));
+      await step(2);
+      await page.evaluate((id) => { window.__tp.debug.aimAtAnimal(id, 'lung'); window.__tp.debug.fire(); }, again.id);
+    }
     await step(3);
     await shot('30_shot');
     await step(20);
@@ -143,6 +153,10 @@ const scripts = {
     console.log('  harvested', hv);
     await step(2);
     await shot('33_harvest');
+    console.log('  album', JSON.stringify(await page.evaluate(() => window.__tp.game.profile.photos.map(p => ({ trophy: !!p.trophy, kb: p.img ? Math.round(p.img.length / 1024) : 0, cap: p.action })))));
+    await page.evaluate(() => { const g = window.__tp.game; g.closeMenu(); g.openMenu('trophies'); });
+    await step(1);
+    await shot('34_album');
   },
   async menus() {
     await page.evaluate(() => window.__tp.debug.startGame({}));

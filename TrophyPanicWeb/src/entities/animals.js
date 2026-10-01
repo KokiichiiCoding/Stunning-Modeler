@@ -1203,7 +1203,8 @@ export class AnimalManager {
     g.fx.burst(a.pos.x, a.pos.y + 0.5, a.pos.z, { count: 24, kind: 'confetti', speed: 4, up: 5, size: 0.06 });
     const w0 = first && WEAPONS[first.weaponId];
     const recovery = a.firstHitPos ? Math.hypot(a.pos.x - a.firstHitPos.x, a.pos.z - a.firstHitPos.z) : 0;
-    this.removeAnimal(a);
+    // say cheese: a trophy photo with your trekker before the animal is tagged out
+    g.trophySelfie(a, h, () => this.removeAnimal(a));
     g.jobs.onEvent('harvest', { sp: h.species.id, overall: h.score.overall, tier: h.score.tier, wtype: w0 ? w0.type : null, dist: first ? first.distance : 0, recovery });
     g.openMenu('harvest');
     g.ui.showHarvest(h);

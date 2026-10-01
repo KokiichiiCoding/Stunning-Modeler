@@ -468,7 +468,7 @@ export class UI {
       if (typeof ph.img === 'string' && ph.img.startsWith('data:image/jpeg')) img.src = ph.img;
       const cap = document.createElement('div'); cap.className = 'cap';
       const st = document.createElement('span'); st.className = 'stars'; st.textContent = '★'.repeat(ph.stars) + '☆'.repeat(5 - ph.stars);
-      cap.append(st, document.createElement('br'), `${ph.nickname} the ${ph.name}, ${ph.action}, ${Math.round(ph.dist)} m`);
+      cap.append(st, document.createElement('br'), ph.trophy ? `${ph.nickname} the ${ph.name} · ${ph.action}` : `${ph.nickname} the ${ph.name}, ${ph.action}, ${Math.round(ph.dist)} m`);
       item.append(img, cap);
       list.appendChild(item);
     }
