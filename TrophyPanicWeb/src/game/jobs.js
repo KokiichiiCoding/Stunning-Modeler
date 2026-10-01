@@ -35,6 +35,7 @@ const TEMPLATES = [
   { w: 0.7, make: () => ({ type: 'recover', title: 'Raccoon justice', desc: 'Get something back from a Bandit Raccoon. Stand still near one (they love that), then bonk it when it runs.', cash: 70, xp: 60 }) },
   { w: 1.1, make: (r) => { const kg = r.pick([1, 2, 3]); return { type: 'fish', minKg: kg, title: `Catch a ${kg}+ kg fish`, desc: `Any fish ${kg} kg or heavier. The lake and the river both count. Boots do not.`, cash: 40 + kg * 25, xp: 30 + kg * 15 }; } },
   { w: 0.6, make: () => ({ type: 'fish', fish: 'pike', title: 'Catch a Grumpy Pike', desc: 'They lurk in the lake and bite harder at dusk. Mind the teeth.', cash: 120, xp: 90 }) },
+  { w: 0.7, make: () => ({ type: 'zip', title: 'Zipline inspection', desc: 'Ride one of the reserve ziplines (orange dashes on the map). Checking the brakes is optional, because there are none.', cash: 60, xp: 40 }) },
   { w: 0.8, make: () => ({ type: 'marsh', title: 'Perfect marshmallow', desc: 'Light a campfire (L), roast a marshmallow (E) and pull it out golden. Not on fire. Golden.', cash: 50, xp: 40 }) },
   { w: 0.5, make: (r, L) => (L >= 4 ? { type: 'staredown', sp: 'cougar', title: 'Stare down a cougar', desc: 'When a cougar stalks you, face it and hold still. Do not run.', cash: 150, xp: 120 } : { type: 'playdead', sp: 'black_bear', title: 'Play dead', desc: 'Survive a bear by lying flat (Z) and holding still.', cash: 120, xp: 100 }) },
 ];
