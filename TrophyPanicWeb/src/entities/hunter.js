@@ -227,6 +227,11 @@ export function buildHunter({ jacket = 0x5f6e34, hat = 'beanie', skin = 0 } = {}
         arms[0].rotation.x = -s * sw * 0.8; arms[1].rotation.x = s * sw * 0.8;
         arms[0].rotation.z = 0.15; arms[1].rotation.z = -0.15;
       }
+      if (st.point && !st.dead) {
+        // "Look! Over there!"
+        arms[1].rotation.x = -1.65 - (st.pitch || 0) * 0.8; arms[1].rotation.z = -0.15;
+        arms[0].rotation.x = -0.3; arms[0].rotation.z = 0.25;
+      }
       if (st.flail && !st.dead) {
         // ragdoll-ish panic: everything windmills
         const f = this.phase * 3.2;

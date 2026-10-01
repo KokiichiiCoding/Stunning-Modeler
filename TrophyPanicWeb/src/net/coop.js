@@ -522,8 +522,9 @@ export class Coop {
       else { m.group.rotation.set(0, (r.target.yaw || 0) + Math.PI, 0); }
       if (r.waveT > 0) r.waveT -= dt;
       if (r.danceT > 0) r.danceT -= dt;
+      if (r.pointT > 0) r.pointT -= dt;
       if (r.model.hat) r.model.hat.visible = !pr.ho;
-      m.animate(dt, { dance: r.danceT > 0, flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
+      m.animate(dt, { point: r.pointT > 0, dance: r.danceT > 0, flail: !!pr.tb, speed: pr.sp || 0, stance: pr.s === 'c' ? 'crouch' : pr.s === 'p' ? 'prone' : 'stand', pitch: r.target.pitch || 0, dead: !!pr.dn, wave: r.waveT > 0 || !!pr.wv, aiming: !!pr.aim, showRifle: WEAPONS[pr.w] && WEAPONS[pr.w].type !== 'thrown' });
       r.tag.position.set(r.pos.x, r.pos.y + 2.05, r.pos.z);
     }
   }

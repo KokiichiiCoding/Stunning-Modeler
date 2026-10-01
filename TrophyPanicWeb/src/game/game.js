@@ -749,7 +749,8 @@ export class Game {
     } else {
       hm.group.rotation.set(0, p.yaw + Math.PI, 0);
     }
-    hm.animate(dt, { dance: this.danceT > 0, flail: !!p.tumble, speed: p.tumble ? 3 : p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming, showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' });
+    if (this.pointT > 0) this.pointT -= dt;
+    hm.animate(dt, { point: this.pointT > 0, dance: this.danceT > 0, flail: !!p.tumble, speed: p.tumble ? 3 : p.speed, stance: p.stance, pitch: p.pitch, dead: p.downed, wave: this.waveT > 0, aiming: this.weapons.aiming, showRifle: this.weapons.current && this.weapons.current.type !== 'thrown' });
   }
 
   render(dt) {

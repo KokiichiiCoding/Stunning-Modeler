@@ -135,6 +135,7 @@ export class Social {
     }
     const me = { name: g.profile.name, color: g.profile.look().jacket };
     this.addPing(spot.x, spot.y, spot.z, label, me.color, me.name);
+    g.pointT = 1.6; g.say && g.say('huh');
     g.coop.broadcastEvent('ping', { x: +spot.x.toFixed(1), y: +spot.y.toFixed(1), z: +spot.z.toFixed(1), l: label });
     g.audio.play('sense');
   }
@@ -152,6 +153,7 @@ export class Social {
   }
 
   receivePing(r, d) {
+    r.pointT = 1.6;
     const num = (v) => (typeof v === 'number' && isFinite(v) ? Math.max(-2000, Math.min(2000, v)) : 0);
     this.addPing(num(d.x), num(d.y), num(d.z), String(d.l || 'Over here'), r.color, r.name);
     this.game.ui.feed(`${r.name} pinged: ${String(d.l || 'over here').slice(0, 40)}`, 'info');
