@@ -50,6 +50,12 @@ artifact declaring the `room` capability to get online co-op.
   bison, wolf and cougar. Each is generated from a seed with its own sex,
   age, mass, trophy size, temperament, a nickname and an occasional rare
   coat.
+- **Fishing.** Everyone carries the Wobble Rod. Hold click to wind up a
+  cast at the lake or river, click when the bobber plunges, then hold to
+  reel and let go when the fish pulls hard (the tension meter shows when
+  the line is about to snap). Perch, trout, bass, Grumpy Pike, Old Man
+  Sturgeon, a very rare Golden Koi, and the odd boot, tin can or rubber
+  duck. Catches pay and you hold each one up for the camera.
 - **Campfires.** L lights one. Standing close heals you, wolves and cougars
   pace outside the firelight, and E roasts a marshmallow: pull it out
   golden for a sugar rush, or leave it until it catches fire. At night the
@@ -175,4 +181,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
-- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`

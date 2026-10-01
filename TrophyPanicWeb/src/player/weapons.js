@@ -94,7 +94,7 @@ export class Weapons {
 
   reload() {
     const w = this.current, st = this.state[w.id], prof = this.game.profile;
-    if (!w || w.type === 'blower' || w.type === 'camera' || w.type === 'spray' || this.reloading > 0) return;
+    if (!w || w.type === 'blower' || w.type === 'camera' || w.type === 'spray' || w.type === 'rod' || this.reloading > 0) return;
     if (w.type === 'shotgun' && st.mag >= w.magazine) {
       // Full tube: R cycles the shell type instead.
       const order = w.ammoAlt;
@@ -158,6 +158,8 @@ export class Weapons {
         if (cmd.firePressed && this.cooldown <= 0) this.spray();
       } else if (w.type === 'camera') {
         if (cmd.firePressed && this.cooldown <= 0) this.snap();
+      } else if (w.type === 'rod') {
+        this.game.fishing.step(dt, cmd);
       } else if (w.type === 'blower') {
         if (cmd.fire) this.blow(dt);
       } else if (w.type === 'bow') {

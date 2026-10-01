@@ -248,6 +248,7 @@ export class UI {
       const st = w.state[cur.id];
       if (cur.type === 'blower') { this.txt('ammo-mag', '∞'); this.txt('ammo-res', ''); }
       else if (cur.type === 'camera') { this.txt('ammo-mag', g.profile.photos.length); this.txt('ammo-res', 'photos'); }
+      else if (cur.type === 'rod') { this.txt('ammo-mag', g.profile.stats.fish || 0); this.txt('ammo-res', 'fish'); }
       else { this.txt('ammo-mag', st ? st.mag : 0); this.txt('ammo-res', g.profile.ammo[cur.id] ?? 0); }
       this.txt('ammo-type', cur.type === 'shotgun' ? AMMO[w.shellType()].name.replace(' pellet', '') : '');
     }
@@ -320,6 +321,8 @@ export class UI {
     if (p.downed) { const di = g.downedInfo; state = 'DOWNED'; detail = di && di.party ? `WAIT FOR A FRIEND ${Math.max(0, Math.ceil(di.wait - di.t))}S · E: RANGERS` : 'RANGERS EN ROUTE'; danger = true; }
     else if (threat && tLevel >= 2) { state = 'MOST DANGEROUS HUNT'; detail = `${short(threat.species)} THREAT: ${tLevel === 3 ? 'HIGH' : 'MEDIUM'}`; danger = true; }
     else if (p.tumble) { state = 'TUMBLING'; detail = 'TRY TO LAND ON SOMETHING SOFT'; }
+    else if (g.fishing.state === 'fight') { state = 'FISH ON!'; detail = g.fishing.tension > 0.75 ? 'LINE IS ABOUT TO SNAP. LET GO!' : `REEL IT IN · ${Math.max(0, g.fishing.dist - 1.6).toFixed(0)}M`; danger = g.fishing.tension > 0.75; }
+    else if (g.fishing.state === 'float' || g.fishing.state === 'bite') { state = 'FISHING'; detail = g.fishing.state === 'bite' ? 'BITE! CLICK!' : 'WATCH THE BOBBER'; }
     else if (g.campfires.roast) { state = 'ROASTING'; detail = g.campfires.roast.burning ? 'IT IS ON FIRE. PULL IT OUT!' : 'WAIT FOR GOLDEN…'; }
     else if (p.warm && g.period === 'night') { state = 'SURVIVE THE NIGHT'; detail = threat ? `${short(threat.species)} NEARBY` : 'WARM BY THE FIRE. WOLVES KEEP CLEAR.'; }
     else if (g.period === 'night') { state = 'SURVIVE THE NIGHT'; detail = threat ? `${short(threat.species)} NEARBY` : null; }
@@ -386,6 +389,12 @@ export class UI {
     else if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
     else if (g.weapons.nearestPickup(p.pos, 2.5)) text = `<kbd>E</kbd>Pick up ${esc(g.weapons.nearestPickup(p.pos, 2.5).label)}`;
     else if (g.campfires.roast) text = null;
+    else if (g.weapons.current && g.weapons.current.type === 'rod' && !p.swimming) {
+      const fs = g.fishing.state;
+      text = fs === 'idle' ? (g.fishing.draw > 0 ? 'Let go to cast!' : '<kbd>Hold click</kbd>wind up a cast at the water')
+        : fs === 'float' ? 'Wait for the bite… <kbd>Click</kbd>reel in' : fs === 'bite' ? '<kbd>CLICK!</kbd>Set the hook!'
+        : fs === 'fight' ? null : fs === 'show' ? null : null;
+    }
     else if (g.campfires.canRoast()) text = '<kbd>E</kbd>Roast a marshmallow · <kbd>L</kbd>put the fire out';
     else if (g.nearestKit(p.pos)) text = p.hp < 99 || p.bleed > 0 ? '<kbd>E</kbd>Use first-aid crate' : '<kbd>E</kbd>Nap in the tent';
     else if (quad) text = quad.crashed ? '<kbd>E</kbd>Heave the quad back over' : '<kbd>E</kbd>Ride quad bike';
@@ -435,7 +444,7 @@ export class UI {
         const klass = w.klass ? `Class ${w.klass}` : 'Gadget';
         items.push(`<div class="shop-item"><h4>${esc(w.name)}</h4><div class="meta">${klass} · ${esc(w.ammoLabel || AMMO[w.ammo].name)}</div><p>${esc(w.desc)}</p>
           <div class="buy-row">${owned ? '<span class="owned-tag">Owned</span>' : `<span class="price">${money(w.price)}</span>`}
-          ${owned ? (w.type === 'blower' || w.type === 'camera' ? '' : `<button class="btn alt" data-ammo="${w.id}">Ammo ${money(p.ammoPrice(w.id))}</button>`) : `<button class="btn" data-buy="${w.id}" ${p.cash < w.price ? 'disabled' : ''}>Buy</button>`}</div></div>`);
+          ${owned ? (w.type === 'blower' || w.type === 'camera' || w.type === 'rod' ? '' : `<button class="btn alt" data-ammo="${w.id}">Ammo ${money(p.ammoPrice(w.id))}</button>`) : `<button class="btn" data-buy="${w.id}" ${p.cash < w.price ? 'disabled' : ''}>Buy</button>`}</div></div>`);
       }
     } else if (this.shopTab === 'jobs') {
       g.jobs.refreshOffers();

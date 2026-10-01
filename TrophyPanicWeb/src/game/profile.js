@@ -14,13 +14,14 @@ const DEFAULTS = () => ({
   skin: 0,
   cash: 300,
   xp: 0,
-  owned: ['rifle_243', 'camera', 'boot', 'chicken'],
+  owned: ['rifle_243', 'camera', 'rod', 'boot', 'chicken'],
   ammo: {},        // weapon id -> reserve rounds
   gear: { bandage: 3, grunt_call: 1, binoculars: 1, scent_spray: 1, energy_drink: 1 },
   shells: '12ga_bird',
   trophies: [],
   photos: [],
   snapped: [],
+  fish: {},       // species id -> best kg
   jobs: { offers: [], active: [], done: 0, day: -1 },
   discovered: ['lodge'],
   zones: [],
@@ -42,6 +43,8 @@ export class Profile {
     this.stats = { ...d.stats, ...(data && data.stats) };
     this.gear = { ...(data && data.gear ? data.gear : d.gear) };
     if (!this.owned.includes('camera')) this.owned.push('camera'); // older saves: everyone gets a camera
+    if (!this.owned.includes('rod')) this.owned.push('rod'); // …and a fishing rod
+    if (!this.fish || typeof this.fish !== 'object') this.fish = {};
     if (!Array.isArray(this.photos)) this.photos = [];
     if (!Array.isArray(this.snapped)) this.snapped = [];
     for (const id of this.owned) if (this.ammo[id] === undefined) this.ammo[id] = WEAPONS[id] ? WEAPONS[id].reserve : 0;
@@ -56,8 +59,8 @@ export class Profile {
   }
 
   toJSON() {
-    const { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, zones, tips, stats, settings } = this;
-    return { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, jobs, discovered, zones, tips, stats, settings };
+    const { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, fish, jobs, discovered, zones, tips, stats, settings } = this;
+    return { name, jacket, hat, skin, cash, xp, owned, ammo, gear, shells, trophies, photos, snapped, fish, jobs, discovered, zones, tips, stats, settings };
   }
 
   save() {
@@ -80,7 +83,7 @@ export class Profile {
     const w = WEAPONS[id];
     if (!w) return 0;
     if (w.type === 'thrown') return 10;
-    if (w.type === 'blower' || w.type === 'camera') return 0;
+    if (w.type === 'blower' || w.type === 'camera' || w.type === 'rod') return 0;
     if (w.type === 'spray') return 30;
     return w.klass >= 4 ? 45 : w.klass === 3 ? 30 : w.type === 'bow' ? 35 : 18;
   }

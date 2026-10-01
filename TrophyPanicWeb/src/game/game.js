@@ -34,6 +34,7 @@ import { Tips } from '../ui/tips.js';
 import { Buddies } from '../entities/buddies.js';
 import { TouchControls } from '../core/touch.js';
 import { Campfires } from '../entities/campfire.js';
+import { Fishing } from '../player/fishing.js';
 
 const TICK = 1 / 60;
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -125,6 +126,7 @@ export class Game {
     this.animals = new AnimalManager(this);
     this.applyHandColors();
     this.weapons = new Weapons(this);
+    this.fishing = new Fishing(this);
     this.vehicles = new Vehicles(this);
     this.dog = new Dog(this);
     this.blinds = new Blinds(this);
@@ -248,6 +250,7 @@ export class Game {
     this.social.clear();
     this.blinds.clear();
     this.campfires.clear();
+    this.fishing.reset();
     this.buddies.clear();
     if (this.player.vehicle) this.player.vehicle.exit(true);
     this.state = 'title';
@@ -834,6 +837,7 @@ export class Game {
     this.campfires.render(dt);
     this.fx.render(dt);
     this.weapons.render(dt);
+    this.fishing.render(dt);
     this.coop.render(dt);
     if (this.state !== 'title') this.social.render(dt);
     if (this.state === 'play' || this.state === 'paused') this.ui.updateHUD(dt);

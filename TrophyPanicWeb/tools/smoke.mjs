@@ -54,6 +54,70 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async fishing() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 17.8; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const setup = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, T = g.terrain;
+      const L = { x: -170, z: 150 };
+      let best = null;
+      for (let a = 0; a < 6.28 && !best; a += 0.2) {
+        for (let r = 40; r < 160; r += 1) {
+          const x = L.x + Math.cos(a) * r, z = L.z + Math.sin(a) * r;
+          if (T.heightAt(x, z) > 4.4) { if (T.heightAt(x - Math.cos(a) * 10, z - Math.sin(a) * 10) < 3.5) best = { x, z, a }; break; }
+        }
+      }
+      p.spawnAt(best.x, best.z, 0);
+      p.yaw = Math.atan2(Math.cos(best.a), Math.sin(best.a)); p.pitch = 0.1;
+      g.weapons.select('rod');
+      for (let i = 0; i < 10; i++) g.advance(1 / 60);
+      return best;
+    });
+    console.log('  shore', JSON.stringify(setup));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, I = g.input, F = g.fishing;
+      const frame = () => { g.advance(1 / 60); I.endFrame(); };
+      I.mouse.left = true; I.mouse.leftPressed = true; for (let i = 0; i < 40; i++) { frame(); }
+      const pre = { st: F.state, draw: F.draw, cur: g.weapons.current.id };
+      I.mouse.left = false; frame(); const after1 = { st: F.state, b: { ...F.b } };
+      for (let i = 0; i < 180 && F.state === 'flying'; i++) frame();
+      const landed = F.state;
+      if (F.state !== 'float') return { landed, pre, after1, b: F.b, h: g.terrain.heightAt(F.b.x, F.b.z), feed: [...document.querySelectorAll('#feed > *')].slice(0, 2).map(e => e.textContent) };
+      F.wait = 0.5; let n = 0;
+      while (F.state === 'float' && n++ < 300) frame();
+      const bite = F.state;
+      I.mouse.leftPressed = true; frame();
+      const hooked = F.state;
+      const fish = F.fish && F.fish.f.id;
+      let maxT = 0; n = 0;
+      while (F.state === 'fight' && n++ < 60 * 90) { I.mouse.left = F.tension < 0.55 && F.pull < 0.75; maxT = Math.max(maxT, F.tension); frame(); if (n === 120) window.__fightShot = true; }
+      I.mouse.left = false;
+      return { landed, bite, hooked, fish, end: F.state, secs: +(n / 60).toFixed(1), maxT: +maxT.toFixed(2), fishCount: g.profile.stats.fish || 0, best: g.profile.fish };
+    });
+    console.log('  fishing', JSON.stringify(r));
+    if (r.landed !== 'float' || r.hooked !== 'fight' || r.fishCount < 1) errors.push('fishing failed: ' + JSON.stringify(r));
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('102_fish_caught');
+    // a second cast, captured mid-fight
+    await page.evaluate(() => {
+      const g = window.__tp.game, I = g.input, F = g.fishing;
+      const frame = () => { g.advance(1 / 60); I.endFrame(); };
+      for (let i = 0; i < 200 && F.state !== 'idle'; i++) frame();
+      F.reset();
+      I.mouse.left = true; for (let i = 0; i < 40; i++) frame(); I.mouse.left = false; frame();
+      for (let i = 0; i < 180 && F.state === 'flying'; i++) frame();
+      window.__fdbg = { cast: F.state };
+      F.wait = 0.1; for (let i = 0; i < 120 && F.state !== 'bite'; i++) frame();
+      I.mouse.leftPressed = true; frame();
+      if (F.fish) F.fish.u = 1; // a whopper, for the picture
+      for (let i = 0; i < 24 && F.state === 'fight'; i++) { I.mouse.left = true; frame(); }
+      I.mouse.left = false;
+      window.__fdbg.end = F.state;
+      return window.__fdbg;
+    }).then(d => console.log('  second cast', JSON.stringify(d)));
+    await page.evaluate(() => window.__tp.debug.renderOnce());
+    await shot('102_fish_fight');
+  },
   async raccoon() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 19.6; g.weather.set('clear', true); g.profile.settings.buddies = 0; });
     await page.evaluate(() => window.__tp.debug.startGame({}));

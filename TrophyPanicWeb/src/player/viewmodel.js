@@ -127,6 +127,19 @@ function build(w) {
       parts.push(...mitten(0.0, -0.04, 0.06, 0.25));
       break;
     }
+    case 'rod': {
+      // cork handle, reel, a long bendy pole angled up and out
+      parts.push(
+        paint(xf(G.cyl(0.022, 0.026, 0.22, 8), [0, -0.02, 0.06], [0.5 - Math.PI / 2, 0, 0]), 0xc9a26a, { bottom: 0xa8824a }),
+        paint(xf(G.cyl(0.04, 0.04, 0.03, 12), [0.035, -0.04, -0.02], [0, 0, Math.PI / 2]), 0xe8384f),
+        paint(xf(G.cyl(0.012, 0.012, 0.035, 6), [0.06, -0.04, -0.02], [0, 0, Math.PI / 2]), 0x2a2a30),
+        paint(xf(G.cyl(0.006, 0.014, 1.15, 6), [0, 0.27, -0.5], [0.5 - Math.PI / 2, 0, 0]), 0x2f6fb0, { bottom: 0x1f4f80 }),
+        paint(xf(G.torus(0.012, 0.003, 4, 8), [0, 0.12, -0.23], [0.5 - Math.PI / 2, 0, 0]), 0xd8d8e0),
+        paint(xf(G.torus(0.009, 0.003, 4, 8), [0, 0.33, -0.62], [0.5 - Math.PI / 2, 0, 0]), 0xd8d8e0),
+      );
+      parts.push(...mitten(0.0, -0.04, 0.08, 0.3));
+      break;
+    }
     case 'camera': {
       parts.push(
         paint(xf(G.box(0.2, 0.12, 0.08), [0, 0, 0]), 0x4fb4f0, { bottom: 0x2f7fb0 }),
@@ -191,6 +204,7 @@ export class Viewmodel {
     if (!this.meshes[w.id]) {
       const m = new THREE.Mesh(build(w), toonMat());
       m.visible = false;
+      if (w.type === 'rod') { this.tip = new THREE.Object3D(); this.tip.position.set(0, 0.53, -1.0); m.add(this.tip); }
       this.root.add(m);
       this.meshes[w.id] = m;
     }
@@ -243,6 +257,12 @@ export class Viewmodel {
       m.visible = !st.binoculars && !(st.hideThrown);
       if (w.type === 'bow') m.position.z = -(st.draw || 0) * 0.02;
       if (w.type === 'rifle' && this.cycleT > 0) m.rotation.z = Math.sin(this.cycleT * Math.PI) * 0.15; else m.rotation.z = 0;
+      if (w.type === 'rod') {
+        // wind back for the cast, bow and shake while a fish fights
+        const bend = this.rodBend || 0;
+        m.rotation.x = -(this.rodDraw || 0) * 0.9 + bend * 0.35 + Math.sin(g.visualTime * 31) * bend * 0.04;
+        m.rotation.z = Math.sin(g.visualTime * 23) * bend * 0.05;
+      } else m.rotation.x = 0;
     }
     this.binos.visible = !!st.binoculars;
     if (st.binoculars) this.root.position.set(0, -0.06, -0.18);

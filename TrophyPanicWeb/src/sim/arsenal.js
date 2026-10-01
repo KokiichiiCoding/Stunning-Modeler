@@ -122,6 +122,11 @@ export const WEAPONS = {
     magazine: 1, reserve: 0, fireInterval: 0.9, reloadTime: 0, spread: 0, sway: 0.6, recoil: 0,
     zoom: 3, loudness: 25, price: 0, color: 0x4fb4f0, desc: 'Shoot animals the nice way. New species and great shots pay; the album keeps your best.',
   },
+  rod: {
+    id: 'rod', name: 'Wobble Rod', short: 'Rod', type: 'rod', ammo: null, ammoLabel: 'Fish caught', klass: 0,
+    magazine: 1, reserve: 0, fireInterval: 0.3, reloadTime: 0, spread: 0, sway: 0.5, recoil: 0,
+    zoom: 1, loudness: 20, price: 0, color: 0xe8384f, desc: 'Hold click to cast into the lake or river, click when the bobber plunges, then hold to reel. Let go when it fights.',
+  },
 };
 
 export const GEAR = {
@@ -137,4 +142,4 @@ export const GEAR = {
   dog: { id: 'dog', name: 'Biscuit (tracking dog)', price: 120, desc: 'A very good girl. Heels, growls at bears, and on K follows the blood trail to whatever you hit. Barking is loud.' },
 };
 
-export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'bear_spray', 'camera', 'boot', 'chicken', 'honey', 'blower'];
+export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'bear_spray', 'camera', 'rod', 'boot', 'chicken', 'honey', 'blower'];

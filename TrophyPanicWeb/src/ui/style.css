@@ -382,3 +382,14 @@ body.is-touch #feed { max-width: 46vw; }
 #roast-meter.burning { border-color: #ff5a4a; animation: rm-shake .12s infinite; }
 #roast-meter.burning b { color: #ff5a4a; }
 @keyframes rm-shake { 0%,100% { transform: none; } 50% { transform: translateX(3px); } }
+
+/* fishing line tension */
+#fish-meter { position: absolute; right: 14px; top: 62px; width: min(300px, 60vw); padding: 8px 12px 10px; background: rgba(14,16,14,.82); border: 2px solid #62c3f2; border-radius: 6px; font-family: 'VT323', monospace; color: #e8f0dc; text-align: center; letter-spacing: 1px; }
+#fish-meter b { display: block; color: #62c3f2; font-size: 20px; font-weight: normal; }
+#fish-meter em { display: block; font-style: normal; font-size: 15px; opacity: .8; margin-top: 4px; }
+#fish-meter .fm-bar { position: relative; height: 16px; margin-top: 4px; border-radius: 3px; background: linear-gradient(90deg, #2f4a2a, #4a5a2a 60%, #6a2a22); overflow: hidden; }
+#fish-meter .fm-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #b6f25a, #ffd34a 70%, #ff5a4a); }
+#fish-meter .fm-dist { font-size: 18px; margin-top: 2px; color: #fff4de; }
+#fish-meter.danger { border-color: #ff5a4a; animation: rm-shake .12s infinite; }
+#fish-meter.danger b { color: #ff5a4a; }
+body.is-touch #fish-meter { top: 180px; }

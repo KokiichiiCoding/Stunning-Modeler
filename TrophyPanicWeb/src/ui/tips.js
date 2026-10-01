@@ -14,6 +14,7 @@ const TIPS = [
   { id: 'rain', when: (g) => g.weather.rain > 0.5, text: 'Rain washes tracks and blood away fast, but it also covers your footsteps. Good time to stalk, bad time to wound.' },
   { id: 'fog', when: (g) => g.weather.fog > 0.6, text: 'Fog: nobody sees far. Get close, stay quiet, and keep your ears on.' },
   { id: 'night', when: (g) => g.period === 'night', text: 'Night: F toggles your flashlight. Predators get bolder in the dark. L lights a campfire: wolves and cougars won\'t come near it.' },
+  { id: 'fish', when: (g) => g.weapons.current && g.weapons.current.type === 'rod', text: 'Fishing! Hold click to wind up, let go to cast at the water. When the bobber plunges, CLICK. Then hold to reel, and let go whenever the fish pulls hard or the line snaps.' },
   { id: 'fire', when: (g) => !!g.campfires.near(g.player.pos.x, g.player.pos.z, 4), text: 'Cosy! The fire heals you. Press E to roast a marshmallow and pull it out when it\'s golden. At night the smell attracts… visitors.' },
   { id: 'zones', when: (g) => g.time > 240, text: 'Animals keep schedules: feeding, drinking and resting zones at set hours. Press Q inside one to log it on your map (M).' },
   { id: 'jobs', when: (g) => g.time > 150 && g.profile.jobs && !g.profile.jobs.active.length, text: 'The lodge and outpost boxes post Ranger jobs (E at a supply box → Ranger jobs). Optional, and they pay.' },
