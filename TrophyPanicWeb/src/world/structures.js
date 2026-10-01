@@ -213,7 +213,7 @@ export class Structures {
   placeCamps(terrain, veg, mat) {
     this.lanterns = [];
     this.tents = [];
-    const frames = [], spots = [];
+    const spots = [];
     const addLantern = (x, z, rot) => { spots.push({ x, z, rot, y: terrain.heightAt(x, z) }); };
     for (const p of POIS) {
       const face = Math.atan2(-p.x, -p.z);
@@ -232,18 +232,21 @@ export class Structures {
         veg.addCollider(tx, tz, 1.3, 1.5, 'building');
       }
     }
-    const frameGeo = lanternFrame();
-    const glassGeo = G.cyl(0.09, 0.09, 0.2, 6);
-    this.glassMat = new THREE.MeshBasicMaterial({ color: 0x6a5a40 });
-    const glowMat = new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
-    this.glowMat = glowMat;
+    // all lanterns merged: one draw for the frames, one for the glass, one for the glows
+    const frames = [], glasses = [], glowPos = [];
     for (const s of spots) {
-      const f = new THREE.Mesh(frameGeo, mat); f.position.set(s.x, s.y, s.z); f.rotation.y = s.rot; f.castShadow = true; this.group.add(f);
+      frames.push(xf(lanternFrame(), [s.x, s.y, s.z], [0, s.rot, 0]));
       const gx = s.x + Math.cos(s.rot) * 0.4, gz = s.z - Math.sin(s.rot) * 0.4;
-      const glass = new THREE.Mesh(glassGeo, this.glassMat); glass.position.set(gx, s.y + 1.2, gz); this.group.add(glass);
-      const glow = new THREE.Sprite(glowMat); glow.position.set(gx, s.y + 1.2, gz); glow.scale.set(2.2, 2.2, 1); this.group.add(glow);
+      glasses.push(xf(G.cyl(0.09, 0.09, 0.2, 6), [gx, s.y + 1.2, gz]));
+      glowPos.push(gx, s.y + 1.2, gz);
       this.lanterns.push({ x: gx, y: s.y + 1.2, z: gz });
     }
+    const fm = new THREE.Mesh(merge(frames), mat); fm.castShadow = true; this.group.add(fm);
+    this.glassMat = new THREE.MeshBasicMaterial({ color: 0x6a5a40 });
+    this.group.add(new THREE.Mesh(merge(glasses.map(g0 => paint(g0, 0xffffff))), this.glassMat));
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(glowPos, 3));
+    this.glowMat = new THREE.PointsMaterial({ map: glowTexture(), size: 2.4, sizeAttenuation: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, color: 0xffffff });
+    this.group.add(new THREE.Points(pg, this.glowMat));
     // two pooled warm lights follow the nearest lanterns (fixed light count: no shader recompiles)
     this.lights = [0, 1].map(() => { const l = new THREE.PointLight(0xffb066, 0, 16, 1.6); this.group.add(l); return l; });
   }

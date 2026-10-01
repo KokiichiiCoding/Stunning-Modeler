@@ -240,6 +240,7 @@ export class Vegetation {
       flowerY: { geos: [flowerPatch(26, 0xffd23f)], mat: this.smallMat, small: true, near: 90 },
       flowerP: { geos: [flowerPatch(27, 0xff8fc7)], mat: this.smallMat, small: true, near: 90 },
       flowerV: { geos: [flowerPatch(28, 0xa98bff)], mat: this.smallMat, small: true, near: 90 },
+      flowerO: { geos: [flowerPatch(29, 0xff8a2a)], mat: this.smallMat, small: true, near: 90 },
     };
     this.chunks = new Map(); // `${type}|${variant}|${cx}|${cz}` -> {mesh, matrices, colors, cx, cz, small}
     this.populate();
@@ -298,15 +299,17 @@ export class Vegetation {
       const s = 0.8 + hash01(WORLD_SEED, Math.floor(x), Math.floor(z), 6) * 0.55;
       const rot = h1 * 6.28;
       if (b === Biome.Forest && r < 0.62) {
-        if (h1 < 0.14) this.add('birch', v % 2, x, z, s, rot);
-        else if (h1 < 0.27) this.add('autumn', v % 2, x, z, s, rot);
+        // mountain-valley mix: plenty of pines among the round trees
+        if (h1 < 0.1) this.add('birch', v % 2, x, z, s, rot);
+        else if (h1 < 0.2) this.add('autumn', v % 2, x, z, s, rot);
+        else if (h1 < 0.55) this.add('pine', v, x, z, s * 1.15, rot);
         else this.add('puff', v, x, z, s, rot);
       } else if (b === Biome.Pine && r < 0.66) {
         this.add('pine', v, x, z, s * 1.1, rot);
       } else if (b === Biome.Brush && r < 0.16) {
         this.add(h1 < 0.5 ? 'puff' : 'autumn', v % 2, x, z, s * 0.85, rot);
       } else if (b === Biome.Meadow && r < 0.035) {
-        this.add(h1 < 0.3 ? 'autumn' : 'puff', v % 2, x, z, s, rot);
+        if (h1 < 0.45) this.add('pine', v, x, z, s * 1.1, rot); else this.add(h1 < 0.6 ? 'autumn' : 'puff', v % 2, x, z, s, rot);
       } else if ((b === Biome.Ridge || b === Biome.Snow) && r < 0.1) {
         this.add('pine', v, x, z, s * 0.9, rot);
       } else if (b === Biome.Marsh && r < 0.05) {
@@ -360,10 +363,11 @@ export class Vegetation {
     });
     T.scatter(4.5, 8000, (b, x, z, r) => {
       if (this.near(x, z)) return false;
-      if (b === Biome.Meadow && r < 0.22) {
-        const k = ['flowerW', 'flowerY', 'flowerP', 'flowerV'][Math.floor(r * 100) % 4];
+      // wildflower meadows: lots of white daisies, orange and yellow, a little pink and violet
+      if ((b === Biome.Meadow && r < 0.3) || (b === Biome.Brush && r < 0.12)) {
+        const k = ['flowerW', 'flowerW', 'flowerO', 'flowerY', 'flowerW', 'flowerO', 'flowerP', 'flowerV'][Math.floor(r * 1000) % 8];
         this.add(k, 0, x, z, 0.9 + r, r * 60);
-      } else if (b === Biome.Forest && r < 0.05) this.add('flowerW', 0, x, z, 1, r * 60);
+      } else if ((b === Biome.Forest || b === Biome.Pine) && r < 0.07) this.add(r < 0.035 ? 'flowerW' : 'flowerO', 0, x, z, 1, r * 60);
       return false;
     });
   }
