@@ -214,7 +214,7 @@ export class Coop {
         break;
       }
       case 'throw': {
-        if (d.k !== 'boot' && d.k !== 'chicken') return;
+        if (d.k !== 'boot' && d.k !== 'chicken' && d.k !== 'honey') return;
         g.weapons.spawnRemoteProp(d.k, num(d.x), num(d.y), num(d.z), num(d.vx, -40, 40), num(d.vy, -40, 40), num(d.vz, -40, 40));
         break;
       }
@@ -234,8 +234,8 @@ export class Coop {
         if (Math.hypot(d.fx, d.fz) > 3 || p.slide > 3) p.startTumble(num(d.fx, -20, 20) * 0.6, 2, num(d.fz, -20, 20) * 0.6);
         break;
       }
-      case 'wave': r.waveT = 2.2; break;
-      case 'dance': r.danceT = 4; break;
+      case 'wave': r.waveT = 2.2; if (r.target) g.audio.babble(r.target, 'happy', 0.85 + ((r.presence && r.presence.sk) | 0) * 0.07); break;
+      case 'dance': r.danceT = 4; if (r.target) g.audio.babble(r.target, 'yay', 0.85 + ((r.presence && r.presence.sk) | 0) * 0.07); break;
       case 'sprayed': {
         const p = g.player;
         g.ui.toast(`${String(d.n || r.name).slice(0, 14)} got you with bear spray! *cough*`, 'big');

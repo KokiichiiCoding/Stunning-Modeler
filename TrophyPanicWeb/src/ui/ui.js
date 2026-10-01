@@ -372,6 +372,7 @@ export class UI {
     else if (p.vehicle) text = g.time - p.vehicle.mountedAt > 6 ? null : '<kbd>E</kbd>Hop off · <kbd>Space</kbd>handbrake · <kbd>V</kbd>chase cam';
     else if (a) text = `<kbd>E</kbd>Harvest ${esc(a.species.displayName)}`;
     else if (g.weapons.nearestPickup(p.pos, 2.5)) text = `<kbd>E</kbd>Pick up ${esc(g.weapons.nearestPickup(p.pos, 2.5).label)}`;
+    else if (g.nearestKit(p.pos) && (p.hp < 99 || p.bleed > 0)) text = '<kbd>E</kbd>Use first-aid crate';
     else if (quad) text = quad.crashed ? '<kbd>E</kbd>Heave the quad back over' : '<kbd>E</kbd>Ride quad bike';
     else {
       for (const tw of g.structures.towers) if (Math.hypot(p.pos.x - tw.x, p.pos.z - (tw.z + 1.5)) < 2.2 && !p.onTower) text = '<kbd>E</kbd>Climb tower';

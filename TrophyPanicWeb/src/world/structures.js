@@ -212,6 +212,7 @@ export class Structures {
   /** Lanterns and tents around every camp; they glow after sunset. */
   placeCamps(terrain, veg, mat) {
     this.lanterns = [];
+    this.tents = [];
     const frames = [], spots = [];
     const addLantern = (x, z, rot) => { spots.push({ x, z, rot, y: terrain.heightAt(x, z) }); };
     for (const p of POIS) {
@@ -221,11 +222,13 @@ export class Structures {
         for (const [a, d] of [[0.35, 8], [-0.35, 8], [0.25, 15], [-0.25, 15], [0.6, 11.5]]) { const [x, z] = at(a, d); addLantern(x, z, face); }
         const [tx, tz] = at(-0.9, 15);
         const t = new THREE.Mesh(tent(), mat); t.position.set(tx, terrain.heightAt(tx, tz), tz); t.rotation.y = face + 0.6; t.castShadow = true; this.group.add(t);
+        this.tents.push({ x: tx, z: tz, rot: face + 0.6, usedT: -1e9 });
         veg.addCollider(tx, tz, 1.3, 1.5, 'building');
       } else {
         for (const [a, d] of [[0.45, 4.2], [-0.5, 4.5]]) { const [x, z] = at(a, d); addLantern(x, z, face); }
         const [tx, tz] = at(-1.2, 7);
         const t = new THREE.Mesh(tent([0xc9b48a, 0x8fa36a, 0xb8826a][POIS.indexOf(p) % 3]), mat); t.position.set(tx, terrain.heightAt(tx, tz), tz); t.rotation.y = face - 0.4; t.castShadow = true; this.group.add(t);
+        this.tents.push({ x: tx, z: tz, rot: face - 0.4, usedT: -1e9 });
         veg.addCollider(tx, tz, 1.3, 1.5, 'building');
       }
     }

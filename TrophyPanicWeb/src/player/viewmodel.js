@@ -87,7 +87,14 @@ function build(w) {
       break;
     }
     case 'thrown': {
-      if (w.id === 'boot') {
+      if (w.id === 'honey') {
+        parts.push(
+          paint(xf(G.cyl(0.09, 0.08, 0.16, 10), [0, 0.08, 0]), 0xf2a72e, { bottom: 0xc97a12 }),
+          paint(xf(G.cyl(0.095, 0.095, 0.04, 10), [0, 0.18, 0]), 0xe8384f),
+          paint(xf(G.sphere(0.04, 6, 5), [0, 0.215, 0]), 0xe8384f),
+          paint(xf(G.box(0.1, 0.06, 0.005), [0, 0.09, 0.085]), 0xfff4de),
+);
+      } else if (w.id === 'boot') {
         parts.push(
           paint(xf(G.box(0.1, 0.16, 0.12), [0, 0.02, 0]), 0x6b4a30),
           paint(xf(G.box(0.11, 0.07, 0.24), [0, -0.07, -0.06]), 0x6b4a30),

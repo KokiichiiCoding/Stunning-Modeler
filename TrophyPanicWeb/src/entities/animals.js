@@ -130,7 +130,7 @@ export class Animal {
         // Novel noises make curious animals curious rather than scared.
         this.curiousAbout = { x: e.x, z: e.z, t: g.time, cat: e.category };
         this.alertness += s * 12;
-      } else if (e.category === 'carcass' || e.category === 'prey') {
+      } else if (e.category === 'carcass' || e.category === 'prey' || e.category === 'honey') {
         this.curiousAbout = { x: e.x, z: e.z, t: g.time, cat: e.category };
       } else {
         this.alertness += s * 30;
@@ -292,13 +292,19 @@ export class Animal {
       if (this.memory.hasThreat) this.lookAt(this.memory.x, this.memory.z);
       return;
     }
-    // curiosity: calls, squeaks, carcasses
+    // a honey lure nearby: sweet-toothed animals settle in for a long snack
+    const sweet = sp.id.includes('bear') || sp.id === 'grizzly' || sp.id === 'boar';
+    if (sweet) {
+      const lure = this.mgr.lures.find(l => g.time < l.until && Math.hypot(l.x - this.pos.x, l.z - this.pos.z) < 3.5);
+      if (lure) { this.state = 'Calm'; this.goal = 'Graze'; this.target = null; this.grazeT = 3; if (!lure.found) { lure.found = true; this.mgr.announce(this, 'honey'); } return; }
+    }
+    // curiosity: calls, squeaks, carcasses, honey
     if (this.curiousAbout && g.time - this.curiousAbout.t < 40) {
       const cu = this.curiousAbout;
-      const wants = cu.cat === 'squeak' ? B.curiosity > 0.4 : cu.cat === 'call' ? this.respondsToCall : cu.cat === 'carcass' ? (sp.id.includes('bear') || B.predator) : false;
+      const wants = cu.cat === 'squeak' ? B.curiosity > 0.4 : cu.cat === 'call' ? this.respondsToCall : cu.cat === 'carcass' ? (sp.id.includes('bear') || B.predator) : cu.cat === 'honey' ? sweet : false;
       if (wants && Math.hypot(cu.x - this.pos.x, cu.z - this.pos.z) > 6) {
         this.state = 'Curious'; this.goal = 'Investigate';
-        this.target = { x: cu.x + this.rng.range(-4, 4), z: cu.z + this.rng.range(-4, 4) };
+        this.target = cu.cat === 'honey' ? { x: cu.x, z: cu.z } : { x: cu.x + this.rng.range(-4, 4), z: cu.z + this.rng.range(-4, 4) };
         return;
       }
     }
@@ -671,6 +677,7 @@ export class AnimalManager {
     this.sightings = [];
     this.spawnCounter = 0;
     this.zones = this.buildZones();
+    this.lures = [];
     const known = (game.profile && game.profile.zones) || [];
     for (const z of this.zones) if (known.includes(z.id)) z.discovered = true;
     this.popAcc = 0;
@@ -824,6 +831,7 @@ export class AnimalManager {
       }
     }
     this.stepPressure(dt);
+    this.stepLures(dt);
     // need-zone schedule: calm herds move to the zone that serves the hour
     this.needAcc = (this.needAcc || 0) + dt;
     if (this.needAcc > 10) { this.needAcc = 0; this.migrate(); }
@@ -855,6 +863,21 @@ export class AnimalManager {
   }
 
   /** Gunshots leave hunting pressure that fades over ~a day; animals avoid it. */
+  /** Honey on the ground: a scent beacon that pulses for a minute. */
+  addLure(x, z) {
+    this.lures.push({ x, z, until: this.game.time + 70, pulse: 0 });
+    this.game.ui.feed('Sticky. Every bear nearby can smell that now.', 'info');
+  }
+
+  stepLures(dt) {
+    const g = this.game;
+    for (const l of this.lures) {
+      l.pulse -= dt;
+      if (l.pulse <= 0 && g.time < l.until) { l.pulse = 8; g.sounds.emit('honey', l.x, g.terrain.heightAt(l.x, l.z) + 0.5, l.z, 2600, g.time, 'lure'); }
+    }
+    this.lures = this.lures.filter(l => g.time < l.until + 5);
+  }
+
   stepPressure(dt) {
     const g = this.game;
     if (!this.pressure) { this.pressure = []; this.lastShotScan = 0; }
@@ -1105,8 +1128,10 @@ export class AnimalManager {
     const g = this.game;
     if (what === 'charge') {
       const d = Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z);
+      if (d < 40 && !(this.lastYelp > g.time)) { this.lastYelp = g.time + 6; g.say('scared'); }
       if (d < 60) g.ui.toast(a.bluff ? `The ${a.species.displayName.split(' ').pop()} is bluff charging!` : `${a.species.displayName.toUpperCase()} IS CHARGING!`, 'big', 1.8);
     } else if (what === 'staredown') { g.ui.feed('You stared the cougar down. It slinks away.', 'good'); g.jobs.onEvent('staredown', { sp: a.species.id }); }
+    else if (what === 'honey') { g.ui.feed(`A ${a.species.displayName.split(' ').pop().toLowerCase()} found the honey. Nom.`, 'info'); }
     else if (what === 'playdead') { g.ui.feed('You play dead. The bear sniffs you… and loses interest.', 'good'); g.jobs.onEvent('playdead', { sp: a.species.id }); }
   }
 
@@ -1208,6 +1233,7 @@ export class AnimalManager {
     g.jobs.onEvent('harvest', { sp: h.species.id, overall: h.score.overall, tier: h.score.tier, wtype: w0 ? w0.type : null, dist: first ? first.distance : 0, recovery });
     g.openMenu('harvest');
     g.ui.showHarvest(h);
+    g.say('yay');
   }
 
   removeAnimal(a) {

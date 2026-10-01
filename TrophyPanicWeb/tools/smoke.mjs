@@ -590,6 +590,30 @@ const scripts = {
     });
     console.log('  spray', JSON.stringify(r));
   },
+  async honey() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, p = g.player, M = g.animals;
+      M.populateAround = () => {};
+      for (const a of M.list) a.dispose(); M.list = []; M.groups = [];
+      let tries = 0;
+      while (!M.list.some(a => a.species.id === 'black_bear') && tries++ < 300) { for (const a of M.list) a.dispose(); M.list = []; M.groups = []; M.spawnGroup(p.pos); }
+      const bear = M.list.find(a => a.species.id === 'black_bear');
+      p.spawnAt(bear.pos.x + 120, bear.pos.z + 120, 0); // far away, quiet
+      const lx = bear.pos.x + 40, lz = bear.pos.z + 10;
+      M.addLure(lx, lz);
+      let t = 0, d = 0;
+      for (; t < 60 * 70; t++) { g.advance(1 / 60); d = Math.hypot(bear.pos.x - lx, bear.pos.z - lz); if (d < 3.6 && bear.goal === 'Graze') break; }
+      // first aid
+      const tent = g.structures.tents[0];
+      p.spawnAt(tent.x + Math.sin(tent.rot) * 2.2, tent.z + Math.cos(tent.rot) * 2.2, 0);
+      p.hp = 40; p.bleed = 1;
+      g.interact();
+      return { reached: d < 3.6, seconds: +(t / 60).toFixed(1), goal: bear.goal, healed: p.hp === 100 && p.bleed === 0, tents: g.structures.tents.length };
+    });
+    console.log('  honey', JSON.stringify(r));
+  },
   async goofy() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 17.4; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

@@ -20,6 +20,12 @@ function propGeo(kind) {
     paint(xf(G.box(0.15, 0.09, 0.3), [0, 0.045, -0.04]), 0x6b4a30),
     paint(xf(G.box(0.16, 0.035, 0.31), [0, 0.0, -0.04]), 0x2a1f1a),
   ]);
+  if (kind === 'honey') return merge([
+    paint(xf(G.cyl(0.09, 0.08, 0.16, 10), [0, 0.08, 0]), 0xf2a72e, { bottom: 0xc97a12 }),
+    paint(xf(G.cyl(0.095, 0.095, 0.04, 10), [0, 0.18, 0]), 0xe8384f),
+    paint(xf(G.sphere(0.04, 6, 5), [0, 0.215, 0]), 0xe8384f),
+    paint(xf(G.box(0.1, 0.06, 0.005), [0, 0.09, 0.085]), 0xfff4de),
+  ]);
   if (kind === 'chicken') return merge([
     paint(xf(G.capsule(0.07, 0.24, 4, 8), [0, 0.07, 0], [Math.PI / 2, 0, 0]), 0xffd23a),
     paint(xf(G.sphere(0.06, 8, 6), [0, 0.12, -0.2]), 0xffd23a),
@@ -54,7 +60,7 @@ export class Weapons {
     this.sway = { x: 0, y: 0 };
     this.draw = 0;
     this.blowing = false;
-    this.geos = { boot: propGeo('boot'), chicken: propGeo('chicken'), arrow: propGeo('arrow') };
+    this.geos = { boot: propGeo('boot'), chicken: propGeo('chicken'), honey: propGeo('honey'), arrow: propGeo('arrow') };
     this.rng = new Rng(game.sessionSeed ^ 0x5eed);
     this.onInventoryChanged();
     this.select(game.profile.ownedWeapons()[0]);
@@ -343,7 +349,7 @@ export class Weapons {
     this.cooldown = w.fireInterval;
     const { origin, dir } = this.aimRay();
     const speed = w.throwSpeed * (0.45 + power * 0.55);
-    const kind = w.id === 'boot' ? 'boot' : 'chicken';
+    const kind = w.id === 'boot' ? 'boot' : w.id === 'honey' ? 'honey' : 'chicken';
     const mesh = new THREE.Mesh(this.geos[kind], toonMat());
     mesh.castShadow = true;
     addOutline(mesh, 0.012);
@@ -371,7 +377,8 @@ export class Weapons {
       pr.x += pr.vx * dt; pr.y += pr.vy * dt; pr.z += pr.vz * dt;
       // hit an animal? (blunt event through the same anatomy pipeline)
       if (!pr.hitAnimal && !pr.remote && pr.kind !== 'hat') {
-        const fake = { ammoId: pr.kind === 'boot' ? 'throwing_boot' : 'rubber_chicken', weaponId: pr.weaponId, klass: 0, owner: pr.owner, traveled: Math.hypot(pr.x - g.player.pos.x, pr.z - g.player.pos.z), speed: Math.hypot(pr.vx, pr.vy, pr.vz), ox: g.player.pos.x, oz: g.player.pos.z, x0: ax, y0: ay, z0: az };
+        const fake = { ammoId: pr.kind === 'boot' ? 'throwing_boot' : 'rubber_chicken', // (a honey jar bonks like a chicken)
+          weaponId: pr.weaponId, klass: 0, owner: pr.owner, traveled: Math.hypot(pr.x - g.player.pos.x, pr.z - g.player.pos.z), speed: Math.hypot(pr.vx, pr.vy, pr.vz), ox: g.player.pos.x, oz: g.player.pos.z, x0: ax, y0: ay, z0: az };
         const hit = g.animals.resolveProjectile(fake, ax, ay, az, pr.x, pr.y, pr.z);
         if (hit) {
           pr.hitAnimal = true;
@@ -385,7 +392,13 @@ export class Weapons {
       if (pr.y < gh + 0.05) {
         pr.y = gh + 0.05;
         const impact = -pr.vy;
-        if (impact > 1.5 && pr.kind !== 'hat') {
+        if (pr.kind === 'honey' && !pr.lured) {
+          pr.lured = true; pr.noPickup = true;
+          g.animals.addLure(pr.x, pr.z);
+          g.fx.splat(pr.x, pr.z, 0.7, 0xf2a72e, 200);
+          g.audio.play('splat', pr);
+        }
+        if (impact > 1.5 && pr.kind !== 'hat' && pr.kind !== 'honey') {
           if (pr.kind === 'chicken') {
             g.audio.play('squeak', pr, { pitch: 0.8 + Math.random() * 0.5 });
             g.sounds.emit('squeak', pr.x, pr.y, pr.z, 900, g.time, pr.owner || 'player');
@@ -404,7 +417,7 @@ export class Weapons {
   nearestPickup(pos, r) {
     let best = null, bd = r;
     for (const pr of this.props) {
-      if (!pr.resting || pr.remote) continue;
+      if (!pr.resting || pr.remote || pr.noPickup) continue;
       const d = Math.hypot(pr.x - pos.x, pr.z - pos.z);
       if (d < bd) { bd = d; best = pr; }
     }

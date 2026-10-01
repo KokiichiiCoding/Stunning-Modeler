@@ -14,6 +14,7 @@ export const AMMO = {
   recurve_broadhead: { name: 'Recurve Broadhead', kind: K.Broadhead, massKg: 0.026, muzzleVelocityMps: 60, energyHalfDistanceM: 40, basePenetrationM: 0.55, expansionFactor: 1.0, bluntShockScale: 0.3 },
   throwing_boot: { name: 'Throwing Boot', kind: K.BluntObject, massKg: 0.8, muzzleVelocityMps: 15, energyHalfDistanceM: 20, basePenetrationM: 0.01, expansionFactor: 2.5, bluntShockScale: 1.0 },
   nail_gun: { name: 'Powder-Actuated Nail', kind: K.SteelNail, massKg: 0.006, muzzleVelocityMps: 150, energyHalfDistanceM: 15, basePenetrationM: 0.12, expansionFactor: 0.6, bluntShockScale: 0.4 },
+  honey_jar: { name: 'Honey Jar', kind: K.BluntObject, massKg: 0.5, muzzleVelocityMps: 12, energyHalfDistanceM: 15, basePenetrationM: 0.005, expansionFactor: 1.0, bluntShockScale: 0.5 },
   rubber_chicken: { name: 'Rubber Chicken', kind: K.BluntObject, massKg: 0.35, muzzleVelocityMps: 12, energyHalfDistanceM: 15, basePenetrationM: 0.005, expansionFactor: 1.0, bluntShockScale: 0.4 },
   leaf_blower: { name: 'Leaf Blower Gust', kind: K.AirImpulse, massKg: 0.001, muzzleVelocityMps: 45, energyHalfDistanceM: 3, basePenetrationM: 0, expansionFactor: 0, bluntShockScale: 0.15 },
   // --- web additions ---
@@ -101,6 +102,11 @@ export const WEAPONS = {
     magazine: 1, reserve: 3, fireInterval: 0.9, reloadTime: 0.3, spread: 0.01, sway: 0.5, recoil: 0.1,
     zoom: 1, loudness: 900, price: 0, throwSpeed: 13, squeak: true, color: 0xffd23a, desc: 'SQUEAK. Curious animals come to look. So do bears.',
   },
+  honey: {
+    id: 'honey', name: 'Honey Jar', short: 'Honey', type: 'thrown', ammo: 'honey_jar', klass: 0,
+    magazine: 1, reserve: 3, fireInterval: 0.9, reloadTime: 0.3, spread: 0.01, sway: 0.5, recoil: 0.1,
+    zoom: 1, loudness: 60, price: 60, throwSpeed: 13, color: 0xf2a72e, desc: 'Smash it somewhere: every bear (and boar) nearby comes for a long, sticky snack. Bait, or a distraction.',
+  },
   blower: {
     id: 'blower', name: 'Leaf Blower', short: 'Blow', type: 'blower', ammo: 'leaf_blower', klass: 0,
     magazine: 100, reserve: 0, fireInterval: 0.05, reloadTime: 0, spread: 0, sway: 0.3, recoil: 0.02,
@@ -131,4 +137,4 @@ export const GEAR = {
   dog: { id: 'dog', name: 'Biscuit (tracking dog)', price: 120, desc: 'A very good girl. Heels, growls at bears, and on K follows the blood trail to whatever you hit. Barking is loud.' },
 };
 
-export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'bear_spray', 'camera', 'boot', 'chicken', 'blower'];
+export const WEAPON_ORDER = ['rifle_243', 'rifle_308', 'rifle_3006', 'lever_4570', 'shotgun_12', 'revolver_44', 'bow_recurve', 'bow_compound', 'rimfire_22', 'bear_spray', 'camera', 'boot', 'chicken', 'honey', 'blower'];

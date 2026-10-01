@@ -263,6 +263,7 @@ export class Game {
     p.downed = false; p.hp = 35; p.bleed = 0; p.invuln = 3; p.getUp = 0.8;
     this.downedInfo = null;
     this.ui.toast(`${byName} pulled you up!`, 'big', 2.4);
+    this.say('huh');
     this.audio.play('boing', p.pos);
     this.coop.broadcastEvent('revived', {});
   }
@@ -324,6 +325,7 @@ export class Game {
     const k = Math.hypot(knock.x, knock.z) || 1;
     this.weapons.props.push({ kind: 'hat', mesh, x: p.pos.x, y: p.pos.y + 1.4, z: p.pos.z, vx: knock.x / k * 5 + (this.weapons.rng.next() - 0.5) * 2, vy: 7, vz: knock.z / k * 5 + (this.weapons.rng.next() - 0.5) * 2, spin: 14, resting: false, label: 'your hat', age: 0 });
     this.ui.toast('Your hat went flying!', 'hit', 1.8);
+    this.say('scared');
   }
 
   restoreHat() {
@@ -333,6 +335,21 @@ export class Game {
     this.weapons.props = this.weapons.props.filter(x => x.kind !== 'hat');
     this.ui.feed('Hat back on. Dignity restored.', 'good');
     this.audio.play('boing', this.player.pos);
+  }
+
+  nearestKit(pos) {
+    for (const k of this.structures.tents) {
+      // the crate sits at the tent's front-right
+      const cx = k.x + Math.sin(k.rot) * 1.4 + Math.cos(k.rot) * 0.9, cz = k.z + Math.cos(k.rot) * 1.4 - Math.sin(k.rot) * 0.9;
+      if (Math.hypot(pos.x - cx, pos.z - cz) < 2.4 || Math.hypot(pos.x - k.x, pos.z - k.z) < 2.8) return k;
+    }
+    return null;
+  }
+
+  /** Your chibi says something. Friends hear their own babble from your position. */
+  say(mood) {
+    const v = 0.85 + ((this.profile.skin | 0) % 6) * 0.07 + (this.profile.name.length % 3) * 0.04;
+    this.audio.babble(this.player.pos, mood, v);
   }
 
   applyHandColors() {
@@ -415,13 +432,13 @@ export class Game {
     if (I.wasPressed('KeyT')) this.useCall();
     if (I.wasPressed('KeyH')) this.bandage();
     if (I.wasPressed('KeyF')) this.fx.toggleFlashlight();
-    if (I.wasPressed('KeyG')) { this.waveT = 2.2; this.coop.broadcastEvent('wave', {}); }
+    if (I.wasPressed('KeyG')) { this.waveT = 2.2; this.coop.broadcastEvent('wave', {}); this.say('happy'); }
     if (I.wasPressed('KeyV')) this.thirdPerson = !this.thirdPerson;
     if (I.wasPressed('KeyM')) this.openMenu('map');
     if (I.wasPressed('KeyX')) this.social.ping();
     if (I.wasPressed('KeyK')) this.dog.command();
     if (I.wasPressed('KeyP')) this.blinds.toggle();
-    if (I.wasPressed('KeyJ') && !this.player.vehicle && !this.player.tumble) { this.danceT = 4; this.coop.broadcastEvent('dance', {}); this.audio.play('levelup', this.player.pos); }
+    if (I.wasPressed('KeyJ') && !this.player.vehicle && !this.player.tumble) { this.danceT = 4; this.coop.broadcastEvent('dance', {}); this.audio.play('levelup', this.player.pos); this.say('yay'); }
     if (I.wasPressed('Enter') || I.wasPressed('NumpadEnter')) this.social.open();
     if (I.wasPressed('Escape')) this.pause();
   }
@@ -566,6 +583,15 @@ export class Game {
     if (a) { this.animals.harvest(a); return; }
     const item = this.weapons.nearestPickup(p.pos, 2.5);
     if (item) { this.weapons.pickup(item); return; }
+    // the first-aid crate by a camp tent patches you up
+    const kit = this.nearestKit(p.pos);
+    if (kit && (p.hp < 99 || p.bleed > 0)) {
+      if (this.time - kit.usedT < 90) { this.ui.feed('The first-aid crate is empty. The rangers restock it every few minutes.', 'warn'); return; }
+      kit.usedT = this.time; p.hp = 100; p.bleed = 0;
+      this.audio.play('levelup', p.pos); this.say('yay');
+      this.ui.feed('First-aid crate: plasters, a lolly, good as new.', 'good');
+      return;
+    }
     const quad = !p.tumble && this.vehicles.nearest(p.pos, 2.6);
     if (quad) { this.weapons.aiming = false; if (this.weapons.binoculars) this.weapons.toggleBinoculars(); quad.enter(p); return; }
     for (const tw of this.structures.towers) {

@@ -196,6 +196,24 @@ export class Audio {
     this.birdT = 0;
   }
 
+  /** Chibi gibberish: a few squeaky syllables. mood: happy | yay | scared | hurt | huh. */
+  babble(pos, mood = 'happy', voice = 1) {
+    if (!this.ctx || this.volume <= 0) return;
+    const t0 = this.ctx.currentTime + 0.01;
+    const { g } = this.out(pos, 0.55, 150);
+    const n = mood === 'yay' ? 2 : mood === 'hurt' ? 1 : mood === 'scared' ? 4 : 3;
+    const base = 380 * voice * (mood === 'scared' ? 1.4 : 1);
+    let t = t0;
+    for (let i = 0; i < n; i++) {
+      const len = mood === 'scared' ? 0.07 : 0.1 + Math.random() * 0.05;
+      const up = mood === 'yay' || mood === 'huh' ? 1 + i * 0.25 : mood === 'hurt' ? 0.6 : 1 + (Math.random() - 0.5) * 0.5;
+      const f = base * up;
+      this.tone(g, t, len, { type: 'square', curve: [f, f * 1.25, f * 0.95], gain: 0.07, vibrato: 25, vibRate: 30 });
+      this.tone(g, t, len, { type: 'sine', curve: [f * 2, f * 2.4, f * 1.9], gain: 0.12 });
+      t += len + 0.03;
+    }
+  }
+
   /** Waterfall roar: low rumbling noise, louder as you approach. */
   setFalls(level) {
     if (!this.ctx) return;

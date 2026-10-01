@@ -78,6 +78,7 @@ export class Player {
     this.hp -= dmg;
     this.bleed = Math.min(6, this.bleed + cut * 0.035);
     this.game.fx && this.game.fx.playerHurt(dmg);
+    if (dmg > 4 && this.game.say) this.game.say('hurt');
     this.lastHurtBy = source;
     if (knock) {
       const k = Math.hypot(knock.x, knock.z);
