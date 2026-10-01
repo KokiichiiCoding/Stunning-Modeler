@@ -409,7 +409,14 @@ export class Animal {
     if (!this.target || this.rng.chance(0.03)) {
       const z = this.zone;
       const r = this.rng.chance(z.need === 'drink' && inWindow(this.game.hour, z) ? 0.5 : 0.15) ? 'drink' : 'graze';
-      if (r === 'drink' && z.water) { this.goal = 'Drink'; this.target = { x: z.water.x + this.rng.range(-3, 3), z: z.water.z + this.rng.range(-3, 3) }; }
+      if (r === 'drink' && z.water) {
+        this.goal = 'Drink'; this.target = { x: z.water.x + this.rng.range(-3, 3), z: z.water.z + this.rng.range(-3, 3) };
+        // bears wade in up to their knees: it's fishing time
+        if (sp.id.includes('bear') || sp.id === 'grizzly') {
+          const T = this.game.terrain;
+          for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, wx = z.water.x + Math.cos(a) * 4, wz = z.water.z + Math.sin(a) * 4, dd = T.waterDepth(wx, wz); if (dd > 0.25 && dd < 0.9) { this.target = { x: wx, z: wz }; break; } }
+        }
+      }
       else {
         this.goal = 'Graze';
         const a = this.rng.range(0, 6.28), d = this.rng.range(4, z.r);
@@ -515,6 +522,17 @@ export class Animal {
       if (Math.abs(this.push.x) + Math.abs(this.push.z) < 0.05) this.push.x = this.push.z = 0;
     }
     if (this.grazeT > 0) this.grazeT -= dt;
+    // a bear standing in the river at drinking time is fishing: swipe, swipe… fish!
+    if (this.alive && !this.downed && this.state === 'Calm' && this.goal === 'Drink' && this.grazeT > 0 && (this.species.id.includes('bear') || this.species.id === 'grizzly') && g.terrain.waterDepth(this.pos.x, this.pos.z) > 0.15) {
+      this.swipeCd = (this.swipeCd || 0) - dt;
+      if (this.swipeCd <= 0) {
+        this.swipeCd = this.rng.range(1.6, 3); this.swipeT = 0.45; this.grazeT = Math.max(this.grazeT, 2.5);
+        g.fx.burst(this.pos.x + Math.sin(this.facingYaw()) * 0.9, WATER_LEVEL + 0.1, this.pos.z + Math.cos(this.facingYaw()) * 0.9, { count: 6, color: 0xcfeaff, speed: 2, up: 2.5, kind: 'drop', size: 0.12 });
+        g.audio.play('splash', this.pos);
+        if (this.rng.chance(0.25)) this.mgr.bearFish(this);
+      }
+    }
+    if (this.swipeT > 0) this.swipeT -= dt;
     this.collide();
     this.pos.y = T.heightAt(this.pos.x, this.pos.z);
     if (this.species.id === 'moose' || this.species.id.includes('bear')) this.pos.y = Math.max(this.pos.y, WATER_LEVEL - 1.1);
@@ -680,6 +698,7 @@ export class Animal {
     const bob = Math.abs(Math.sin(this.phase)) * amp * 0.06 * B.leg;
     const bedT = this.goal === 'Rest' && this.speed < 0.1 ? 1 : 0;
     this.bed = (this.bed || 0) + (bedT - (this.bed || 0)) * Math.min(1, dt * 1.5);
+    if (this.swipeT > 0) { const u = 1 - this.swipeT / 0.45; r.legs[0].rotation.x = -1.6 * Math.sin(u * Math.PI); }
     if (this.bed > 0.01) r.legs.forEach((l, i) => { l.rotation.x = (i < 2 ? 1.45 : -1.45) * this.bed; }); // tucked under the belly
     r.body.position.y = bob + (this.lungeT > 0 ? 0.15 : 0) - this.bed * B.leg * 0.62;
     r.body.rotation.x = this.goal === 'Charge' ? 0.12 : this.lungeT > 0 ? -0.25 : 0;
@@ -955,6 +974,16 @@ export class AnimalManager {
   }
 
   /** Gunshots leave hunting pressure that fades over ~a day; animals avoid it. */
+  /** A bear flicks a fish out of the river onto the bank. Finders keepers? */
+  bearFish(a) {
+    const g = this.game, rng = a.rng;
+    const f = rng.weighted([{ w: 5, v: 'trout' }, { w: 3, v: 'perch' }, { w: 1, v: 'pike' }]);
+    const yaw = a.facingYaw() + Math.PI + rng.range(-0.6, 0.6); // flung back over its shoulder, toward the bank
+    g.weapons.spawnFishProp(f, rng.range(0.3, 1) , a.pos.x, WATER_LEVEL + 0.4, a.pos.z, Math.sin(yaw) * rng.range(3, 5), 6, Math.cos(yaw) * rng.range(3, 5));
+    const d = Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z);
+    if (d < 90 && !a.fishAnnounced) { a.fishAnnounced = true; g.ui.feed(`A ${a.species.displayName.split(' ').pop().toLowerCase()} just caught a fish with its bare paws. Show-off. (You could… pinch it.)`, 'info'); }
+  }
+
   /** A raccoon rummages through the player's pack and makes off with something. */
   raccoonSteal(a) {
     const g = this.game, pr = g.profile, P = g.player, rng = a.rng;

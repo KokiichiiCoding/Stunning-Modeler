@@ -123,7 +123,7 @@ export class Fishing {
             this.wait = this.rng.range(4, 13) * (g.period === 'dawn' || g.period === 'dusk' ? 0.6 : 1) * (g.weather.rain > 0.3 ? 0.75 : 1);
             this.nibbleT = this.rng.range(1, 3);
             g.audio.play('splash', b);
-            g.fx.burst(b.x, b.y + 0.05, b.z, { count: 6, color: 0xcfeaff, speed: 1.5, up: 1.5, kind: 'smoke', size: 0.08 });
+            g.fx.burst(b.x, b.y + 0.05, b.z, { count: 6, color: 0xcfeaff, speed: 1.5, up: 1.5, kind: 'drop', size: 0.08 });
           } else { this.reset('Plonk. You caught… the ground.'); g.audio.play('dirt', b); }
         }
         if (cmd.firePressed) this.reset();
@@ -137,7 +137,7 @@ export class Fishing {
         if (this.wait <= 0) {
           this.state = 'bite'; this.biteT = 1.3; this.dip = 0.22;
           g.audio.play('splash', b); g.ui.toast('BITE! CLICK!', 'hit', 1.1);
-          g.fx.burst(b.x, b.y + 0.05, b.z, { count: 10, color: 0xcfeaff, speed: 2, up: 2, kind: 'smoke', size: 0.1 });
+          g.fx.burst(b.x, b.y + 0.05, b.z, { count: 10, color: 0xcfeaff, speed: 2, up: 2, kind: 'drop', size: 0.1 });
         }
         if (cmd.firePressed) this.reset(this.t < 1.5 ? null : 'You reel in an empty hook.');
         if (Math.hypot(b.x - p.pos.x, b.z - p.pos.z) > 45) this.reset('Your line ran out. Reel in closer to the water.');
@@ -208,7 +208,7 @@ export class Fishing {
     if (this.waterAt(tx, tz)) { b.x = tx; b.z = tz; }
     else if (this.dist < l) { b.x = p.pos.x + nx * this.dist; b.z = p.pos.z + nz * this.dist; } // dragged up the bank
     b.y = Math.max(WATER_LEVEL, g.terrain.heightAt(b.x, b.z)) - burst * 0.12;
-    if (burst > 0.8 && !this.splashed) { this.splashed = true; g.fx.burst(b.x, WATER_LEVEL + 0.05, b.z, { count: 5, color: 0xcfeaff, speed: 2, up: 2.5, kind: 'smoke', size: 0.08 }); g.audio.play('splash', b); }
+    if (burst > 0.8 && !this.splashed) { this.splashed = true; g.fx.burst(b.x, WATER_LEVEL + 0.05, b.z, { count: 5, color: 0xcfeaff, speed: 2, up: 2.5, kind: 'drop', size: 0.08 }); g.audio.play('splash', b); }
     if (burst < 0.3) this.splashed = false;
     if (this.tension >= 1) { g.audio.play('ricochet', p.pos); g.ui.toast('SNAP!', 'hit', 1.2); this.reset(`The line snapped. Somewhere, a ${F.f.junk ? 'boot' : 'fish'} is laughing at you.`); return; }
     if (this.dist > this.dist0 + 14) { this.reset('It got away. It was probably huge.'); return; }
@@ -248,6 +248,18 @@ export class Fishing {
     this.held = m; this.heldScale = s;
     g.viewScene.add(m);
     this.state = 'show'; this.showT = 8;
+  }
+
+  /** A fish you picked up off the bank (a bear caught it). Half price: it's a bit chewed. */
+  pocketFish({ id, kg }) {
+    const g = this.game, pr = g.profile, f = FISH.find(q => q.id === id);
+    const cash = Math.round(f.value * 0.5);
+    pr.cash += cash; pr.stats.fish = (pr.stats.fish || 0) + 1;
+    pr.fish = pr.fish || {};
+    if (kg > (pr.fish[id] || 0)) pr.fish[id] = Math.round(kg * 100) / 100;
+    g.audio.play('cash', g.player.pos);
+    g.ui.feed(`You pinched a ${kg.toFixed(1)} kg ${f.name} from a bear. Bold. (+$${cash}, slightly chewed)`, 'good');
+    g.jobs.onEvent('pinch', {});
   }
 
   /** FISH SLAP. Buddies fall over, friends get knocked about, animals see stars. */

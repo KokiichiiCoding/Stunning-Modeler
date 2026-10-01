@@ -55,7 +55,10 @@ artifact declaring the `room` capability to get online co-op.
   reel and let go when the fish pulls hard (the tension meter shows when
   the line is about to snap). Perch, trout, bass, Grumpy Pike, Old Man
   Sturgeon, a very rare Golden Koi, and the odd boot, tin can or rubber
-  duck. Catches pay and you hold each one up for the camera.
+  duck. Catches pay and you hold each one up for the camera (then click to
+  fish-slap whoever is in front of you). Bears fish too: at drinking time
+  they wade in, swipe, and flick fish onto the bank. You can pinch them.
+  The bear may have opinions.
 - **The Hairy Hiker.** Some nights the radio crackles about a very tall,
   very hairy hiker. It strolls across distant clearings; get close (or
   shine a flashlight on it) and it waves, then sprints off flailing,
@@ -185,4 +188,4 @@ Each one fails on any page or console error and writes screenshots to
 - `social`
 - `jobs`
 - `zones`
-- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`, `hiker`
+- `dog`, `blind`, `tips`, `slapstick`, `lineup`, `falls`, `revive`, `goofy`, `spray`, `honey`, `rest`, `legsup`, `skunk`, `turkey`, `signs`, `soak`, `touch`, `campfire`, `raccoon`, `fishing`, `hiker`, `bearfish`

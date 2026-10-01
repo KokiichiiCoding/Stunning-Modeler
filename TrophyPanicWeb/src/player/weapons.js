@@ -5,6 +5,7 @@
 
 import { evaluatePhoto } from '../game/photo.js';
 import { THREE } from '../three.js';
+import { FISH, buildFish } from './fishing.js';
 import { WEAPONS, AMMO, dragPerMeter } from '../sim/arsenal.js';
 import { Viewmodel } from './viewmodel.js';
 import { G, paint, merge, xf, toonMat, addOutline } from '../render/toon.js';
@@ -369,10 +370,21 @@ export class Weapons {
     this.props.push({ kind, mesh, x, y, z, vx, vy, vz, spin: 9, resting: false, label: kind, remote: true, age: 0 });
   }
 
+  /** A loose, flopping fish (a bear flicked it out of the river). */
+  spawnFishProp(id, u, x, y, z, vx, vy, vz) {
+    const f = FISH.find(q => q.id === id);
+    const kg = f.kg[0] + (f.kg[1] - f.kg[0]) * u * 0.6;
+    const mesh = buildFish(f); mesh.scale.setScalar(Math.max(0.55, Math.cbrt(kg) * 0.75));
+    this.game.scene.add(mesh);
+    this.props.push({ kind: 'fish', fish: { id, kg }, mesh, x, y, z, vx, vy, vz, spin: 9, resting: false, label: `a ${kg.toFixed(1)} kg ${f.name}`, age: 0, noHit: true });
+  }
+
   stepProps(dt) {
     const g = this.game, T = g.terrain;
     for (const pr of this.props) {
       pr.age = (pr.age || 0) + dt;
+      // a landed fish flops about for a while
+      if (pr.kind === 'fish' && pr.resting && pr.age < 40 && this.rng.chance(dt * 0.8)) { pr.resting = false; pr.vy = 2.6; pr.vx = (this.rng.next() - 0.5) * 1.5; pr.vz = (this.rng.next() - 0.5) * 1.5; pr.spin = 12; }
       if (pr.resting) continue;
       pr.vy -= GRAV * dt;
       const ax = pr.x, ay = pr.y, az = pr.z;
@@ -390,7 +402,7 @@ export class Weapons {
           g.ui.toast(pr.kind === 'boot' ? 'BONK!' : 'SQUEAK!', 'hit');
         }
       }
-      const gh = Math.max(T.heightAt(pr.x, pr.z), pr.kind === 'chicken' ? WATER_LEVEL - 0.05 : -99);
+      const gh = Math.max(T.heightAt(pr.x, pr.z), pr.kind === 'chicken' || pr.kind === 'fish' ? WATER_LEVEL - 0.05 : -99);
       if (pr.y < gh + 0.05) {
         pr.y = gh + 0.05;
         const impact = -pr.vy;
@@ -419,7 +431,7 @@ export class Weapons {
   nearestPickup(pos, r) {
     let best = null, bd = r;
     for (const pr of this.props) {
-      if (!pr.resting || pr.remote || pr.noPickup || pr.carried) continue;
+      if ((!pr.resting && pr.kind !== 'fish') || pr.remote || pr.noPickup || pr.carried) continue;
       const d = Math.hypot(pr.x - pos.x, pr.z - pos.z);
       if (d < bd) { bd = d; best = pr; }
     }
@@ -432,6 +444,7 @@ export class Weapons {
     this.props = this.props.filter(x => x !== pr);
     if (pr.kind === 'hat') { g.restoreHat(); return; }
     if (pr.kind === 'loot') { g.animals.returnLoot(pr.loot); return; }
+    if (pr.kind === 'fish') { g.fishing.pocketFish(pr.fish); return; }
     const id = pr.kind === 'arrow' ? pr.weaponId : pr.weaponId || (pr.kind === 'boot' ? 'boot' : 'chicken');
     if (g.profile.owned.includes(id)) g.profile.ammo[id] = (g.profile.ammo[id] || 0) + 1;
     g.audio.play('click');

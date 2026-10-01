@@ -54,6 +54,37 @@ const wait = ms => page.waitForTimeout(ms);
 const step = async (n) => page.evaluate(k => window.__tp.debug.stepFrames(k), n);
 
 const scripts = {
+  async bearfish() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = 9; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    const r = await page.evaluate(() => {
+      const g = window.__tp.game, M = g.animals, p = g.player, T = g.terrain;
+      // a shallow spot by the lake shore
+      let spot = null;
+      for (let a = 0; a < 6.28 && !spot; a += 0.1) for (let rr = 60; rr < 170; rr += 1) { const x = -170 + Math.cos(a) * rr, z = 150 + Math.sin(a) * rr, d = T.waterDepth(x, z); if (d > 0.3 && d < 0.7) { spot = { x, z, a }; break; } }
+      for (const a of M.list) a.dispose(); M.list = []; M.groups = [];
+      let tries = 0; while (!M.list.some(a => a.species.id === 'black_bear') && tries++ < 400) { for (const a of M.list) a.dispose(); M.list = []; M.groups = []; M.spawnGroup({ x: spot.x, z: spot.z }); }
+      const bear = M.list.find(a => a.species.id === 'black_bear'); for (const a of M.list) if (a !== bear) a.dispose(); M.list = [bear];
+      bear.pos.x = spot.x; bear.pos.z = spot.z; bear.alertness = 0; bear.frozenAI = true;
+      p.spawnAt(-170 + Math.cos(spot.a) * 200, 150 + Math.sin(spot.a) * 200, 0);
+      let fish = 0, swipes = 0;
+      for (let i = 0; i < 60 * 30; i++) { bear.pos.x = spot.x; bear.pos.z = spot.z; bear.speed = 0; bear.state = 'Calm'; bear.goal = 'Drink'; bear.grazeT = 5; bear.target = null; g.advance(1 / 60); if (bear.swipeT > 0.42) swipes++; }
+      fish = g.weapons.props.filter(x => x.kind === 'fish').length;
+      const fp = g.weapons.props.find(x => x.kind === 'fish');
+      let picked = false;
+      if (fp) { for (let i = 0; i < 120; i++) g.advance(1 / 60); p.pos.x = fp.x; p.pos.z = fp.z; p.pos.y = T.heightAt(fp.x, fp.z); const before = g.profile.stats.fish || 0; g.interact(); picked = (g.profile.stats.fish || 0) > before; }
+      // camera on the bear
+      p.pos.x = bear.pos.x + Math.cos(spot.a) * 9; p.pos.z = bear.pos.z + Math.sin(spot.a) * 9; p.pos.y = Math.max(T.heightAt(p.pos.x, p.pos.z), 4);
+      p.yaw = Math.atan2(-(bear.pos.x - p.pos.x), -(bear.pos.z - p.pos.z)); p.pitch = -0.15;
+      bear.swipeT = 0.25;
+      const kinds = {}; for (const q of g.fx.particles) kinds[q.kind] = (kinds[q.kind] || 0) + 1;
+      return { swipes, fish, picked, kinds, decals: g.fx.decals.length, ev: g.evidence.items ? g.evidence.items.length : -1 };
+    });
+    console.log('  bearfish', JSON.stringify(r));
+    if (r.swipes < 3 || r.fish < 1 || !r.picked) errors.push('bear fishing failed: ' + JSON.stringify(r));
+    for (let i = 0; i < 2; i++) await step(1);
+    await shot('104_bear_fishing');
+  },
   async hiker() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 19.4; g.weather.set('clear', true); g.profile.settings.buddies = 0; g.profile.settings.tips = false; });
     await page.evaluate(() => window.__tp.debug.startGame({}));
