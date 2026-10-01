@@ -26,6 +26,7 @@ import { Weather } from '../sim/weather.js';
 import { WeatherFX } from '../world/weatherfx.js';
 import { Waterfall } from '../world/waterfall.js';
 import { Social } from '../ui/social.js';
+import { Post } from '../render/post.js';
 import { Jobs } from './jobs.js';
 import { Dog } from '../entities/dog.js';
 import { Blinds } from '../entities/blind.js';
@@ -64,6 +65,7 @@ export class Game {
     r.toneMappingExposure = 1.05;
     r.autoClear = false;
     r.info.autoReset = false;
+    this.post = new Post(r);
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(this.fov, window.innerWidth / window.innerHeight, 0.08, 2600);
@@ -165,6 +167,7 @@ export class Game {
     }
     this.renderer.setPixelRatio(pr);
     this.vegetation.lodDistance = [170, 150, 120, 95][L];
+    this.post.enabled = this.profile.settings.post !== false && L <= 1;
     this.onResize();
   }
 
@@ -186,6 +189,7 @@ export class Game {
   onResize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
+    if (this.post) this.post.setSize(w, h, this.renderer.getPixelRatio());
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
     this.viewCamera.aspect = w / h; this.viewCamera.updateProjectionMatrix();
   }
@@ -791,13 +795,18 @@ export class Game {
     if (this.selfie) this.doSelfie();
     const r = this.renderer;
     r.info.reset();
-    r.clear();
+    const post = this.post.enabled;
+    if (post) this.post.begin(); else { r.setRenderTarget(null); r.clear(); }
     r.render(this.scene, this.camera);
-    if (this.pendingPhoto) this.capturePhoto();
     if (this.state !== 'title' && !this.thirdPerson && !this.player.tumble && !this.player.vehicle && !this.player.downed && !(this.danceT > 0) && this.weapons.viewmodelVisible()) {
       r.clearDepth();
       r.render(this.viewScene, this.viewCamera);
     }
+    if (post) {
+      const h = this.hour, night = h >= 20 || h < 5 ? 1 : h >= 18.5 ? (h - 18.5) / 1.5 : h < 6.3 ? (6.3 - h) / 1.3 : 0;
+      this.post.end(Math.max(0, Math.min(1, night)));
+    }
+    if (this.pendingPhoto) this.capturePhoto();
   }
 
   snapshot() { return { profile: this.profile.toJSON() }; }

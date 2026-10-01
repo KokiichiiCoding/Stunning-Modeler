@@ -67,7 +67,7 @@ export class UI {
       });
     };
     bindSetting('set-sens', 'sens'); bindSetting('set-vol', 'volume'); bindSetting('set-fov', 'fov');
-    bindSetting('set-quality', 'quality', String); bindSetting('set-reports', 'reports'); bindSetting('set-gore', 'gore', String); bindSetting('set-tips', 'tips');
+    bindSetting('set-quality', 'quality', String); bindSetting('set-reports', 'reports'); bindSetting('set-gore', 'gore', String); bindSetting('set-tips', 'tips'); bindSetting('set-post', 'post');
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Escape' && g.state === 'menu') g.closeMenu();
       else if (e.code === 'Escape' && g.state === 'paused') g.resume();
@@ -133,7 +133,7 @@ export class UI {
     if (name === 'settings') {
       const s = this.game.profile.settings;
       $('set-sens').value = s.sens; $('set-vol').value = s.volume; $('set-fov').value = s.fov;
-      $('set-quality').value = s.quality; $('set-reports').checked = !!s.reports; $('set-gore').value = s.gore; $('set-tips').checked = s.tips !== false;
+      $('set-quality').value = s.quality; $('set-reports').checked = !!s.reports; $('set-gore').value = s.gore; $('set-tips').checked = s.tips !== false; $('set-post').checked = s.post !== false;
     }
   }
 
