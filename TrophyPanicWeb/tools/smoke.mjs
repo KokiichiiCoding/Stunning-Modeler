@@ -532,6 +532,29 @@ const scripts = {
     });
     console.log('  revive', JSON.stringify(r));
   },
+  async falls() {
+    await page.evaluate(() => { const g = window.__tp.game; g.hour = Number(17.4); g.weather.set('clear', true); });
+    await page.evaluate(() => window.__tp.debug.startGame({}));
+    await page.evaluate(() => {
+      const g = window.__tp.game, W = g.waterfall, F = { x: W.base.x, z: W.base.z };
+      // stand downstream on the bank looking back up at the falls
+      const sx = W.base.x - g.waterfall.sheet.geometry.attributes.position.getX(0) + W.base.x;
+      const dx = W.base.x - (W.base.x + 1), dz = 0;
+      const R = g.terrain;
+      let best = null;
+      for (let a = 0; a < 6.28; a += 0.2) for (const d of [30, 38, 46]) {
+        const x = F.x + Math.cos(a) * d, z = F.z + Math.sin(a) * d;
+        if (R.waterDepth(x, z) > 0.05 || R.heightAt(x, z) > 14) continue;
+        const score = -Math.abs(R.heightAt(x, z) - 6);
+        if (!best || score > best.s) best = { x, z, s: score };
+      }
+      g.player.spawnAt(best.x, best.z, 0);
+      const ex = W.base.x - best.x, ez = W.base.z - best.z;
+      g.player.yaw = Math.atan2(-ex, -ez); g.player.pitch = 0.18;
+    });
+    for (let i = 0; i < 6; i++) await step(4);
+    await shot('99_waterfall');
+  },
   async slapstick() {
     await page.evaluate(() => { const g = window.__tp.game; g.hour = 10; g.weather.set('clear', true); });
     await page.evaluate(() => window.__tp.debug.startGame({}));

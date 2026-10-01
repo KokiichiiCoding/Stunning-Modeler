@@ -194,6 +194,20 @@ export class Audio {
     this.birdT = 0;
   }
 
+  /** Waterfall roar: low rumbling noise, louder as you approach. */
+  setFalls(level) {
+    if (!this.ctx) return;
+    if (!this.fallsNode && level > 0.01) {
+      const c = this.ctx;
+      const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true; src.playbackRate.value = 0.7;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+      const g = c.createGain(); g.gain.value = 0;
+      src.connect(lp); lp.connect(g); g.connect(this.master); src.start(0, 0.7);
+      this.fallsNode = { g };
+    }
+    if (this.fallsNode) this.fallsNode.g.gain.setTargetAtTime(level * level * 0.35, this.ctx.currentTime, 0.4);
+  }
+
   /** Rain hiss (two filtered noise layers) scaled by rain intensity. */
   setRain(level) {
     if (!this.ctx) return;

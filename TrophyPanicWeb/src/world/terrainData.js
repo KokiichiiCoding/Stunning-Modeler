@@ -24,6 +24,13 @@ export const RIVER = [
   [140, -40], [60, -10], [0, 40], [-60, 70], [-110, 110],
 ];
 
+// The river pours off a cliff step near its source (see the waterfall in world/waterfall.js).
+export const FALLS = (() => {
+  const [a, b] = [RIVER[0], RIVER[1]];
+  const l = Math.hypot(a[0] - b[0], a[1] - b[1]);
+  return { x: a[0] + (b[0] - a[0]) * 0.3, z: a[1] + (b[1] - a[1]) * 0.3, dx: (a[0] - b[0]) / l, dz: (a[1] - b[1]) / l, drop: 16 };
+})();
+
 export const POIS = [
   { id: 'lodge', name: 'Wobblewood Lodge', x: 330, z: 330, r: 34, kind: 'lodge' },
   { id: 'outpost_moss', name: 'Mossbottom Outpost', x: -360, z: -260, r: 18, kind: 'outpost' },
@@ -121,6 +128,14 @@ export function rawHeight(x, z) {
     const bed = WATER_LEVEL - 2.2 + rd.d / w * 1.4;
     const target = rd.d < w ? bed : bank;
     h = lerp(h, Math.min(h, target), smoothstep(w + 55, w, rd.d) * 0.98);
+  }
+
+  // Waterfall cliff: everything upstream of the falls is lifted onto a ledge.
+  {
+    const fx = x - FALLS.x, fz = z - FALLS.z;
+    const along = fx * FALLS.dx + fz * FALLS.dz;
+    const across = Math.abs(-fx * FALLS.dz + fz * FALLS.dx);
+    if (along > -4 && across < 75) h += FALLS.drop * smoothstep(-1, 6, along) * smoothstep(75, 40, across);
   }
 
   // Flatten pads for the lodge and outposts.

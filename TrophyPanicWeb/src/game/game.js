@@ -24,6 +24,7 @@ import { Coop } from '../net/coop.js';
 import { Vehicles } from '../entities/vehicle.js';
 import { Weather } from '../sim/weather.js';
 import { WeatherFX } from '../world/weatherfx.js';
+import { Waterfall } from '../world/waterfall.js';
 import { Social } from '../ui/social.js';
 import { Jobs } from './jobs.js';
 import { Dog } from '../entities/dog.js';
@@ -111,6 +112,7 @@ export class Game {
     await nextFrame();
     this.fx = new FX(this);
     this.weatherFx = new WeatherFX(this);
+    this.waterfall = new Waterfall(this);
     this.player = new Player(this);
     this.hunterModel = buildHunter(this.profile.look());
     this.scene.add(this.hunterModel.group);
@@ -644,6 +646,7 @@ export class Game {
     this.sky.update(this.hour, center, dt, { x: wv.x * this.wind.speed, z: wv.z * this.wind.speed }, this.weather);
     this.water.update(this.visualTime, this.sky.light);
     this.structures.update(this.hour, this.camera.position);
+    this.waterfall.update(dt);
 
     if (this.state !== 'title') {
       this.updateCamera(dt);
